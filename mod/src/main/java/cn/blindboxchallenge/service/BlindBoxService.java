@@ -4,14 +4,15 @@ import cn.blindboxchallenge.data.BlindBoxPoolSavedData;
 import cn.blindboxchallenge.data.PrizeBundle;
 import cn.blindboxchallenge.data.TransactionRecord;
 import cn.blindboxchallenge.registry.ModItems;
+import cn.blindboxchallenge.util.InventoryEvidence;
 import cn.blindboxchallenge.util.StackFingerprint;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
@@ -60,12 +61,20 @@ public final class BlindBoxService {
         UUID transactionId = UUID.randomUUID();
         UUID token = UUID.randomUUID();
         PrizeBundle bundle = data.createBundle(player.getUUID(), player.level().getGameTime(), payload);
+        List<ItemStack> beforeMain = InventoryEvidence.copyMain(inventory);
+        List<ItemStack> afterMain = copyStacks(beforeMain);
+        for (Selection selection : selections) afterMain.get(selection.slot()).shrink(selection.count());
+        ItemStack expectedBox = createBlindBox(token);
+        if (!insertAll(afterMain, List.of(expectedBox.copy()))) return fail(player, "背包没有空间接收盲盒，未执行打包。");
+        CompoundTag receipts = packReceipts(selections, beforeMain, afterMain, expectedBox);
+        String beforeDigest = InventoryEvidence.digest(beforeMain, inventory.offhand.get(0), inventory.player.containerMenu.getCarried());
+        String afterDigest = InventoryEvidence.digest(afterMain, inventory.offhand.get(0), inventory.player.containerMenu.getCarried());
         data.prepare(TransactionRecord.createV2(transactionId, player.getUUID(), token, bundle.id(), TransactionRecord.Kind.PACK, bundle,
-                player.level().getGameTime(), new CompoundTag(), "", ""));
+                player.level().getGameTime(), receipts, beforeDigest, afterDigest));
 
         // 重新从服务端槽位扣除；上方验证与同一主线程保证此处不会被并发改变。
         for (Selection selection : selections) inventory.removeItem(selection.slot(), selection.count());
-        ItemStack box = createBlindBox(token);
+        ItemStack box = expectedBox.copy();
         if (!inventory.add(box)) {
             // 理论上已预演；若模组交互导致失败，立即回滚并保留 PREPARED 记录供登录恢复审计。
             for (ItemStack stack : payload) inventory.add(stack.copy());
@@ -131,12 +140,39 @@ public final class BlindBoxService {
     }
 
     private static List<ItemStack> copyMain(Inventory inventory) {
-        List<ItemStack> result = new ArrayList<>();
-        for (int slot = 0; slot < 36; slot++) result.add(inventory.getItem(slot).copy());
+        return InventoryEvidence.copyMain(inventory);
+    }
+
+    private static List<ItemStack> copyStacks(List<ItemStack> stacks) {
+        List<ItemStack> result = new ArrayList<>(stacks.size());
+        for (ItemStack stack : stacks) result.add(stack.copy());
         return result;
     }
 
+    private static CompoundTag packReceipts(List<Selection> selections, List<ItemStack> before, List<ItemStack> after, ItemStack token) {
+        CompoundTag receipts = new CompoundTag();
+        ListTag sources = new ListTag();
+        for (Selection selection : selections) {
+            CompoundTag receipt = new CompoundTag();
+            receipt.putInt("slot", selection.slot());
+            receipt.putInt("removed_count", selection.count());
+            receipt.put("before", InventoryEvidence.stack(before.get(selection.slot())));
+            receipt.put("after", InventoryEvidence.stack(after.get(selection.slot())));
+            sources.add(receipt);
+        }
+        receipts.put("source_receipts", sources);
+        CompoundTag tokenReceipt = new CompoundTag();
+        tokenReceipt.put("stack", InventoryEvidence.stack(token));
+        tokenReceipt.putInt("expected_count", 1);
+        receipts.put("token_receipt", tokenReceipt);
+        return receipts;
+    }
+
     private static boolean canInsertAll(List<ItemStack> slots, List<ItemStack> additions) {
+        return insertAll(copyStacks(slots), additions);
+    }
+
+    private static boolean insertAll(List<ItemStack> slots, List<ItemStack> additions) {
         for (ItemStack original : additions) {
             ItemStack remaining = original.copy();
             for (ItemStack slot : slots) {
