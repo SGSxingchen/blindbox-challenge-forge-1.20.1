@@ -54,17 +54,23 @@ public final class BlindBoxPoolSavedData extends SavedData {
         setDirty();
     }
 
-    public synchronized void commitPack(UUID transactionId, PrizeBundle bundle) {
-        bundles.put(bundle.id(), bundle);
+    public synchronized void markStage(UUID transactionId, TransactionRecord.Stage stage, long gameTime) {
         TransactionRecord record = transactions.get(transactionId);
-        if (record != null) transactions.put(transactionId, record.withStage(TransactionRecord.Stage.COMMITTED));
+        if (record != null) transactions.put(transactionId, record.withStage(stage, gameTime));
         setDirty();
     }
 
-    public synchronized void commitOpen(UUID transactionId, UUID bundleId) {
+    public synchronized void commitPack(UUID transactionId, PrizeBundle bundle, long gameTime) {
+        bundles.putIfAbsent(bundle.id(), bundle);
+        TransactionRecord record = transactions.get(transactionId);
+        if (record != null) transactions.put(transactionId, record.withStage(TransactionRecord.Stage.COMMITTED, gameTime));
+        setDirty();
+    }
+
+    public synchronized void commitOpen(UUID transactionId, UUID bundleId, long gameTime) {
         bundles.remove(bundleId);
         TransactionRecord record = transactions.get(transactionId);
-        if (record != null) transactions.put(transactionId, record.withStage(TransactionRecord.Stage.COMMITTED));
+        if (record != null) transactions.put(transactionId, record.withStage(TransactionRecord.Stage.COMMITTED, gameTime));
         setDirty();
     }
 
@@ -78,11 +84,11 @@ public final class BlindBoxPoolSavedData extends SavedData {
     public synchronized int bundleCount() { return bundles.size(); }
     public synchronized Collection<PrizeBundle> bundles() { return List.copyOf(bundles.values()); }
     public synchronized Collection<TransactionRecord> pendingFor(UUID playerId) {
-        return transactions.values().stream().filter(record -> record.playerId().equals(playerId) && record.stage() != TransactionRecord.Stage.COMMITTED).toList();
+        return transactions.values().stream().filter(record -> record.playerId().equals(playerId) && !record.stage().terminal()).toList();
     }
-    public synchronized void markManualReview(UUID id) {
+    public synchronized void markManualReview(UUID id, long gameTime, String reason) {
         TransactionRecord record = transactions.get(id);
-        if (record != null) transactions.put(id, record.withStage(TransactionRecord.Stage.MANUAL_REVIEW));
+        if (record != null) transactions.put(id, record.withRecoveryResult(TransactionRecord.Stage.MANUAL_REVIEW, gameTime, reason));
         setDirty();
     }
     public synchronized void clearForDebug() { bundles.clear(); setDirty(); }

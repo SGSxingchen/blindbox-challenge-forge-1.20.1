@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
@@ -59,7 +60,8 @@ public final class BlindBoxService {
         UUID transactionId = UUID.randomUUID();
         UUID token = UUID.randomUUID();
         PrizeBundle bundle = data.createBundle(player.getUUID(), player.level().getGameTime(), payload);
-        data.prepare(new TransactionRecord(transactionId, player.getUUID(), token, bundle.id(), TransactionRecord.Kind.PACK, TransactionRecord.Stage.PREPARED, bundle));
+        data.prepare(TransactionRecord.createV2(transactionId, player.getUUID(), token, bundle.id(), TransactionRecord.Kind.PACK, bundle,
+                player.level().getGameTime(), new CompoundTag(), "", ""));
 
         // 重新从服务端槽位扣除；上方验证与同一主线程保证此处不会被并发改变。
         for (Selection selection : selections) inventory.removeItem(selection.slot(), selection.count());
@@ -67,10 +69,11 @@ public final class BlindBoxService {
         if (!inventory.add(box)) {
             // 理论上已预演；若模组交互导致失败，立即回滚并保留 PREPARED 记录供登录恢复审计。
             for (ItemStack stack : payload) inventory.add(stack.copy());
-            data.markManualReview(transactionId);
+            data.markManualReview(transactionId, player.level().getGameTime(), "inventory_delivery_failed");
             return fail(player, "检测到异常背包状态，物品已尝试回滚；事务已隔离供管理员检查。");
         }
-        data.commitPack(transactionId, bundle);
+        data.markStage(transactionId, TransactionRecord.Stage.PLAYER_APPLIED, player.level().getGameTime());
+        data.commitPack(transactionId, bundle, player.level().getGameTime());
         player.containerMenu.broadcastChanges();
         player.displayClientMessage(Component.literal("已打包 " + payload.size() + " 种物品并加入全局奖池。"), true);
         return true;
@@ -85,15 +88,17 @@ public final class BlindBoxService {
         if (!canFitAfterOpening(player.getInventory(), held, bundle.stacks())) return fail(player, "背包空间不足，盲盒和奖池均未改变。");
 
         UUID transactionId = UUID.randomUUID();
-        data.prepare(new TransactionRecord(transactionId, player.getUUID(), token, bundle.id(), TransactionRecord.Kind.OPEN, TransactionRecord.Stage.PREPARED, bundle));
+        data.prepare(TransactionRecord.createV2(transactionId, player.getUUID(), token, bundle.id(), TransactionRecord.Kind.OPEN, bundle,
+                player.level().getGameTime(), new CompoundTag(), "", ""));
         held.shrink(1);
         for (ItemStack reward : bundle.stacks()) {
             if (!player.getInventory().add(reward.copy())) {
-                data.markManualReview(transactionId);
+                data.markManualReview(transactionId, player.level().getGameTime(), "payload_delivery_failed");
                 return fail(player, "异常：奖品交付未完成，事务已隔离，未生成地面掉落。");
             }
         }
-        data.commitOpen(transactionId, bundle.id());
+        data.markStage(transactionId, TransactionRecord.Stage.PLAYER_APPLIED, player.level().getGameTime());
+        data.commitOpen(transactionId, bundle.id(), player.level().getGameTime());
         player.containerMenu.broadcastChanges();
         player.displayClientMessage(Component.literal("盲盒已开启，获得一个完整奖项。"), true);
         return true;
@@ -104,7 +109,7 @@ public final class BlindBoxService {
         BlindBoxPoolSavedData data = BlindBoxPoolSavedData.get(player.serverLevel());
         int pending = data.pendingFor(player.getUUID()).size();
         if (pending > 0) {
-            for (TransactionRecord record : data.pendingFor(player.getUUID())) data.markManualReview(record.id());
+            for (TransactionRecord record : data.pendingFor(player.getUUID())) data.markManualReview(record.id(), player.level().getGameTime(), "legacy_or_unproven_state");
             player.sendSystemMessage(Component.literal("检测到 " + pending + " 个未完成盲盒事务，已隔离且未自动删改物品；请管理员使用 /blindbox pool count 检查。")
                     .withStyle(ChatFormatting.YELLOW));
         }
