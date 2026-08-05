@@ -19,8 +19,14 @@ jobs:
           cache: gradle
       - name: 允许执行 Gradle Wrapper
         run: chmod +x gradlew
-      - name: 质量检查与重混淆构建
-        run: ./gradlew --no-daemon check build
+      - name: 质量检查、正式构建与 CI 探针构建
+        run: ./gradlew --no-daemon check build ciTestJar
+      - name: 断言正式 Jar 不含 CI 探针
+        run: |
+          FORMAL_JAR="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*.jar' ! -name '*-sources.jar' ! -name '*-citest.jar' -print -quit)"
+          test -n "$FORMAL_JAR"
+          ! jar tf "$FORMAL_JAR" | grep -q '^cn/blindboxchallenge/citest/'
+          test -f "build/libs/blindboxchallenge-0.1.0-p1-citest.jar"
       - name: 生成 Jar 校验和
         run: |
           find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-sources.jar' -print0 | sort -z | xargs -0 sha256sum > build/libs/SHA256SUMS
