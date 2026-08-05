@@ -6,6 +6,7 @@ import cn.blindboxchallenge.data.BlindBoxPoolSavedData;
 import cn.blindboxchallenge.data.PrizeBundle;
 import java.util.List;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.item.ItemArgument;
 import net.minecraft.network.chat.Component;
@@ -13,12 +14,12 @@ import net.minecraft.world.item.ItemStack;
 
 /** 仅管理员调试；正常玩法不调用本命令。 */
 public final class BlindBoxCommands {
-    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+    public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext buildContext) {
         var pool = Commands.literal("pool")
                 .then(Commands.literal("count").executes(context -> count(context.getSource())))
                 .then(Commands.literal("clear").executes(context -> clear(context.getSource())))
                 .then(Commands.literal("inject")
-                        .then(Commands.argument("item", ItemArgument.item())
+                        .then(Commands.argument("item", ItemArgument.item(buildContext))
                                 .then(Commands.argument("count", IntegerArgumentType.integer(1, 64))
                                         .executes(context -> inject(context.getSource(), ItemArgument.getItem(context, "item")
                                                 .createItemStack(IntegerArgumentType.getInteger(context, "count"), false))))));

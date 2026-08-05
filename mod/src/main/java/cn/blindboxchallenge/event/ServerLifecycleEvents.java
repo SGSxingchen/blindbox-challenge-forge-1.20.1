@@ -14,7 +14,7 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = BlindBoxChallenge.MOD_ID)
 public final class ServerLifecycleEvents {
     @SubscribeEvent
-    public static void commands(RegisterCommandsEvent event) { BlindBoxCommands.register(event.getDispatcher()); }
+    public static void commands(RegisterCommandsEvent event) { BlindBoxCommands.register(event.getDispatcher(), event.getBuildContext()); }
 
     @SubscribeEvent
     public static void login(PlayerEvent.PlayerLoggedInEvent event) {
