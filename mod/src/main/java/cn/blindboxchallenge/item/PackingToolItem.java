@@ -7,6 +7,8 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleMenuProvider;
+import java.util.UUID;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -20,13 +22,9 @@ public final class PackingToolItem extends Item {
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
-            MenuProvider provider = new MenuProvider() {
-                @Override public Component getDisplayName() { return Component.translatable("menu.blindboxchallenge.packing"); }
-                @Override public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int id, net.minecraft.world.entity.player.Inventory inventory, Player ignored) {
-                    return new PackingMenu(id, inventory);
-                }
-            };
-            NetworkHooks.openScreen(serverPlayer, provider);
+            UUID session = UUID.randomUUID();
+            MenuProvider provider = new SimpleMenuProvider((id, inventory, ignored) -> new PackingMenu(id, inventory, session), Component.translatable("menu.blindboxchallenge.packing"));
+            NetworkHooks.openScreen(serverPlayer, provider, buffer -> buffer.writeUUID(session));
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
     }

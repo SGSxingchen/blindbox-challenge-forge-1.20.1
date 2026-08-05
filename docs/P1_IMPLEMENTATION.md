@@ -17,7 +17,7 @@
 
 ### 打包菜单与网络
 
-打包道具通过 `NetworkHooks.openScreen` 打开 `PackingMenu`。P1 界面显示玩家背包，输入 `槽位:数量` 列表（例如 `0:5, 12:1`）后才发送 `CommitPackingPacket`。包中仅有：容器 ID、槽位、数量、该槽位完整 `ItemStack` NBT 的 SHA-256 指纹；**不携带、也不接受客户端给出的物品 NBT**。服务端再次校验当前菜单、槽位范围、去重、数量、禁打包项、物品与指纹，然后从真实库存复制完整 NBT。
+打包道具通过 `NetworkHooks.openScreen` 打开 `PackingMenu`。P1 界面显示玩家背包，输入 `槽位:数量` 列表（例如 `0:5, 12:1`）后才发送 `CommitPackingPacket`。包中仅有：容器 ID、一次性菜单会话 UUID、槽位、数量、该槽位完整 `ItemStack` NBT 的 SHA-256 指纹；**不携带、也不接受客户端给出的物品 NBT**。C2S 注册显式限定为 `PLAY_TO_SERVER`；服务端再次校验当前菜单、会话 UUID、槽位范围、去重、数量、禁打包项、物品与指纹，然后从真实库存复制完整 NBT。
 
 禁止打包 `blind_box` 和 `packing_tool`，防止递归盲盒/事务工具进入奖池。
 

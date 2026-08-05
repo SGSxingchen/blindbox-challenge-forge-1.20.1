@@ -47,7 +47,7 @@ public final class PackingScreen extends AbstractContainerScreen<PackingMenu> {
                 var stack = minecraft.player.getInventory().getItem(slot);
                 values.add(new BlindBoxService.Selection(slot, count, StackFingerprint.of(stack)));
             }
-            ModNetwork.CHANNEL.sendToServer(new CommitPackingPacket(menu.containerId, values));
+            ModNetwork.CHANNEL.sendToServer(new CommitPackingPacket(menu.containerId, menu.sessionId(), values));
             error = Component.empty();
         } catch (RuntimeException ignored) {
             error = Component.translatable("screen.blindboxchallenge.invalid_selection");
