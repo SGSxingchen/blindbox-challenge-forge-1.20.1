@@ -126,6 +126,11 @@ tasks.register('ciTestJar', Jar) {
     from sourceSets.ciTest.output
 }
 
+// ciTest 的运行时类路径可见 main 资源；打包探针时只保留自己的 mods.toml。
+tasks.named('processCiTestResources', ProcessResources).configure {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
 repositories {
     // Put repositories for dependencies here
     // ForgeGradle automatically adds the Forge maven and Maven Central for you
