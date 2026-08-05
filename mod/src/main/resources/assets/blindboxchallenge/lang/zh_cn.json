@@ -1,0 +1,9 @@
+{
+  "item.blindboxchallenge.blind_box": "盲盒",
+  "item.blindboxchallenge.packing_tool": "奖池打包道具",
+  "menu.blindboxchallenge.packing": "奖池打包",
+  "screen.blindboxchallenge.selection": "槽位:数量",
+  "screen.blindboxchallenge.pack": "打包并生成盲盒",
+  "screen.blindboxchallenge.help": "输入背包槽位:数量，例如 0:5, 12:1",
+  "screen.blindboxchallenge.invalid_selection": "请输入有效且不重复的槽位:数量。"
+}

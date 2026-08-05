@@ -1,0 +1,9 @@
+{
+  "item.blindboxchallenge.blind_box": "Blind Box",
+  "item.blindboxchallenge.packing_tool": "Prize Pool Packer",
+  "menu.blindboxchallenge.packing": "Prize Pool Packer",
+  "screen.blindboxchallenge.selection": "slot:count",
+  "screen.blindboxchallenge.pack": "Pack and Create Blind Box",
+  "screen.blindboxchallenge.help": "Enter inventory slot:count, e.g. 0:5, 12:1",
+  "screen.blindboxchallenge.invalid_selection": "Enter valid, non-duplicate slot:count pairs."
+}

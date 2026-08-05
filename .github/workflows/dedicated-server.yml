@@ -1,0 +1,25 @@
+name: 专用服务器启动
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  dedicated-server-smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: 构建模组
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon build
+      - name: 安装 Forge 专用服务器并启动探针
+        run: bash scripts/ci/server-smoke.sh

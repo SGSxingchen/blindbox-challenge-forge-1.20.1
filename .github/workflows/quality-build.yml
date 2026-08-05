@@ -1,0 +1,35 @@
+name: 质量与构建
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  quality-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: 允许执行 Gradle Wrapper
+        run: chmod +x gradlew
+      - name: 质量检查与重混淆构建
+        run: ./gradlew --no-daemon check build
+      - name: 生成 Jar 校验和
+        run: |
+          find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-sources.jar' -print0 | sort -z | xargs -0 sha256sum > build/libs/SHA256SUMS
+          cat build/libs/SHA256SUMS
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: blindboxchallenge-jar
+          path: |
+            mod/build/libs/*.jar
+            mod/build/libs/SHA256SUMS
+          if-no-files-found: error
