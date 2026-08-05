@@ -1,0 +1,16 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="blindboxchallenge_citest"
+version="0.1.0-ci"
+displayName="Blind Box CI Probe"
+description="只用于 GitHub Actions 动态验证，禁止发布。"
+
+[[dependencies.blindboxchallenge_citest]]
+modId="blindboxchallenge"
+mandatory=true
+versionRange="[0.1.0-p1,)"
+ordering="AFTER"
+side="BOTH"
