@@ -69,9 +69,9 @@ public final class BlindBoxPoolSavedData extends SavedData {
     }
 
     public synchronized Optional<PrizeBundle> randomBundle(net.minecraft.util.RandomSource random) {
-        if (bundles.isEmpty()) return Optional.empty();
-        int wanted = random.nextInt(bundles.size());
-        return bundles.values().stream().skip(wanted).findFirst();
+        List<PrizeBundle> available = bundles.values().stream().filter(bundle -> !bundle.stacks().isEmpty()).toList();
+        if (available.isEmpty()) return Optional.empty();
+        return Optional.of(available.get(random.nextInt(available.size())));
     }
 
     public synchronized boolean containsBundle(UUID id) { return bundles.containsKey(id); }

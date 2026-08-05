@@ -6,6 +6,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.item.ItemStack;
 
 /** 仅展示玩家背包；选择以 C2S 的槽位+数量提交，服务器会再次读取真实槽位。 */
 public final class PackingMenu extends AbstractContainerMenu {
@@ -24,4 +25,8 @@ public final class PackingMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) { return !player.isSpectator(); }
+
+    /** P1 的数量选择由受校验的文本提交完成，禁止 Shift+点击制造另一个临时库存副本。 */
+    @Override
+    public ItemStack quickMoveStack(Player player, int index) { return ItemStack.EMPTY; }
 }

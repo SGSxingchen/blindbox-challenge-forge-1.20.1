@@ -20,12 +20,24 @@ curl --fail --location --retry 3 --connect-timeout 20 \
   mkdir -p mods
   cp "../../${JAR}" mods/
   # Forge 安装器生成 run.sh；日志中的 Done 是真正启动而非仅安装成功。
-  timeout 90s ./run.sh nogui > server.log 2>&1 &
+  mkfifo server.stdin
+  timeout 120s ./run.sh nogui < server.stdin > server.log 2>&1 &
   pid=$!
+  exec 3>server.stdin
   for _ in $(seq 1 90); do
     if grep -q 'Done (' server.log; then
-      kill "${pid}" || true
-      wait "${pid}" || true
+      printf 'list\nsave-all flush\nstop\n' >&3
+      exec 3>&-
+      if ! timeout 30s bash -c "while kill -0 ${pid} 2>/dev/null; do sleep 1; done"; then
+        cat server.log
+        kill "${pid}" || true
+        wait "${pid}" || true
+        exit 1
+      fi
+      ! grep -Eq 'FATAL|NoClassDefFoundError|Exception in server tick|Crash report|crash-report' server.log
+      grep -q 'There are ' server.log
+      grep -q 'Saved the game' server.log
+      grep -q 'Stopping server' server.log
       exit 0
     fi
     if ! kill -0 "${pid}" 2>/dev/null; then
@@ -35,6 +47,7 @@ curl --fail --location --retry 3 --connect-timeout 20 \
     sleep 1
   done
   cat server.log
+  exec 3>&- || true
   kill "${pid}" || true
   wait "${pid}" || true
   exit 1

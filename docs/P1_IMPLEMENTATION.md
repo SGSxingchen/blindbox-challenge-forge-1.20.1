@@ -69,5 +69,6 @@ OPEN:  验证/容量预演 -> PREPARED(日志) -> 扣盲盒+给完整 bundle -> 
 
 * `.github/workflows/quality-build.yml` 在 GitHub Hosted Runner 上执行 `check build`、生成 Jar SHA-256、上传产物。
 * `.github/workflows/dedicated-server.yml` 在 GitHub Hosted Runner 上安装 Forge 专用服务器、放入构建 Jar，并仅在日志出现 `Done (` 后通过。
+* 专服探针随后会发送 `list`、`save-all flush`、`stop`，并拒绝包含 `FATAL`、`NoClassDefFoundError`、服务端 tick 异常或崩溃报告痕迹的日志。
 * 根据本轮约束，本机**没有**运行 Gradle、Java、Forge 或 Minecraft；Actions 尚未因当前 `gh` 登录失效/没有远端仓库而实际触发。
 * 两客户端并发自动化和 SIGKILL 自动恢复均未虚报为已测。
