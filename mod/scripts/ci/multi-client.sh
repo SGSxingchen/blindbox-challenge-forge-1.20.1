@@ -12,6 +12,7 @@ test -n "${GITHUB_ACTIONS:-}"
 test -f "${FORMAL}" && test -f "${CITEST}"
 rm -rf "${SERVER_DIR}" "${CLIENT_TEMPLATE}" "${EVIDENCE}" build/ci-client-1 build/ci-client-2
 mkdir -p "${SERVER_DIR}" "${EVIDENCE}"
+EVIDENCE_ABS="$(cd "${EVIDENCE}" && pwd)"
 python scripts/ci/install-client.py "${CLIENT_TEMPLATE}"
 mkdir -p "${CLIENT_TEMPLATE}/mods" "${CLIENT_TEMPLATE}/config"
 cp "${FORMAL}" "${CITEST}" "${CLIENT_TEMPLATE}/mods/"
@@ -26,7 +27,7 @@ curl --fail --location --retry 3 --connect-timeout 20 -o "${SERVER_DIR}/${INSTAL
  mkdir -p mods
  cp "../../${FORMAL}" "../../${CITEST}" mods/
  mkfifo server.stdin
- setsid ./run.sh nogui < server.stdin > server.log 2>&1 & echo $! > server.pid
+ BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" setsid ./run.sh nogui < server.stdin > server.log 2>&1 & echo $! > server.pid
 )
 SERVER_PID="$(cat "${SERVER_DIR}/server.pid")"
 exec 3>"${SERVER_DIR}/server.stdin"
@@ -67,6 +68,37 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P3_BUSINESS=success' "${SERVER_DIR}/server.log"
+printf 'blindboxcitest run_p3_pillow\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P3_PILLOW_STARTED=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_PILLOW_STARTED=success' "${SERVER_DIR}/server.log"
+# 两个客户端先真实跟踪同一座位及两种投掷物；场景随后触发命中/超时，
+# marker 仅在客户端收到 impacted、目标 UUID 与对应回收落物后由客户端自行写入。
+for _ in $(seq 1 180); do
+  if grep -q 'BLINDBOX_CITEST_P3_PILLOW_SERVER=failed' "${SERVER_DIR}/server.log"; then
+    cat "${SERVER_DIR}/server.log"
+    exit 1
+  fi
+  grep -q 'BLINDBOX_CITEST_P3_PILLOW_SERVER=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_PILLOW_SERVER=success' "${SERVER_DIR}/server.log"
+for _ in $(seq 1 120); do
+  [ -f "${EVIDENCE}/client-1-pillow-observed.marker" ] && [ -f "${EVIDENCE}/client-2-pillow-observed.marker" ] && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+test -f "${EVIDENCE}/client-1-pillow-observed.marker"
+test -f "${EVIDENCE}/client-2-pillow-observed.marker"
+printf 'blindboxcitest verify_p3_pillow_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P3_PILLOW_CLIENTS=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_PILLOW_CLIENTS=success' "${SERVER_DIR}/server.log"
 printf 'blindboxcitest prepare_reconnect\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_RECONNECT_PREPARED=success' "${SERVER_DIR}/server.log" && break

@@ -33,7 +33,7 @@ def stop(process):
         process.wait()
 
 
-def launch(directory: Path, username: str, uuid: str, marker: Path, release: Path, reconnect_marker: Path):
+def launch(directory: Path, username: str, uuid: str, marker: Path, pillow_marker: Path, release: Path, reconnect_marker: Path):
     options = minecraft_launcher_lib.utils.generate_test_options()
     options.update({
         "username": username, "uuid": uuid, "token": "blindbox-ci-offline-token",
@@ -42,6 +42,7 @@ def launch(directory: Path, username: str, uuid: str, marker: Path, release: Pat
         "jvmArguments": ["-Xms768M", "-Xmx2G", "-Dblindbox.ci.multiplayerSmoke=true",
                          "-Dblindbox.ci.serverAddress=127.0.0.1:25565",
                          f"-Dblindbox.ci.clientMarker={marker}", f"-Dblindbox.ci.clientRelease={release}",
+                         f"-Dblindbox.ci.pillowMarker={pillow_marker}",
                          f"-Dblindbox.ci.reconnectMarker={reconnect_marker}"]
                         + (["-Dblindbox.ci.reconnect=true"] if username == "BlindBoxAlice" else []),
     })
@@ -72,15 +73,18 @@ def main():
                 shutil.rmtree(directory)
             shutil.copytree(template, directory)
             marker = evidence / f"client-{index}-connected.marker"
+            pillow_marker = evidence / f"client-{index}-pillow-observed.marker"
             reconnect_marker = evidence / f"client-{index}-reconnected.marker"
             marker.unlink(missing_ok=True)
+            pillow_marker.unlink(missing_ok=True)
             reconnect_marker.unlink(missing_ok=True)
-            clients.append((*launch(directory, username, uuid, marker, release, reconnect_marker), marker, username, uuid, directory))
+            clients.append((*launch(directory, username, uuid, marker, pillow_marker, release, reconnect_marker),
+                            marker, pillow_marker, username, uuid, directory))
 
         deadline = time.monotonic() + 600
         while time.monotonic() < deadline:
             failures = []
-            for process, _, console, marker, username, _, directory in clients:
+            for process, _, console, marker, _, username, _, directory in clients:
                 text = console.read_text(encoding="utf-8", errors="replace") if console.is_file() else ""
                 latest = directory / "logs" / "latest.log"
                 if latest.is_file():
@@ -104,7 +108,7 @@ def main():
             time.sleep(1)
         if not release.is_file():
             raise RuntimeError("未收到服务端 canonical 完成释放标志")
-        for process, _, _, _, username, _, _ in clients:
+        for process, _, _, _, _, username, _, _ in clients:
             try:
                 code = process.wait(timeout=90)
             except subprocess.TimeoutExpired:

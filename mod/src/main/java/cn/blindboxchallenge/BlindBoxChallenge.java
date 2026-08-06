@@ -3,6 +3,7 @@ package cn.blindboxchallenge;
 import cn.blindboxchallenge.registry.ModItems;
 import cn.blindboxchallenge.registry.ModBlocks;
 import cn.blindboxchallenge.registry.ModMenus;
+import cn.blindboxchallenge.registry.ModEntities;
 import cn.blindboxchallenge.network.ModNetwork;
 import cn.blindboxchallenge.config.ModServerConfig;
 import net.minecraftforge.fml.common.Mod;
@@ -20,6 +21,7 @@ public final class BlindBoxChallenge {
         ModBlocks.BLOCKS.register(bus);
         ModItems.ITEMS.register(bus);
         ModMenus.MENUS.register(bus);
+        ModEntities.ENTITIES.register(bus);
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, ModServerConfig.SERVER_SPEC);
         ModNetwork.register();
     }

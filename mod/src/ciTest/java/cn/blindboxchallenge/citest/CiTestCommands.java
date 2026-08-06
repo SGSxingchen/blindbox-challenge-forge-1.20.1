@@ -61,6 +61,9 @@ public final class CiTestCommands {
                 .then(Commands.literal("run_multi_business").executes(context -> runMultiBusiness(context.getSource())))
                 .then(Commands.literal("run_p2_business").executes(context -> runP2Business(context.getSource())))
                 .then(Commands.literal("run_p3_business").executes(context -> runP3Business(context.getSource())))
+                .then(Commands.literal("run_p3_pillow").executes(context -> PillowCiScenario.start(context.getSource())))
+                .then(Commands.literal("verify_p3_pillow_clients")
+                        .executes(context -> PillowCiScenario.verifyClientMarkers(context.getSource())))
                 .then(Commands.literal("prepare_reconnect").executes(context -> prepareReconnect(context.getSource())))
                 .then(Commands.literal("verify_reconnect").executes(context -> verifyReconnect(context.getSource()))));
     }

@@ -5,20 +5,29 @@ import cn.blindboxchallenge.item.BlackKnightTelescopicKnifeItem;
 import cn.blindboxchallenge.item.PurpleToyPickaxeSwordItem;
 import cn.blindboxchallenge.registry.ModItems;
 import cn.blindboxchallenge.registry.ModMenus;
+import cn.blindboxchallenge.registry.ModEntities;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.item.ItemProperties;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.client.event.EntityRenderersEvent;
 
 @Mod.EventBusSubscriber(modid = BlindBoxChallenge.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class ClientModEvents {
     @SubscribeEvent
     public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(ClientAbilityKeyEvents.doubleJumpKey());
+    }
+
+    @SubscribeEvent
+    public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerEntityRenderer(ModEntities.THROWN_PILLOW.get(), ThrownItemRenderer::new);
+        event.registerEntityRenderer(ModEntities.PILLOW_SEAT.get(), PillowSeatRenderer::new);
     }
 
     @SubscribeEvent

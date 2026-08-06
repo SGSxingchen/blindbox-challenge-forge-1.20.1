@@ -64,5 +64,11 @@
   "item.blindboxchallenge.road_barrier_helmet": "路障头饰",
   "item.blindboxchallenge.efficient_pig_breeding": "高效养猪技术",
   "key.blindboxchallenge.double_jump": "二段跳",
-  "key.categories.blindboxchallenge": "盲盒挑战生存"
+  "key.categories.blindboxchallenge": "盲盒挑战生存",
+  "item.blindboxchallenge.stone_pillow": "石墩子抱枕",
+  "block.blindboxchallenge.stone_pillow": "石墩子抱枕",
+  "item.blindboxchallenge.diamond_pillow": "钻石抱枕",
+  "block.blindboxchallenge.diamond_pillow": "钻石抱枕",
+  "entity.blindboxchallenge.thrown_pillow": "投掷抱枕",
+  "entity.blindboxchallenge.pillow_seat": "抱枕座位"
 }

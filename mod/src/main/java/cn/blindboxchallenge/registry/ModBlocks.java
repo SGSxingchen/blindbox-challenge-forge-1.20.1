@@ -3,8 +3,11 @@ package cn.blindboxchallenge.registry;
 import cn.blindboxchallenge.BlindBoxChallenge;
 import cn.blindboxchallenge.block.BmlCheerStickBlock;
 import cn.blindboxchallenge.block.GlowStickBlock;
+import cn.blindboxchallenge.block.PillowBlock;
+import cn.blindboxchallenge.entity.PillowVariant;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.level.block.WallTorchBlock;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraftforge.registries.DeferredRegister;
@@ -23,6 +26,10 @@ public final class ModBlocks {
             () -> new BmlCheerStickBlock(BlockBehaviour.Properties.of().noCollission().instabreak()));
     public static final RegistryObject<Block> BML_CHEER_STICK_WALL = BLOCKS.register("bml_cheer_stick_wall",
             () -> new BmlCheerStickBlock.Wall(BlockBehaviour.Properties.of().noCollission().instabreak()));
+    public static final RegistryObject<Block> STONE_PILLOW = BLOCKS.register("stone_pillow",
+            () -> new PillowBlock(PillowVariant.STONE, BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.WOOL).noOcclusion()));
+    public static final RegistryObject<Block> DIAMOND_PILLOW = BLOCKS.register("diamond_pillow",
+            () -> new PillowBlock(PillowVariant.DIAMOND, BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.WOOL).noOcclusion()));
 
     private ModBlocks() {}
 }

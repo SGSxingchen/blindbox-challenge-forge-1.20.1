@@ -2,6 +2,7 @@ package cn.blindboxchallenge.event;
 
 import cn.blindboxchallenge.BlindBoxChallenge;
 import cn.blindboxchallenge.command.BlindBoxCommands;
+import cn.blindboxchallenge.entity.PillowSeatEntity;
 import cn.blindboxchallenge.item.BlindBoxItem;
 import cn.blindboxchallenge.item.EggyEyeMaskItem;
 import cn.blindboxchallenge.item.SafetyExitSignShieldItem;
@@ -36,18 +37,28 @@ public final class ServerLifecycleEvents {
 
     @SubscribeEvent
     public static void logout(PlayerEvent.PlayerLoggedOutEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) BlindBoxItem.cancelUse(player);
+        if (event.getEntity() instanceof ServerPlayer player) {
+            BlindBoxItem.cancelUse(player);
+            PillowSeatEntity.releasePassenger(player);
+        }
     }
 
     @SubscribeEvent
     public static void dimensionChange(PlayerEvent.PlayerChangedDimensionEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) BlindBoxItem.cancelUse(player);
+        if (event.getEntity() instanceof ServerPlayer player) {
+            BlindBoxItem.cancelUse(player);
+            PillowSeatEntity.releasePassenger(player);
+        }
     }
 
     @SubscribeEvent
     public static void death(LivingDeathEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) BlindBoxItem.cancelUse(player);
-        if (event.getEntity().level().isClientSide || event.getSource().is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return;
+        if (event.getEntity().level().isClientSide) return;
+        if (event.getSource().is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            if (event.getEntity() instanceof ServerPlayer player) PillowSeatEntity.releasePassenger(player);
+            return;
+        }
 
         for (InteractionHand hand : InteractionHand.values()) {
             ItemStack stack = event.getEntity().getItemInHand(hand);
@@ -62,6 +73,8 @@ public final class ServerLifecycleEvents {
             event.getEntity().level().broadcastEntityEvent(event.getEntity(), (byte) 35);
             return;
         }
+        // 自定义图腾会取消本次死亡，不能在该分支前错误拆掉仍存活玩家的座位。
+        if (event.getEntity() instanceof ServerPlayer player) PillowSeatEntity.releasePassenger(player);
     }
 
     /**

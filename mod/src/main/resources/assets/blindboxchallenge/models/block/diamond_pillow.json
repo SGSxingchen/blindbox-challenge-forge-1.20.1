@@ -1,0 +1,29 @@
+{
+  "ambientocclusion": false,
+  "textures": { "fabric": "blindboxchallenge:block/diamond_pillow" },
+  "elements": [
+    {
+      "from": [1, 0, 1],
+      "to": [15, 7, 15],
+      "faces": {
+        "down": { "texture": "#fabric" },
+        "up": { "texture": "#fabric" },
+        "north": { "texture": "#fabric" },
+        "south": { "texture": "#fabric" },
+        "west": { "texture": "#fabric" },
+        "east": { "texture": "#fabric" }
+      }
+    },
+    {
+      "from": [2, 7, 2],
+      "to": [14, 8, 14],
+      "faces": {
+        "up": { "texture": "#fabric" },
+        "north": { "texture": "#fabric" },
+        "south": { "texture": "#fabric" },
+        "west": { "texture": "#fabric" },
+        "east": { "texture": "#fabric" }
+      }
+    }
+  ]
+}

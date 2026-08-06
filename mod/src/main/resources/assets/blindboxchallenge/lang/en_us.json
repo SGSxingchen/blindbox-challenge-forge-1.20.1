@@ -64,5 +64,11 @@
   "item.blindboxchallenge.road_barrier_helmet": "Road Barrier Helmet",
   "item.blindboxchallenge.efficient_pig_breeding": "Efficient Pig Breeding",
   "key.blindboxchallenge.double_jump": "Double Jump",
-  "key.categories.blindboxchallenge": "Blind Box Challenge"
+  "key.categories.blindboxchallenge": "Blind Box Challenge",
+  "item.blindboxchallenge.stone_pillow": "Stone Stool Pillow",
+  "block.blindboxchallenge.stone_pillow": "Stone Stool Pillow",
+  "item.blindboxchallenge.diamond_pillow": "Diamond Pillow",
+  "block.blindboxchallenge.diamond_pillow": "Diamond Pillow",
+  "entity.blindboxchallenge.thrown_pillow": "Thrown Pillow",
+  "entity.blindboxchallenge.pillow_seat": "Pillow Seat"
 }
