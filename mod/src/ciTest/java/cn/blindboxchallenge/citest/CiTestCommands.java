@@ -16,6 +16,8 @@ import cn.blindboxchallenge.item.DecisionCoinItem;
 import cn.blindboxchallenge.item.BirthdayCandleItem;
 import cn.blindboxchallenge.item.RainbowHoopItem;
 import cn.blindboxchallenge.service.PlayerAbilityService;
+import cn.blindboxchallenge.service.PigBreedingService;
+import cn.blindboxchallenge.config.ModServerConfig;
 import cn.blindboxchallenge.menu.PackingMenu;
 import cn.blindboxchallenge.network.CommitPackingPacket;
 import cn.blindboxchallenge.registry.ModItems;
@@ -409,6 +411,8 @@ public final class CiTestCommands {
                 throw new IllegalStateException("road barrier helmet differs from vanilla iron helmet attributes or durability");
             }
 
+            assertEfficientPigBreeding(player);
+
             source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P3_BUSINESS=success"), false);
             return 1;
         } catch (Exception exception) {
@@ -452,6 +456,110 @@ public final class CiTestCommands {
                         PlayerAbilityService.YIJIN_ATTACK_DAMAGE_BONUS)) {
             throw new IllegalStateException("Yi Jin capability did not reconcile its fixed UUID attributes");
         }
+    }
+
+    /** 011：真实服务端书本入口、10 格球形过滤、候选硬上限、繁殖与冷却。 */
+    private static void assertEfficientPigBreeding(ServerPlayer player) {
+        net.minecraft.server.level.ServerLevel level = player.serverLevel();
+        double originalX = player.getX();
+        double originalY = player.getY();
+        double originalZ = player.getZ();
+        float originalYRot = player.getYRot();
+        float originalXRot = player.getXRot();
+        if (player.getCooldowns().isOnCooldown(ModItems.EFFICIENT_PIG_BREEDING.get())) {
+            throw new IllegalStateException("pig breeding fixture was not clean before server cooldown assertion");
+        }
+        // 固定高空孤立夹具区避免扫描或改动真实世界中既有猪，结束后精确回到原位置。
+        player.teleportTo(level, 192.5D, 200.0D, 192.5D, originalYRot, originalXRot);
+        net.minecraft.world.phys.AABB fixtureArea = player.getBoundingBox().inflate(12.0D);
+        Set<UUID> fixturePigs = new HashSet<>();
+        try {
+            if (!level.getEntitiesOfClass(net.minecraft.world.entity.animal.Pig.class, fixtureArea).isEmpty()) {
+                throw new IllegalStateException("pig breeding fixture area was occupied before test execution");
+            }
+            // 先直接调用生产服务，明确证明 AABB 粗筛之后仍执行了 10 格球形过滤。
+            net.minecraft.world.entity.animal.Pig first = spawnFixturePig(level, player.getX() + 2.0D, player.getY(), player.getZ());
+            net.minecraft.world.entity.animal.Pig second = spawnFixturePig(level, player.getX() - 2.0D, player.getY(), player.getZ());
+            fixturePigs.add(first.getUUID());
+            fixturePigs.add(second.getUUID());
+            net.minecraft.world.entity.animal.Pig outsideSphere = spawnFixturePig(level, player.getX() + 9.0D,
+                    player.getY() + 9.0D, player.getZ());
+            fixturePigs.add(outsideSphere.getUUID());
+            PigBreedingService.BreedingResult spherical = PigBreedingService.breedNearby(player);
+            if (spherical.scannedPigCount() != 2 || spherical.eligiblePigCount() != 2 || spherical.bredPairCount() != 1
+                    || !outsideSphere.canFallInLove()) {
+                throw new IllegalStateException("pig breeding did not enforce the declared 10-block spherical range");
+            }
+            collectFixturePigChildren(level, fixtureArea, fixturePigs);
+            discardFixturePigs(level, fixtureArea, fixturePigs);
+            fixturePigs.clear();
+
+            // 再走物品生产入口，验证书不消耗、成功冷却和重复拒绝。
+            net.minecraft.world.entity.animal.Pig bookFirst = spawnFixturePig(level, player.getX() + 2.0D, player.getY(), player.getZ());
+            net.minecraft.world.entity.animal.Pig bookSecond = spawnFixturePig(level, player.getX() - 2.0D, player.getY(), player.getZ());
+            fixturePigs.add(bookFirst.getUUID());
+            fixturePigs.add(bookSecond.getUUID());
+            ItemStack book = new ItemStack(ModItems.EFFICIENT_PIG_BREEDING.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, book);
+            if (!book.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
+                    || book.getCount() != 1 || !player.getCooldowns().isOnCooldown(ModItems.EFFICIENT_PIG_BREEDING.get())) {
+                throw new IllegalStateException("efficient pig breeding book did not preserve book stack or write server cooldown");
+            }
+            collectFixturePigChildren(level, fixtureArea, fixturePigs);
+            if (fixturePigs.size() != 3) throw new IllegalStateException("pig breeding book did not create exactly one fixture child");
+            if (book.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult()
+                    != net.minecraft.world.InteractionResult.FAIL) {
+                throw new IllegalStateException("pig breeding server cooldown did not reject repeated use");
+            }
+            player.getCooldowns().removeCooldown(ModItems.EFFICIENT_PIG_BREEDING.get());
+            discardFixturePigs(level, fixtureArea, fixturePigs);
+            fixturePigs.clear();
+
+            int maximum = ModServerConfig.EFFICIENT_PIG_MAX_SCANNED.get();
+            for (int gridX = -9; gridX <= 9 && fixturePigs.size() < maximum + 2; gridX++) {
+                for (int gridZ = -9; gridZ <= 9 && fixturePigs.size() < maximum + 2; gridZ++) {
+                    if (gridX * gridX + gridZ * gridZ > 81) continue;
+                    net.minecraft.world.entity.animal.Pig pig = spawnFixturePig(level, player.getX() + gridX + 0.25D,
+                            player.getY(), player.getZ() + gridZ + 0.25D);
+                    fixturePigs.add(pig.getUUID());
+                }
+            }
+            if (fixturePigs.size() != maximum + 2) {
+                throw new IllegalStateException("pig breeding upper-bound fixture could not fit all legal config candidates");
+            }
+            PigBreedingService.BreedingResult capped = PigBreedingService.breedNearby(player);
+            if (capped.scannedPigCount() != maximum || capped.eligiblePigCount() != maximum
+                    || capped.bredPairCount() != maximum / 2) {
+                throw new IllegalStateException("pig breeding scan upper bound or paired production result mismatch");
+            }
+            collectFixturePigChildren(level, fixtureArea, fixturePigs);
+        } finally {
+            player.getCooldowns().removeCooldown(ModItems.EFFICIENT_PIG_BREEDING.get());
+            discardFixturePigs(level, fixtureArea, fixturePigs);
+            player.teleportTo(level, originalX, originalY, originalZ, originalYRot, originalXRot);
+        }
+    }
+
+    private static void collectFixturePigChildren(net.minecraft.server.level.ServerLevel level, net.minecraft.world.phys.AABB area,
+                                                  Set<UUID> fixturePigs) {
+        level.getEntitiesOfClass(net.minecraft.world.entity.animal.Pig.class, area).stream()
+                .map(net.minecraft.world.entity.Entity::getUUID).forEach(fixturePigs::add);
+    }
+
+    private static void discardFixturePigs(net.minecraft.server.level.ServerLevel level, net.minecraft.world.phys.AABB area,
+                                           Set<UUID> fixturePigs) {
+        level.getEntitiesOfClass(net.minecraft.world.entity.animal.Pig.class, area,
+                pig -> fixturePigs.contains(pig.getUUID())).forEach(net.minecraft.world.entity.Entity::discard);
+    }
+
+    private static net.minecraft.world.entity.animal.Pig spawnFixturePig(net.minecraft.server.level.ServerLevel level,
+                                                                           double x, double y, double z) {
+        net.minecraft.world.entity.animal.Pig pig = net.minecraft.world.entity.EntityType.PIG.create(level);
+        if (pig == null) throw new IllegalStateException("could not create pig breeding fixture entity");
+        pig.setAge(0);
+        pig.setPos(x, y, z);
+        level.addFreshEntity(pig);
+        return pig;
     }
 
     private static double attributeTotal(net.minecraft.world.item.Item item, net.minecraft.world.entity.ai.attributes.Attribute attribute) {
