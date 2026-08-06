@@ -24,6 +24,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
@@ -124,7 +125,7 @@ public final class ReturningScissorsCiScenario {
         private final AABB fixtureBounds;
         private ReturningScissorsEntity normalScissors;
         private ReturningScissorsEntity fullScissors;
-        private Pig normalTarget;
+        private LivingEntity normalTarget;
         private Pig fullTarget;
         private ItemEntity fallbackItem;
         private UUID expectedNormalScissorsId;
@@ -261,9 +262,13 @@ public final class ReturningScissorsCiScenario {
         }
 
         private void activateNormalHit() {
-            // 将真实猪目标放到下一段精确扫掠路径的中心，避免冻结观察后由随机实体碰撞形状
-            // 造成“超时自动返航”误代替实体命中；目标仍由生产 AbstractArrow 碰撞代码命中。
-            normalTarget = createTarget(minecraftEntity(normalScissors).position().add(0.0D, 0.0D, 0.15D));
+            // 采用同服真实 Bob 作为命中目标，避免无 AI 生物的碰撞状态在冻结观察窗口后被引擎
+            // 分区延迟跳过；仍完全由生产 AbstractArrow 的普通 tick 碰撞、伤害和返航路径结算。
+            Vec3 targetPosition = minecraftEntity(normalScissors).position().add(0.0D, 0.0D, 0.15D);
+            bob.teleportTo(level, targetPosition.x, targetPosition.y, targetPosition.z, 0.0F, 0.0F);
+            bob.setDeltaMovement(Vec3.ZERO);
+            bob.hurtMarked = true;
+            normalTarget = bob;
             expectedTargetId = normalTarget.getUUID();
             normalTargetHealth = normalTarget.getHealth();
             // 保持真实投掷入口产生的实体，只在双端观察窗结束后调整其物理位置/速度来稳定命中时序。
@@ -412,7 +417,6 @@ public final class ReturningScissorsCiScenario {
             cleaned = true;
             discard(normalScissors);
             discard(fullScissors);
-            discard(normalTarget);
             discard(fullTarget);
             discard(fallbackItem);
             for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, fixtureBounds.inflate(8.0D),
@@ -454,13 +458,14 @@ public final class ReturningScissorsCiScenario {
         }
     }
 
-    private record PlayerPosition(double x, double y, double z, float yRot, float xRot) {
+    private record PlayerPosition(double x, double y, double z, float yRot, float xRot, float health) {
         private static PlayerPosition capture(ServerPlayer player) {
-            return new PlayerPosition(player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
+            return new PlayerPosition(player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot(), player.getHealth());
         }
 
         private void restore(ServerPlayer player, ServerLevel level) {
             player.teleportTo(level, x, y, z, yRot, xRot);
+            player.setHealth(Math.min(health, player.getMaxHealth()));
         }
     }
 }
