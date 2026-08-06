@@ -112,6 +112,13 @@ public final class CiTestCommands {
             if (CommitPackingPacket.isAuthorized(alice, new CommitPackingPacket(91, UUID.randomUUID(), List.of()))) {
                 throw new IllegalStateException("forged packing nonce accepted");
             }
+            int acceptedBurstPackets = 0;
+            for (int attempt = 0; attempt < 64; attempt++) {
+                if (CommitPackingPacket.authorizeAndConsume(alice, validShape)) acceptedBurstPackets++;
+            }
+            if (acceptedBurstPackets != 1 || !data.transactions().isEmpty() || !data.bundles().isEmpty()) {
+                throw new IllegalStateException("packing burst replay was not bounded or changed assets");
+            }
             alice.closeContainer();
             if (CommitPackingPacket.isAuthorized(alice, validShape)) throw new IllegalStateException("closed menu replay accepted");
 

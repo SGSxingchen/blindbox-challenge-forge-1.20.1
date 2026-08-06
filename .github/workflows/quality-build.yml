@@ -30,6 +30,12 @@ jobs:
           test -f "$CITEST_JAR"
           jar tf "$CITEST_JAR" | grep -q '^cn/blindboxchallenge/citest/CiTestProbe.class$'
           jar tf "$CITEST_JAR" | grep -q '^META-INF/mods.toml$'
+      - name: 校验网络包方向与一次性提交门闩
+        run: |
+          grep -q 'Optional.of(NetworkDirection.PLAY_TO_SERVER)' src/main/java/cn/blindboxchallenge/network/ModNetwork.java
+          ! grep -q 'PLAY_TO_CLIENT' src/main/java/cn/blindboxchallenge/network/ModNetwork.java
+          grep -q 'authorizeAndConsume(player, packet)' src/main/java/cn/blindboxchallenge/network/CommitPackingPacket.java
+          grep -q 'consumeSubmission()' src/main/java/cn/blindboxchallenge/menu/PackingMenu.java
       - name: 生成 Jar 校验和
         run: |
           find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-sources.jar' -print0 | sort -z | xargs -0 sha256sum > build/libs/SHA256SUMS

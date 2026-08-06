@@ -12,6 +12,7 @@ import java.util.UUID;
 /** 仅展示玩家背包；选择以 C2S 的槽位+数量提交，服务器会再次读取真实槽位。 */
 public final class PackingMenu extends AbstractContainerMenu {
     private final UUID sessionId;
+    private boolean submissionConsumed;
     public PackingMenu(int containerId, Inventory inventory) {
         this(containerId, inventory, UUID.randomUUID());
     }
@@ -30,6 +31,15 @@ public final class PackingMenu extends AbstractContainerMenu {
     }
 
     public UUID sessionId() { return sessionId; }
+
+    /** 同一菜单会话只允许一个合法提交进入业务层，阻断重复包和有限突发重放。 */
+    public boolean consumeSubmission() {
+        if (submissionConsumed) return false;
+        submissionConsumed = true;
+        return true;
+    }
+
+    public boolean submissionConsumed() { return submissionConsumed; }
 
     @Override
     public boolean stillValid(Player player) { return !player.isSpectator(); }

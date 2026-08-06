@@ -38,16 +38,23 @@ public record CommitPackingPacket(int containerId, UUID sessionId, List<BlindBox
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
             ServerPlayer player = context.getSender();
-            if (isAuthorized(player, packet)) BlindBoxService.pack(player, packet.selections());
+            if (authorizeAndConsume(player, packet)) BlindBoxService.pack(player, packet.selections());
         });
         context.setPacketHandled(true);
     }
 
-    /** 供处理器和隔离 CI 探针共同验证菜单实例、容器编号与一次性会话。 */
+    /** 只检查菜单实例与会话形状，不消费会话；供负例探针检查使用。 */
     public static boolean isAuthorized(ServerPlayer player, CommitPackingPacket packet) {
         return player != null && player.containerMenu instanceof PackingMenu
                 && player.containerMenu.containerId == packet.containerId()
                 && player.containerMenu.stillValid(player)
-                && ((PackingMenu) player.containerMenu).sessionId().equals(packet.sessionId());
+                && ((PackingMenu) player.containerMenu).sessionId().equals(packet.sessionId())
+                && !((PackingMenu) player.containerMenu).submissionConsumed();
+    }
+
+    /** 服务端主线程原子消费一次性提交权，合法但业务失败的请求也不能原会话重放。 */
+    public static boolean authorizeAndConsume(ServerPlayer player, CommitPackingPacket packet) {
+        if (!isAuthorized(player, packet)) return false;
+        return ((PackingMenu) player.containerMenu).consumeSubmission();
     }
 }

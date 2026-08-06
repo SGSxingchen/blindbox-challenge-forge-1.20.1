@@ -66,3 +66,7 @@
 ## 2026-08-06 强制汇总门禁
 
 新增 `regression-report.yml` 与 `.github/ci/check_required_workflows.py`：针对同一提交 SHA 等待五条必需工作流，并将缺失、失败、取消或跳过统一判为失败；成功时上传 `p1-required-workflows.json`，禁止只看部分绿灯就宣称 P1 全绿。
+
+## 2026-08-06 网络突发门禁
+
+打包菜单会话增加服务端一次性消费门闩：同一 containerId + nonce 仅首个合法 C2S 提交可进入业务层，后续有限突发重放全部拒绝。隔离 ciTest 在两个真实客户端在线时发送 64 次同形请求并断言仅 1 次获准、库存/奖池/事务均不变化；网络注册仍固定为 `PLAY_TO_SERVER`，质量门禁检查方向声明，禁止 S2C 误投进入服务端处理器。
