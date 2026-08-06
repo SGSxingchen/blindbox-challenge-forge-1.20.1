@@ -23,7 +23,9 @@ curl --fail --location --retry 3 --connect-timeout 20 -o "${SERVER_DIR}/${INSTAL
  cd "${SERVER_DIR}"
  java -jar "${INSTALLER}" --installServer
  echo 'eula=true' > eula.txt
- printf 'online-mode=false\nserver-port=25565\nview-distance=4\nsimulation-distance=4\nmax-players=4\n' > server.properties
+ # 能力专项必须在服务端仍以 player.onGround() 判定的真实腾空中等待 C2S；只关闭原版
+ # anti-fly 踢人，避免 Hosted Runner 追帧把网络往返误判为飞行。生产能力服务仍拒绝原版飞行。
+ printf 'online-mode=false\nallow-flight=true\nserver-port=25565\nview-distance=4\nsimulation-distance=4\nmax-players=4\n' > server.properties
  mkdir -p mods
  cp "../../${FORMAL}" "../../${CITEST}" mods/
  mkfifo server.stdin
