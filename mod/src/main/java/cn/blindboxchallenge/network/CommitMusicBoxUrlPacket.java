@@ -53,6 +53,6 @@ public record CommitMusicBoxUrlPacket(int containerId, UUID sessionId, BlockPos 
                 || !menu.instanceId().equals(packet.instanceId()) || menu.revision() != packet.revision()) return false;
             if (!(player.level().getBlockEntity(packet.position()) instanceof MusicBoxBlockEntity box)
                     || !box.instanceId().equals(packet.instanceId()) || box.revision() != packet.revision()) return false;
-        return player.mayBuild(packet.position());
+        return player.mayBuild() && player.level().mayInteract(player, packet.position());
     }
 }

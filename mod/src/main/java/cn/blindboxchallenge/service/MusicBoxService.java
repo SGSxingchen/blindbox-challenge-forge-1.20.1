@@ -17,7 +17,7 @@ public final class MusicBoxService {
     private MusicBoxService() {}
 
     public static void openEditor(ServerPlayer player, MusicBoxBlockEntity box) {
-        if (!player.mayBuild(box.getBlockPos())) return;
+        if (!mayEdit(player, box)) return;
         UUID session = UUID.randomUUID();
         MenuProvider provider = new SimpleMenuProvider((containerId, inventory, ignored) -> new MusicBoxMenu(containerId, inventory,
                 session, box.getBlockPos(), box.instanceId(), box.revision(), box.url()), Component.translatable("menu.blindboxchallenge.music_box"));
@@ -31,7 +31,7 @@ public final class MusicBoxService {
     }
 
     public static void play(ServerPlayer player, MusicBoxBlockEntity box) {
-        if (!player.mayBuild(box.getBlockPos()) || !box.configured()) return;
+        if (!mayEdit(player, box) || !box.configured()) return;
         final String normalized;
         try {
             normalized = AudioUrlPolicy.normalizeHttpsUrl(box.url());
@@ -41,5 +41,10 @@ public final class MusicBoxService {
         UUID eventId = UUID.randomUUID();
         ModNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), new PlayMusicBoxPacket(eventId, normalized, box.getBlockPos(),
                 box.getLevel().getGameTime()));
+    }
+
+    /** 同时遵守玩家建造能力与该维度的实际交互权限（出生点保护等）。 */
+    private static boolean mayEdit(ServerPlayer player, MusicBoxBlockEntity box) {
+        return player.mayBuild() && box.getLevel() != null && box.getLevel().mayInteract(player, box.getBlockPos());
     }
 }

@@ -49,6 +49,12 @@ jobs:
           grep -q 'consumeSubmission()' src/main/java/cn/blindboxchallenge/menu/PackingMenu.java
           grep -q 'isMatchingTextItem(player, packet.heldSlot(), packet.instanceId(), packet.revision(), true)' src/main/java/cn/blindboxchallenge/network/CommitLetterEditPacket.java
           grep -q 'isMatchingTextItem(player, packet.heldSlot(), packet.instanceId(), packet.revision(), false)' src/main/java/cn/blindboxchallenge/network/CommitDeathNotePacket.java
+          # 1.20.1 的 Player 只有无参 mayBuild()；方块位置权限必须再由 Level.mayInteract 校验。
+          ! grep -RInE 'mayBuild\([^)]' src/main/java/cn/blindboxchallenge
+          grep -q 'sourceLevel.mayInteract(player, sourcePos)' src/main/java/cn/blindboxchallenge/service/DoorService.java
+          grep -q 'level.mayInteract(player, clicked)' src/main/java/cn/blindboxchallenge/service/DoorService.java
+          grep -q 'box.getLevel().mayInteract(player, box.getBlockPos())' src/main/java/cn/blindboxchallenge/service/MusicBoxService.java
+          grep -q 'player.level().mayInteract(player, packet.position())' src/main/java/cn/blindboxchallenge/network/CommitMusicBoxUrlPacket.java
           ! grep -RInE 'net\.minecraft\.client|javazoom\.' src/main/java/cn/blindboxchallenge/{block,blockentity,item,service,network,registry,menu,event,data,config}
       - name: 生成 Jar 校验和
         run: |
