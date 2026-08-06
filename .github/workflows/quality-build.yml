@@ -63,6 +63,11 @@ jobs:
           grep -q 'player.level().mayInteract(player, packet.position())' src/main/java/cn/blindboxchallenge/network/CommitMusicBoxUrlPacket.java
           # ciTest 是独立 mod，绝不能与生产 mod 共享同一个 Java 包，否则 Forge 模块层会拒绝启动。
           ! grep -RInE '^package cn\.blindboxchallenge\.client(\.|;)' src/ciTest/java
+          grep -q '^public final class RemoteMusicSoundInstance' src/main/java/cn/blindboxchallenge/client/audio/RemoteMusicSoundInstance.java
+          grep -q 'public UUID eventId()' src/main/java/cn/blindboxchallenge/client/audio/RemoteMusicSoundInstance.java
+          grep -q 'public RemoteAudioDownload.Kind kind()' src/main/java/cn/blindboxchallenge/client/audio/RemoteMusicSoundInstance.java
+          grep -q 'public boolean cacheHit()' src/main/java/cn/blindboxchallenge/client/audio/RemoteMusicSoundInstance.java
+          grep -q 'public net.minecraft.core.BlockPos source()' src/main/java/cn/blindboxchallenge/client/audio/RemoteMusicSoundInstance.java
           ! grep -RInE 'net\.minecraft\.client|javazoom\.' src/main/java/cn/blindboxchallenge/{block,blockentity,item,service,network,registry,menu,event,data,config}
       - name: 生成 Jar 校验和
         run: |

@@ -13,7 +13,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 
 /** 通过 Forge 公开的 SoundInstance#getStream 扩展点接入原版 SoundEngine，不直接控制 OpenAL。 */
-final class RemoteMusicSoundInstance extends AbstractSoundInstance {
+public final class RemoteMusicSoundInstance extends AbstractSoundInstance {
     private final BufferedAudioStream audio;
     private final UUID eventId;
     private final RemoteAudioDownload.Kind kind;
@@ -57,9 +57,10 @@ final class RemoteMusicSoundInstance extends AbstractSoundInstance {
         return CompletableFuture.completedFuture(audio);
     }
 
-    UUID eventId() { return eventId; }
-    RemoteAudioDownload.Kind kind() { return kind; }
-    boolean cacheHit() { return cacheHit; }
-    net.minecraft.core.BlockPos source() { return source; }
+    /** 仅公开已由服务端广播的事件元数据，供独立 ciTest 观察生产 SoundEngine 路径。 */
+    public UUID eventId() { return eventId; }
+    public RemoteAudioDownload.Kind kind() { return kind; }
+    public boolean cacheHit() { return cacheHit; }
+    public net.minecraft.core.BlockPos source() { return source; }
     void discard() { audio.close(); }
 }
