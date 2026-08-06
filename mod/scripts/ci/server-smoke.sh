@@ -6,7 +6,7 @@ FORGE_VERSION="47.4.22"
 MC_VERSION="1.20.1"
 SERVER_DIR="build/ci-forge-server"
 INSTALLER="forge-${MC_VERSION}-${FORGE_VERSION}-installer.jar"
-JAR="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*.jar' ! -name '*-sources.jar' ! -name '*-citest.jar' -print -quit)"
+JAR="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*-all.jar' -print)"
 
 test -n "${JAR}" && test -f "${JAR}"
 [[ "${JAR}" != *-citest.jar ]]

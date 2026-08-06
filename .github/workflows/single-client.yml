@@ -36,8 +36,9 @@ jobs:
         run: |
           python scripts/ci/install-client.py build/ci-client
           mkdir -p build/ci-client/mods build/ci-client/config
-          formal="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*.jar' ! -name '*-sources.jar' ! -name '*-citest.jar' -print -quit)"
-          test -n "$formal"
+          # 单客户端必须安装 JarJar 的发行候选，不能误取不含 JLayer 的普通 reobf jar。
+          formal="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*-all.jar' -print)"
+          test -n "$formal" && test -f "$formal"
           cp "$formal" build/ci-client/mods/
           cp build/libs/blindboxchallenge-0.1.0-p1-citest.jar build/ci-client/mods/
           printf 'earlyWindowControl=false\n' > build/ci-client/config/fml.toml

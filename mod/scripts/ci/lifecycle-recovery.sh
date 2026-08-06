@@ -8,7 +8,7 @@ MC_VERSION="1.20.1"
 SERVER_DIR="build/ci-lifecycle-server"
 EVIDENCE_DIR="build/ci-lifecycle-evidence"
 INSTALLER="forge-${MC_VERSION}-${FORGE_VERSION}-installer.jar"
-FORMAL_JAR="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*.jar' ! -name '*-sources.jar' ! -name '*-citest.jar' -print -quit)"
+FORMAL_JAR="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*-all.jar' -print)"
 CITEST_JAR="build/libs/blindboxchallenge-0.1.0-p1-citest.jar"
 
 test -n "${GITHUB_ACTIONS:-}"

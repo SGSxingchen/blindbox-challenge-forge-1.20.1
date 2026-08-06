@@ -25,9 +25,12 @@ jobs:
         run: ./gradlew --no-daemon check build ciTestJar
       - name: 断言正式 Jar 不含 CI 探针
         run: |
-          FORMAL_JAR="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*.jar' ! -name '*-sources.jar' ! -name '*-citest.jar' -print -quit)"
+          # ForgeGradle 6 的 jarJar 发行候选固定为 *-all.jar；普通 reobf jar 不含嵌入的 JLayer。
+          # 不允许在多个候选中任意挑第一个，test -f 会在 0 个或多个匹配时严格失败。
+          FORMAL_JAR="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*-all.jar' -print)"
           fail() { echo "::error::正式 Jar 质量断言失败：$1"; exit 1; }
           test -n "$FORMAL_JAR" || fail '找不到正式 Jar'
+          test -f "$FORMAL_JAR" || fail '正式 Jar 候选不唯一'
           if jar tf "$FORMAL_JAR" | grep -q '^cn/blindboxchallenge/citest/'; then fail '正式 Jar 混入 ciTest 类'; fi
           if jar tf "$FORMAL_JAR" | grep -q '^ci-audio/'; then fail '正式 Jar 混入 ciTest 音频'; fi
           jar tf "$FORMAL_JAR" | grep -q '^META-INF/jarjar/.*jlayer.*\.jar$' || fail '正式 Jar 未包含 JLayer Jar-in-Jar'
