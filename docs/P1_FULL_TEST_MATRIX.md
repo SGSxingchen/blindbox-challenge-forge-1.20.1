@@ -7,7 +7,7 @@
 1. `single-client.yml`：Xvfb + Mesa 启动真实 Forge 1.20.1 Client，进入主菜单并连接本次 Jar 的专服；正常退出，客户端与服务端无 crash-report、FATAL、Mixin/客户端类泄漏。
 2. `multi-client.yml`：两个独立游戏目录、独立玩家身份的真实客户端连接同一专服，执行 P1 业务探针。
 3. `lifecycle-recovery.yml`：固定测试世界与玩家 UUID，执行 `save-all flush` 后 SIGKILL(-9)，用同世界重启并核对资产与事务状态。
-4. `regression-report.yml` 或汇总 Job：任何必需 Job failed/skipped/missing 均失败；上传机器可读结果、完整日志、crash-report（若有）、产品 Jar 与 SHA-256。
+4. `regression-report.yml`：由五条必需工作流完成事件触发，按同一 HEAD 等待并核验质量、专服、强杀恢复、单客户端和双客户端；任何 failed/cancelled/skipped/missing 均失败，并上传机器可读汇总 JSON。
 
 ## P1 业务断言
 
@@ -61,4 +61,8 @@
 
 ## 2026-08-06 真实断线重连增量
 
-双客户端流程新增真实断线重连：Alice 持唯一 token 盲盒进入长按状态后，由专服 `kick` 触发真实登出事件；客户端在断线界面自动重新连接同一专服。重连稳定 40 tick 后，服务端断言该 token 未消耗或丢失，玩家无残留使用态与减速修饰，并上传重连 marker、canonical JSON 和双端日志。此项必须由 Hosted Runner 的真实双客户端工作流通过后才标记覆盖。
+双客户端流程新增真实断线重连：Alice 持唯一 token 盲盒进入长按状态后，由专服 `kick` 触发真实登出事件；客户端在断线界面自动重新连接同一专服。重连稳定 40 tick 后，服务端断言该 token 未消耗或丢失，玩家无残留使用态与减速修饰，并上传重连 marker、canonical JSON 和双端日志。此项已由提交 `d5ff391` 的真实双客户端 run `31067326341` 验证通过；同提交的质量、专服、强杀恢复和真实单客户端也全部成功。
+
+## 2026-08-06 强制汇总门禁
+
+新增 `regression-report.yml` 与 `.github/ci/check_required_workflows.py`：针对同一提交 SHA 等待五条必需工作流，并将缺失、失败、取消或跳过统一判为失败；成功时上传 `p1-required-workflows.json`，禁止只看部分绿灯就宣称 P1 全绿。

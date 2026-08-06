@@ -1,0 +1,45 @@
+name: P1 强制回归汇总
+
+on:
+  workflow_run:
+    workflows:
+      - 质量与构建
+      - 专用服务器启动
+      - 生命周期强杀恢复
+      - 真实单客户端启动
+      - 真实双客户端联机
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: p1-regression-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
+jobs:
+  required-workflow-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: 等待并核验同一提交的全部必需工作流
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+          TARGET_REPO: ${{ github.repository }}
+        run: |
+          python3 .github/ci/check_required_workflows.py \
+            --repo "$TARGET_REPO" \
+            --sha "$TARGET_SHA" \
+            --output build/ci-regression-report/p1-required-workflows.json
+      - name: 上传 P1 汇总证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-regression-report-${{ github.event.workflow_run.head_sha }}
+          path: build/ci-regression-report/
+          if-no-files-found: error
