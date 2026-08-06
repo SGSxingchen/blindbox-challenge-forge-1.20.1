@@ -27,13 +27,18 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.ClipContext;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.ProjectileImpactEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -104,6 +109,15 @@ public final class ReturningScissorsCiScenario {
         }
     }
 
+    /**
+     * 只记录原版 {@code AbstractArrow} 已实际计算出的碰撞结果；不取消、不改写结果，也不触发命中。
+     * 若夹具再次失败，日志可区分“未发生扫掠”“方块先命中”和“实体筛选未命中”。
+     */
+    @SubscribeEvent
+    public static void onProjectileImpact(ProjectileImpactEvent event) {
+        if (active != null) active.recordProjectileImpact(event);
+    }
+
     private enum Phase {
         OBSERVING_NORMAL_THROW,
         AWAITING_NORMAL_RETURN,
@@ -133,6 +147,15 @@ public final class ReturningScissorsCiScenario {
         private UUID expectedFallbackId;
         private float normalTargetHealth;
         private float fullTargetHealth;
+        private boolean normalNativeSweepFindsTarget;
+        private String normalActivationBlockHit = "未计算";
+        private boolean normalNoPhysicsAtActivation;
+        private int normalImpactCount;
+        private String normalImpact = "无";
+        private Vec3 normalLastPosition = Vec3.ZERO;
+        private Vec3 normalLastMovement = Vec3.ZERO;
+        private boolean normalLastReturning;
+        private boolean normalLastNoPhysics;
         private int phaseTicks;
         private Phase phase = Phase.OBSERVING_NORMAL_THROW;
         private String failure;
@@ -241,6 +264,7 @@ public final class ReturningScissorsCiScenario {
                 return;
             }
             if (phase == Phase.AWAITING_NORMAL_RETURN) {
+                snapshotNormalFlight();
                 if (minecraftEntity(normalScissors).isRemoved()) {
                     assertNormalReturn();
                     startFullInventoryFallback();
@@ -271,7 +295,40 @@ public final class ReturningScissorsCiScenario {
             normalTargetHealth = normalTarget.getHealth();
             // 保持真实投掷入口产生的实体，只在双端观察窗结束后恢复稳定扫掠速度。
             minecraftEntity(normalScissors).setNoGravity(true);
-            minecraftEntity(normalScissors).setDeltaMovement(new Vec3(0.0D, 0.0D, -1.25D));
+            Vec3 sweep = new Vec3(0.0D, 0.0D, -1.25D);
+            minecraftEntity(normalScissors).setDeltaMovement(sweep);
+            recordNormalActivationSweep(sweep);
+        }
+
+        private void recordNormalActivationSweep(Vec3 sweep) {
+            Entity projectile = minecraftEntity(normalScissors);
+            Vec3 start = projectile.position();
+            Vec3 end = start.add(sweep);
+            EntityHitResult targetHit = ProjectileUtil.getEntityHitResult(level, projectile, start, end,
+                    projectile.getBoundingBox().expandTowards(sweep).inflate(1.0D), candidate -> candidate == normalTarget);
+            normalNativeSweepFindsTarget = targetHit != null && targetHit.getEntity() == normalTarget;
+            HitResult blockHit = level.clip(new ClipContext(start, end, ClipContext.Block.COLLIDER,
+                    ClipContext.Fluid.NONE, projectile));
+            normalActivationBlockHit = blockHit.getType().name();
+            normalNoPhysicsAtActivation = normalScissors.isNoPhysics();
+            normalLastPosition = start;
+            normalLastMovement = sweep;
+        }
+
+        private void snapshotNormalFlight() {
+            Entity entity = minecraftEntity(normalScissors);
+            normalLastPosition = entity.position();
+            normalLastMovement = entity.getDeltaMovement();
+            normalLastReturning = normalScissors.isReturning();
+            normalLastNoPhysics = normalScissors.isNoPhysics();
+        }
+
+        private void recordProjectileImpact(ProjectileImpactEvent event) {
+            if (phase != Phase.AWAITING_NORMAL_RETURN || event.getProjectile() != normalScissors) return;
+            normalImpactCount++;
+            HitResult hit = event.getRayTraceResult();
+            normalImpact = hit.getType().name();
+            if (hit instanceof EntityHitResult entityHit) normalImpact += ":" + entityHit.getEntity().getUUID();
         }
 
         private Pig createTarget(Vec3 position) {
@@ -291,7 +348,13 @@ public final class ReturningScissorsCiScenario {
                 throw new IllegalStateException("返航剪刀命中、目标同步、完整 NBT 回收或物品守恒断言失败：targetHurt="
                         + targetHurt + ", targetSynced=" + targetSynced + ", returnedCount=" + returnedCount
                         + ", targetHealth=" + normalTarget.getHealth() + ", targetHealthBefore=" + normalTargetHealth
-                        + ", stored=" + normalScissors.storedStack());
+                        + ", stored=" + normalScissors.storedStack()
+                        + ", nativeSweepTarget=" + normalNativeSweepFindsTarget
+                        + ", activationBlock=" + normalActivationBlockHit
+                        + ", activationNoPhysics=" + normalNoPhysicsAtActivation
+                        + ", impactCount=" + normalImpactCount + ", impact=" + normalImpact
+                        + ", lastPosition=" + normalLastPosition + ", lastMovement=" + normalLastMovement
+                        + ", lastReturning=" + normalLastReturning + ", lastNoPhysics=" + normalLastNoPhysics);
             }
         }
 
