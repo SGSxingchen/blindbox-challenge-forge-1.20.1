@@ -48,7 +48,7 @@ public final class PillowProjectileEntity extends ThrowableItemProjectile {
     private int returnDelayTicks;
     private boolean missingStackReported;
 
-    public PillowProjectileEntity(EntityType<? extends PillowProjectileEntity> entityType, Level level) {
+    public PillowProjectileEntity(EntityType<PillowProjectileEntity> entityType, Level level) {
         super(entityType, level);
     }
 
@@ -107,7 +107,7 @@ public final class PillowProjectileEntity extends ThrowableItemProjectile {
     }
 
     @Override
-    protected void addAdditionalSaveData(CompoundTag tag) {
+    public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putInt(VARIANT_TAG, variant().serializedId());
         tag.putBoolean(RETURN_ITEM_TAG, shouldReturnItem());
@@ -118,7 +118,7 @@ public final class PillowProjectileEntity extends ThrowableItemProjectile {
     }
 
     @Override
-    protected void readAdditionalSaveData(CompoundTag tag) {
+    public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         setVariant(PillowVariant.fromSerializedId(tag.getInt(VARIANT_TAG)));
         setReturnItem(!tag.contains(RETURN_ITEM_TAG) || tag.getBoolean(RETURN_ITEM_TAG));

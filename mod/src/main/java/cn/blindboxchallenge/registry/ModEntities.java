@@ -15,13 +15,13 @@ public final class ModEntities {
             DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, BlindBoxChallenge.MOD_ID);
 
     public static final RegistryObject<EntityType<PillowSeatEntity>> PILLOW_SEAT = ENTITIES.register("pillow_seat",
-            () -> EntityType.Builder.of(PillowSeatEntity::new, MobCategory.MISC)
+            () -> EntityType.Builder.<PillowSeatEntity>of(PillowSeatEntity::new, MobCategory.MISC)
                     .sized(0.01F, 0.01F)
                     .clientTrackingRange(8)
                     .updateInterval(20)
                     .build(BlindBoxChallenge.MOD_ID + ":pillow_seat"));
     public static final RegistryObject<EntityType<PillowProjectileEntity>> THROWN_PILLOW = ENTITIES.register("thrown_pillow",
-            () -> EntityType.Builder.of(PillowProjectileEntity::new, MobCategory.MISC)
+            () -> EntityType.Builder.<PillowProjectileEntity>of(PillowProjectileEntity::new, MobCategory.MISC)
                     .sized(0.5F, 0.5F)
                     .clientTrackingRange(64)
                     .updateInterval(1)

@@ -21,7 +21,7 @@ public final class PillowSeatEntity extends Entity {
             SynchedEntityData.defineId(PillowSeatEntity.class, EntityDataSerializers.INT);
     private static final String VARIANT_TAG = "PillowVariant";
 
-    public PillowSeatEntity(EntityType<? extends PillowSeatEntity> entityType, Level level) {
+    public PillowSeatEntity(EntityType<PillowSeatEntity> entityType, Level level) {
         super(entityType, level);
         noPhysics = true;
     }
