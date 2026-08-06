@@ -106,7 +106,6 @@ public final class P3AbilityCiScenario {
                 // 强杀后的临时场景不会留在内存；本 CI 世界每次新建，立即复位为原版默认 false。
                 ServerPlayer alice = player(source.getServer(), "BlindBoxAlice");
                 resetAbility(alice);
-                alice.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
                 source.getServer().getGameRules().getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(false, source.getServer());
                 source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P3_ABILITY_CLEANUP=success"), false);
                 return 1;
@@ -191,6 +190,7 @@ public final class P3AbilityCiScenario {
         private final ServerLevel origin;
         private final boolean originalImmediateRespawn;
         private final int initialAliceEntityId;
+        private final int originalAliceSelectedSlot;
         private BlockPos aliceSupport;
         private BlockPos bobSupport;
         private BlockState originalAliceSupport;
@@ -219,6 +219,7 @@ public final class P3AbilityCiScenario {
             this.bobUuid = bob.getUUID();
             this.origin = alice.serverLevel();
             this.initialAliceEntityId = alice.getId();
+            this.originalAliceSelectedSlot = alice.getInventory().selected;
             this.originalImmediateRespawn = server.getGameRules().getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).get();
         }
 
@@ -473,11 +474,15 @@ public final class P3AbilityCiScenario {
 
         private void learnThroughProductionItem(ServerPlayer alice) {
             ItemStack manual = new ItemStack(ModItems.YIJIN_MANUAL.get());
+            int temporarySlot = emptyMainInventorySlot(alice);
+            // 不覆盖 P1/P2 回归留在当前手持槽位的完整物品；书本只占用本轮真实右键所需的空主背包格。
+            alice.getInventory().selected = temporarySlot;
             alice.setItemInHand(InteractionHand.MAIN_HAND, manual);
             InteractionResult result = manual.getItem().use(alice.serverLevel(), alice, InteractionHand.MAIN_HAND).getResult();
             if (!result.consumesAction() || !manual.isEmpty()) {
                 throw new IllegalStateException("易筋经真实右键入口没有恰好消耗首本书");
             }
+            alice.getInventory().selected = originalAliceSelectedSlot;
             requireLearned(alice);
             alice.containerMenu.broadcastChanges();
         }
@@ -499,7 +504,7 @@ public final class P3AbilityCiScenario {
             if (alice != null) {
                 resetAbility(alice);
                 restoreSlowFalling(alice);
-                alice.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+                alice.getInventory().selected = originalAliceSelectedSlot;
                 alice.containerMenu.broadcastChanges();
             }
             if (aliceSupport != null && originalAliceSupport != null) origin.setBlock(aliceSupport, originalAliceSupport, 3);
@@ -570,6 +575,13 @@ public final class P3AbilityCiScenario {
             PlayerAbilityService.reconcileAttributes(player, data);
             PlayerAbilityService.syncTrackingAndSelf(player, data);
         });
+    }
+
+    private static int emptyMainInventorySlot(ServerPlayer player) {
+        for (int slot = 0; slot < 36; slot++) {
+            if (player.getInventory().getItem(slot).isEmpty()) return slot;
+        }
+        throw new IllegalStateException("易筋经 CI 场景需要一个空主背包格，不能覆盖既有物品");
     }
 
     private static void requireLearned(ServerPlayer player) {
