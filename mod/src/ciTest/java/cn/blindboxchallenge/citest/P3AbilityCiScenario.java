@@ -186,6 +186,7 @@ public final class P3AbilityCiScenario {
         private BlockPos bobSupport;
         private BlockState originalAliceSupport;
         private BlockState originalBobSupport;
+        private final Map<BlockPos, BlockState> originalLandingBlocks = new HashMap<>();
         private Phase phase = Phase.WAITING_DETRACK;
         private int phaseTicks;
         private boolean clientPathVerified;
@@ -221,20 +222,29 @@ public final class P3AbilityCiScenario {
             // 先让 Bob 离开追踪范围并等待服务器实际撤销追踪，再学习；因此 Bob 的 true 快照只能来自随后真实 StartTracking。
             double x = Math.floor(alice.getX()) + 0.5D;
             double z = Math.floor(alice.getZ()) + 0.5D;
-            aliceSupport = BlockPos.containing(x, 219.0D, z);
-            bobSupport = BlockPos.containing(x + 512.0D, 119.0D, z);
+            // 采用短落差而非高空：平台移除后客户端有数 tick 的真实腾空时间触发 C2S，
+            // 即使客户端未及时按键也会安全落地，不会再次触发专服 anti-fly 断线。
+            aliceSupport = BlockPos.containing(x, 120.0D, z);
+            bobSupport = BlockPos.containing(x + 512.0D, 120.0D, z);
             // 先让两名真实客户端站在高空临时平台，避免等待撤销追踪/同步时被专服的
             // anti-fly 机制踢出；只在学习后移除 Alice 平台以走合法的腾空 C2S 路径。
             originalAliceSupport = origin.getBlockState(aliceSupport);
             originalBobSupport = origin.getBlockState(bobSupport);
             origin.setBlock(aliceSupport, Blocks.STONE.defaultBlockState(), 3);
             origin.setBlock(bobSupport, Blocks.STONE.defaultBlockState(), 3);
+            for (int dx = -1; dx <= 3; dx++) {
+                for (int dz = -1; dz <= 3; dz++) {
+                    BlockPos landing = aliceSupport.offset(dx, -8, dz);
+                    originalLandingBlocks.put(landing, origin.getBlockState(landing));
+                    origin.setBlock(landing, Blocks.STONE.defaultBlockState(), 3);
+                }
+            }
             alice.stopRiding();
             bob.stopRiding();
-            alice.teleportTo(origin, x, 220.0D, z, 0.0F, 0.0F);
+            alice.teleportTo(origin, x, 121.0D, z, 0.0F, 0.0F);
             alice.setDeltaMovement(0.0D, 0.0D, 0.0D);
             alice.hurtMarked = true;
-            bob.teleportTo(origin, x + 512.0D, 120.0D, z, 0.0F, 0.0F);
+            bob.teleportTo(origin, x + 512.0D, 121.0D, z, 0.0F, 0.0F);
             bob.setDeltaMovement(0.0D, 0.0D, 0.0D);
             bob.hurtMarked = true;
         }
@@ -416,6 +426,7 @@ public final class P3AbilityCiScenario {
             }
             if (aliceSupport != null && originalAliceSupport != null) origin.setBlock(aliceSupport, originalAliceSupport, 3);
             if (bobSupport != null && originalBobSupport != null) origin.setBlock(bobSupport, originalBobSupport, 3);
+            originalLandingBlocks.forEach((position, state) -> origin.setBlock(position, state, 3));
             server.getGameRules().getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(originalImmediateRespawn, server);
         }
 

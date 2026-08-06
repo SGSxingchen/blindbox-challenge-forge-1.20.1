@@ -59,6 +59,7 @@ public final class CiClientAbilityObservation {
             if (ALICE.equals(role)) {
                 initialSelfSync = true;
                 learnedSelfSyncCount++;
+                CiTestProbe.LOGGER.info("P3 易筋经客户端收到自身能力同步，次数={}，实体={}", learnedSelfSyncCount, player.getId());
                 if (initialEntityId < 0) initialEntityId = player.getId();
                 if (clientCloneEvent && learnedSelfSyncCount >= 2) learnedAfterClone = true;
                 if (isNether(minecraft) && learnedSelfSyncCount >= 3) dimensionSyncObserved = true;
@@ -112,10 +113,12 @@ public final class CiClientAbilityObservation {
                 && ClientPlayerAbilityState.hasLearnedYiJin(player.getId())) {
             KeyMapping.click(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_SPACE));
             keyInjected = true;
+            CiTestProbe.LOGGER.info("P3 易筋经客户端已通过真实 KeyMapping 注入空格按键，实体={}", player.getId());
         }
         if (keyInjected && !serverVelocityObserved
                 && player.getDeltaMovement().y >= PlayerAbilityService.DOUBLE_JUMP_VELOCITY - 0.02D) {
             serverVelocityObserved = true;
+            CiTestProbe.LOGGER.info("P3 易筋经客户端已观察到服务端二段跳速度，实体={}", player.getId());
         }
         if (initialSelfSync && keyInjected && serverVelocityObserved && !keyMarkerWritten) {
             writeKeyMarker(player);
