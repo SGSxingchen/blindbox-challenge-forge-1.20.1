@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-P1 的盲盒、打包、全局奖池、事务隔离与调试命令，P2 的 50 项基础物品族，以及 P3 的持久能力、抱枕投掷与返航剪刀均已完成代码验收。P3 验收提交 `ac940e476a9ee19de5724825562460193be38748` 的质量、专服、强杀恢复、单客户端、双客户端和汇总门禁全绿；范围与证据见 [P3_IMPLEMENTATION.md](docs/P3_IMPLEMENTATION.md)、[P3_ACCEPTANCE.md](docs/P3_ACCEPTANCE.md)。下一阶段仅保留 P4 的落盘准备，待 P3 归档工单关闭后才开始生产实现。原始资料在 `source-package/`，不得修改或删除；原压缩包备份在 `archive/`。
+P1 的盲盒、打包、全局奖池、事务隔离与调试命令，P2 的 50 项基础物品族，以及 P3 的持久能力、抱枕投掷与返航剪刀均已验收归档；P3 最终六门禁证据见 [P3_IMPLEMENTATION.md](docs/P3_IMPLEMENTATION.md)、[P3_ACCEPTANCE.md](docs/P3_ACCEPTANCE.md)。本仓库现进入 P4 交互、传送与在线音频开发，范围与实施进度见 [P4_IMPLEMENTATION.md](docs/P4_IMPLEMENTATION.md)，验收要求见 [P4_ACCEPTANCE.md](docs/P4_ACCEPTANCE.md)，准备裁决见 [P4_PREPARATION.md](docs/P4_PREPARATION.md)。原始资料在 `source-package/`，不得修改或删除；原压缩包备份在 `archive/`。
 
 ## 规划文档
 
@@ -16,5 +16,7 @@ P1 的盲盒、打包、全局奖池、事务隔离与调试命令，P2 的 50 �
 * [P3 持久能力、抱枕投掷与返航剪刀实施记录](docs/P3_IMPLEMENTATION.md)
 * [P3 持久能力、抱枕投掷与返航剪刀验收矩阵](docs/P3_ACCEPTANCE.md)
 * [P4 交互、传送与在线音频准备记录](docs/P4_PREPARATION.md)
+* [P4 交互、传送与在线音频实施记录](docs/P4_IMPLEMENTATION.md)
+* [P4 交互、传送与在线音频验收矩阵](docs/P4_ACCEPTANCE.md)
 
 后续新增或变更功能时，必须同步更新对应文档与本索引；所有代码、提交信息和工程文档使用中文。
