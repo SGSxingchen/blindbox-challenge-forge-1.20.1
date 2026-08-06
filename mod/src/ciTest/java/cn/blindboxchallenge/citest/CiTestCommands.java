@@ -849,13 +849,18 @@ public final class CiTestCommands {
         }
         net.minecraft.server.level.ServerLevel level = player.serverLevel();
         net.minecraft.core.BlockPos fluidPos = player.blockPosition().offset(0, 3, -4);
-        net.minecraft.core.BlockPos pourPos = fluidPos.north();
+        // 玩家从南侧朝北进行真实 POV Clip。清出完整射线路径；命中方块南侧才是原版倒水落点。
+        net.minecraft.core.BlockPos pourPos = fluidPos.south();
+        net.minecraft.core.BlockPos rayPos2 = fluidPos.south(2);
+        net.minecraft.core.BlockPos rayPos3 = fluidPos.south(3);
         // 岩浆夹具与真实倒水区域分离，避免原版相邻水/岩浆反应篡改待测源方块。
         net.minecraft.core.BlockPos lavaPos = fluidPos.east(4);
         net.minecraft.core.BlockPos cheerPos = fluidPos.east(2);
         net.minecraft.core.BlockPos cheerSupport = cheerPos.below();
         net.minecraft.world.level.block.state.BlockState oldFluid = level.getBlockState(fluidPos);
         net.minecraft.world.level.block.state.BlockState oldPour = level.getBlockState(pourPos);
+        net.minecraft.world.level.block.state.BlockState oldRay2 = level.getBlockState(rayPos2);
+        net.minecraft.world.level.block.state.BlockState oldRay3 = level.getBlockState(rayPos3);
         net.minecraft.world.level.block.state.BlockState oldLava = level.getBlockState(lavaPos);
         net.minecraft.world.level.block.state.BlockState oldCheer = level.getBlockState(cheerPos);
         net.minecraft.world.level.block.state.BlockState oldCheerSupport = level.getBlockState(cheerSupport);
@@ -869,6 +874,9 @@ public final class CiTestCommands {
             ItemStack bath = new ItemStack(ModItems.BATH_BUCKET.get());
             if (bath.getMaxDamage() != 10) throw new IllegalStateException("bath bucket durability is not ten");
             player.setItemInHand(InteractionHand.MAIN_HAND, bath);
+            level.setBlock(pourPos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+            level.setBlock(rayPos2, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+            level.setBlock(rayPos3, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
             level.setBlock(fluidPos, net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 3);
             if (!level.getBlockState(fluidPos).getFluidState().isSource()
                     || !bath.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
@@ -917,6 +925,8 @@ public final class CiTestCommands {
         } finally {
             level.setBlock(fluidPos, oldFluid, 3);
             level.setBlock(pourPos, oldPour, 3);
+            level.setBlock(rayPos2, oldRay2, 3);
+            level.setBlock(rayPos3, oldRay3, 3);
             level.setBlock(lavaPos, oldLava, 3);
             level.setBlock(cheerPos, oldCheer, 3);
             level.setBlock(cheerSupport, oldCheerSupport, 3);
