@@ -863,17 +863,19 @@ public final class CiTestCommands {
         float oldYaw = player.getYRot(), oldPitch = player.getXRot();
         try {
             // 眼高落在水源方块内部，朝正北的真实射线必经 fluidPos。
-            player.setPos(fluidPos.getX() + 0.5D, fluidPos.getY() - 1.0D, fluidPos.getZ() + 3.5D);
-            player.setYRot(180.0F);
-            player.setXRot(0.0F);
+            player.teleportTo(level, fluidPos.getX() + 0.5D, fluidPos.getY() - 1.0D, fluidPos.getZ() + 3.5D,
+                    180.0F, 0.0F);
 
             ItemStack bath = new ItemStack(ModItems.BATH_BUCKET.get());
             if (bath.getMaxDamage() != 10) throw new IllegalStateException("bath bucket durability is not ten");
             player.setItemInHand(InteractionHand.MAIN_HAND, bath);
             level.setBlock(fluidPos, net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 3);
-            if (!bath.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
+            if (!level.getBlockState(fluidPos).getFluidState().isSource()
+                    || !bath.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
                     || RestrictedFluidContainerItem.getContainedFluid(bath) != net.minecraft.world.level.material.Fluids.WATER) {
-                throw new IllegalStateException("bath bucket did not retain water in its own stack");
+                throw new IllegalStateException("bath bucket water fixture failed: source="
+                        + level.getBlockState(fluidPos).getFluidState().isSource() + ", contained="
+                        + RestrictedFluidContainerItem.getContainedFluid(bath));
             }
 
             level.setBlock(fluidPos, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
@@ -882,7 +884,8 @@ public final class CiTestCommands {
                 throw new IllegalStateException("bath bucket did not use vanilla-safe emptying semantics");
             }
 
-            player.setPos(lavaPos.getX() + 0.5D, lavaPos.getY() - 1.0D, lavaPos.getZ() + 3.5D);
+            player.teleportTo(level, lavaPos.getX() + 0.5D, lavaPos.getY() - 1.0D, lavaPos.getZ() + 3.5D,
+                    180.0F, 0.0F);
             level.setBlock(lavaPos, net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState(), 3);
             if (!bath.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
                     || bath.getDamageValue() != 1
@@ -917,9 +920,7 @@ public final class CiTestCommands {
             level.setBlock(lavaPos, oldLava, 3);
             level.setBlock(cheerPos, oldCheer, 3);
             level.setBlock(cheerSupport, oldCheerSupport, 3);
-            player.setPos(oldX, oldY, oldZ);
-            player.setYRot(oldYaw);
-            player.setXRot(oldPitch);
+            player.teleportTo(level, oldX, oldY, oldZ, oldYaw, oldPitch);
             player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         }
     }
