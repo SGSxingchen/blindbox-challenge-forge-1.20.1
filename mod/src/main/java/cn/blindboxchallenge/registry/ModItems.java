@@ -19,7 +19,6 @@ import net.minecraft.world.item.ElytraItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.Tiers;
-import net.minecraft.world.item.TotemItem;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -62,7 +61,7 @@ public final class ModItems {
     public static final RegistryObject<Item> EGGY_EYE_MASK = ITEMS.register("eggy_eye_mask",
             () -> new EggyEyeMaskItem(ArmorMaterials.LEATHER));
     public static final RegistryObject<Item> WENXU_STANDEE = ITEMS.register("wenxu_standee",
-            () -> new TotemItem(new Item.Properties().stacksTo(1)));
+            () -> new Item(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> CAT_DOLL = ITEMS.register("cat_doll", ModItems::collectible);
     public static final RegistryObject<Item> FACE_MASK = ITEMS.register("face_mask",
             () -> new ArmorItem(ArmorMaterials.LEATHER, ArmorItem.Type.HELMET, new Item.Properties()));
