@@ -87,9 +87,19 @@ public final class CiTestCommands {
 
     /** P2 首批基础物品的服务端语义断言；由两个真实客户端在线的专服执行。 */
     private static int runP2Business(CommandSourceStack source) {
+        ServerPlayer player = null;
+        ItemStack originalMainHand = ItemStack.EMPTY;
+        ItemStack originalOffhand = ItemStack.EMPTY;
+        float originalHealth = 0.0F;
+        List<net.minecraft.world.effect.MobEffectInstance> originalEffects = List.of();
         try {
-            ServerPlayer player = source.getServer().getPlayerList().getPlayerByName("BlindBoxAlice");
+            player = source.getServer().getPlayerList().getPlayerByName("BlindBoxAlice");
             if (player == null) throw new IllegalStateException("Alice not online for P2 suite");
+            // 此套件在 P1 多人资产守恒断言之后运行，绝不能覆盖主副手中的真实业务产物。
+            originalMainHand = player.getMainHandItem().copy();
+            originalOffhand = player.getOffhandItem().copy();
+            originalHealth = player.getHealth();
+            originalEffects = player.getActiveEffects().stream().map(net.minecraft.world.effect.MobEffectInstance::new).toList();
 
             assertFood(ModItems.TRUFFLE_HAM_CRACKER.get(), 2, 0.1F);
             assertFood(ModItems.SUN_CANDY.get(), 2, 0.1F);
@@ -191,6 +201,15 @@ public final class CiTestCommands {
             source.sendFailure(Component.literal("CI P2 业务失败：" + exception.getClass().getSimpleName()));
             CiTestProbe.LOGGER.error("Cannot run P2 business suite", exception);
             return 0;
+        } finally {
+            if (player != null) {
+                player.setItemInHand(InteractionHand.MAIN_HAND, originalMainHand);
+                player.setItemInHand(InteractionHand.OFF_HAND, originalOffhand);
+                player.removeAllEffects();
+                for (net.minecraft.world.effect.MobEffectInstance effect : originalEffects) player.addEffect(effect);
+                player.setHealth(Math.min(originalHealth, player.getMaxHealth()));
+                player.containerMenu.broadcastChanges();
+            }
         }
     }
 
