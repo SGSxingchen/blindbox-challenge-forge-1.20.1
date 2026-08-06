@@ -137,6 +137,26 @@ public final class CiTestCommands {
             ItemStack lighter = new ItemStack(ModItems.LIGHTER.get());
             if (lighter.getMaxDamage() != 64) throw new IllegalStateException("lighter durability is not vanilla flint-and-steel durability");
 
+            ItemStack fairyWand = new ItemStack(ModItems.FAIRY_WAND.get());
+            double fairyDamage = attributeTotal(ModItems.FAIRY_WAND.get(), net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+            double fairySpeed = attributeTotal(ModItems.FAIRY_WAND.get(), net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED);
+            double fairyKnockback = attributeTotal(ModItems.FAIRY_WAND.get(), net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_KNOCKBACK);
+            if (fairyWand.getMaxDamage() != net.minecraft.world.item.Tiers.WOOD.getUses()
+                    || Double.compare(fairyDamage, 3.0D) != 0
+                    || Double.compare(fairySpeed, -2.4D) != 0
+                    || Double.compare(fairyKnockback, 2.0D) != 0) {
+                throw new IllegalStateException("fairy wand lacks wooden-sword and knockback-II semantics");
+            }
+
+            ItemStack sharkDagger = new ItemStack(ModItems.SHARK_DAGGER_PILLOW.get());
+            double sharkDamage = attributeTotal(ModItems.SHARK_DAGGER_PILLOW.get(), net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+            double sharkSpeed = attributeTotal(ModItems.SHARK_DAGGER_PILLOW.get(), net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED);
+            if (sharkDagger.getMaxDamage() != net.minecraft.world.item.Tiers.STONE.getUses()
+                    || Double.compare(sharkDamage, 4.0D) != 0
+                    || Double.compare(sharkSpeed, -2.4D) != 0) {
+                throw new IllegalStateException("shark dagger pillow differs from vanilla stone-sword semantics");
+            }
+
             source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P2_BUSINESS=success"), false);
             return 1;
         } catch (Exception exception) {
@@ -144,6 +164,11 @@ public final class CiTestCommands {
             CiTestProbe.LOGGER.error("Cannot run P2 business suite", exception);
             return 0;
         }
+    }
+
+    private static double attributeTotal(net.minecraft.world.item.Item item, net.minecraft.world.entity.ai.attributes.Attribute attribute) {
+        return item.getDefaultAttributeModifiers(net.minecraft.world.entity.EquipmentSlot.MAINHAND)
+                .get(attribute).stream().mapToDouble(net.minecraft.world.entity.ai.attributes.AttributeModifier::getAmount).sum();
     }
 
     private static void assertFood(net.minecraft.world.item.Item item, int nutrition, float saturation) {
