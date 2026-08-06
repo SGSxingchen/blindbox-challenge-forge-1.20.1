@@ -38,6 +38,8 @@ public final class P3AbilityCiScenario {
     /** 先让真实客户端在平台上收到自身 S2C，再释放为腾空，避免网络到达与落地窗口竞争。 */
     private static final int SELF_SYNC_SETTLE_TICKS = 20;
     private static final int TRACKING_REQUEST_TICKS = 40;
+    /** 约一秒真实下落窗口；干草块同时保证失败时不以摔死掩盖 C2S 物理校验。 */
+    private static final int AIR_JUMP_DROP_BLOCKS = 20;
     private static ActiveScenario active;
 
     private P3AbilityCiScenario() {
@@ -229,8 +231,8 @@ public final class P3AbilityCiScenario {
             // 先让 Bob 离开追踪范围并等待服务器实际撤销追踪，再学习；因此 Bob 的 true 快照只能来自随后真实 StartTracking。
             double x = Math.floor(alice.getX()) + 0.5D;
             double z = Math.floor(alice.getZ()) + 0.5D;
-            // 采用短落差而非高空：平台移除后客户端有数 tick 的真实腾空时间触发 C2S，
-            // 即使客户端未及时按键也会安全落地，不会再次触发专服 anti-fly 断线。
+            // 平台移除后需要覆盖真实 S2C、KeyMapping 和 C2S 往返的腾空窗口；使用干草安全着陆，
+            // 即使按键链路异常也不会以摔死或反飞行断线掩盖真实 C2S 拒绝原因。
             aliceSupport = BlockPos.containing(x, 120.0D, z);
             bobSupport = BlockPos.containing(x + 512.0D, 120.0D, z);
             // 先让两名真实客户端站在高空临时平台，避免等待撤销追踪/同步时被专服的
@@ -241,9 +243,9 @@ public final class P3AbilityCiScenario {
             origin.setBlock(bobSupport, Blocks.STONE.defaultBlockState(), 3);
             for (int dx = -1; dx <= 3; dx++) {
                 for (int dz = -1; dz <= 3; dz++) {
-                    BlockPos landing = aliceSupport.offset(dx, -8, dz);
+                    BlockPos landing = aliceSupport.offset(dx, -AIR_JUMP_DROP_BLOCKS, dz);
                     originalLandingBlocks.put(landing, origin.getBlockState(landing));
-                    origin.setBlock(landing, Blocks.STONE.defaultBlockState(), 3);
+                    origin.setBlock(landing, Blocks.HAY_BLOCK.defaultBlockState(), 3);
                 }
             }
             alice.stopRiding();
@@ -421,7 +423,7 @@ public final class P3AbilityCiScenario {
             alice.containerMenu.broadcastChanges();
         }
 
-        /** 平台只在客户端已完成稳定追踪后移除，留出小于 anti-fly 阈值的真实腾空窗口。 */
+        /** 平台只在客户端已收到自身 S2C 后移除，留出小于 anti-fly 阈值的真实腾空窗口。 */
         private void releaseAliceForAirJump(ServerPlayer alice) {
             if (aliceSupport != null) origin.setBlock(aliceSupport, Blocks.AIR.defaultBlockState(), 3);
             alice.setOnGround(false);
