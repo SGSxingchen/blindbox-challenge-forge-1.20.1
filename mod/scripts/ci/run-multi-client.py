@@ -35,15 +35,18 @@ def stop(process):
 
 def launch(directory: Path, username: str, uuid: str, marker: Path, pillow_marker: Path, scissors_marker: Path, pig_marker: Path, release: Path, reconnect_marker: Path,
            ability_role: str, ability_self_sync_marker: Path, ability_key_marker: Path, ability_tracking_marker: Path, ability_lifecycle_marker: Path,
-           ability_recovery_marker: Path, server_recovery_marker: Path, p4_text_marker: Path, p4_death_marker: Path, chicken_marker: Path):
+           ability_recovery_marker: Path, server_recovery_marker: Path, p4_text_marker: Path, p4_death_marker: Path, chicken_marker: Path,
+           p4_music_marker_directory: Path, p4_audio_base: str):
     options = minecraft_launcher_lib.utils.generate_test_options()
-    jvm_arguments = ["-Xms768M", "-Xmx2G", "-Dblindbox.ci.multiplayerSmoke=true",
+    jvm_arguments = ["-Xms768M", "-Xmx2G", "-Dblindbox.ci.multiplayerSmoke=true", "-Dsun.net.inetaddr.ttl=0",
                      "-Dblindbox.ci.serverAddress=127.0.0.1:25565",
                      f"-Dblindbox.ci.clientMarker={marker}", f"-Dblindbox.ci.clientRelease={release}",
                      f"-Dblindbox.ci.pillowMarker={pillow_marker}",
                      f"-Dblindbox.ci.scissorsMarker={scissors_marker}",
                      f"-Dblindbox.ci.pigMarker={pig_marker}",
                      f"-Dblindbox.ci.chickenMarker={chicken_marker}",
+                     f"-Dblindbox.ci.p4MusicMarkerDir={p4_music_marker_directory}",
+                     f"-Dblindbox.ci.p4AudioBase={p4_audio_base}",
                      f"-Dblindbox.ci.reconnectMarker={reconnect_marker}",
                      "-Dblindbox.ci.serverRecovery=true",
                      f"-Dblindbox.ci.serverRecoveryMarker={server_recovery_marker}",
@@ -66,7 +69,8 @@ def launch(directory: Path, username: str, uuid: str, marker: Path, pillow_marke
         "username": username, "uuid": uuid, "token": "blindbox-ci-offline-token",
         "executablePath": shutil.which("java") or "java", "gameDirectory": str(directory),
         "disableMultiplayer": False,
-        "jvmArguments": jvm_arguments + (["-Dblindbox.ci.reconnect=true"] if username == "BlindBoxAlice" else []),
+        # Alice 在 P3 先被踢以验证重连；P4 末尾会真实踢出 Bob，两个客户端均须有同一生产 ConnectScreen 重连能力。
+        "jvmArguments": jvm_arguments + ["-Dblindbox.ci.reconnect=true"],
     })
     command = ["xvfb-run", "-a", "-s", "-screen 0 1024x576x24 +extension GLX",
                *minecraft_launcher_lib.command.get_minecraft_command(VERSION_ID, str(directory), options)]
@@ -110,6 +114,13 @@ def main():
     template = Path(sys.argv[1]).resolve()
     evidence = Path(sys.argv[2]).resolve()
     evidence.mkdir(parents=True, exist_ok=True)
+    p4_audio_base = os.environ.get("BLINDBOX_CITEST_P4_AUDIO_BASE_URL")
+    if not p4_audio_base:
+        raise RuntimeError("缺少 BLINDBOX_CITEST_P4_AUDIO_BASE_URL")
+    for stale in evidence.glob("client-*-p4-music-*.marker"):
+        stale.unlink()
+    for stage_flag in (evidence / "p4-music-cache-enabled.flag", evidence / "p4-music-network-restored.flag"):
+        stage_flag.unlink(missing_ok=True)
     release = evidence / "release-clients.marker"
     release.unlink(missing_ok=True)
     clients = []
@@ -128,6 +139,7 @@ def main():
             p4_text_marker = evidence / "client-1-p4-text-observed.marker" if username == "BlindBoxAlice" else None
             p4_death_marker = evidence / "client-2-p4-death-observed.marker" if username == "BlindBoxBob" else None
             chicken_marker = evidence / f"client-{index}-p4-chicken-observed.marker"
+            p4_music_marker_directory = evidence
             ability_self_sync_marker = evidence / "client-1-p3-ability-self-sync.marker" if username == "BlindBoxAlice" else None
             ability_key_marker = evidence / "client-1-p3-ability-key.marker" if username == "BlindBoxAlice" else None
             ability_tracking_marker = evidence / "client-2-p3-ability-tracking.marker" if username == "BlindBoxBob" else None
@@ -150,7 +162,8 @@ def main():
             clients.append((*launch(directory, username, uuid, marker, pillow_marker, scissors_marker, pig_marker, release, reconnect_marker,
                                     "alice" if username == "BlindBoxAlice" else "bob", ability_self_sync_marker, ability_key_marker,
                                     ability_tracking_marker, ability_lifecycle_marker, ability_recovery_marker,
-                                    recovery_connection_marker, p4_text_marker, p4_death_marker, chicken_marker), marker, pillow_marker, scissors_marker, pig_marker, username, uuid, directory,
+                                    recovery_connection_marker, p4_text_marker, p4_death_marker, chicken_marker,
+                                    p4_music_marker_directory, p4_audio_base), marker, pillow_marker, scissors_marker, pig_marker, username, uuid, directory,
                             recovery_connection_marker))
             # 先由 Alice 完成真实握手和稳定联机，再启动 Bob，规避专服登录层的瞬时并发错误。
             # 两个客户端在业务探针、强杀恢复和最终正常退出阶段仍全程同时在线。

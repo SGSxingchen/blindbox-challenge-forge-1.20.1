@@ -9,6 +9,9 @@ INSTALLER="forge-${MC_VERSION}-${FORGE_VERSION}-installer.jar"
 FORMAL="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*.jar' ! -name '*-sources.jar' ! -name '*-citest.jar' -print -quit)"
 CITEST="build/libs/blindboxchallenge-0.1.0-p1-citest.jar"
 test -n "${GITHUB_ACTIONS:-}"
+: "${GITHUB_REPOSITORY:?真实在线音频 CI 缺少 GitHub 仓库名}"
+: "${GITHUB_SHA:?真实在线音频 CI 缺少提交 SHA}"
+export BLINDBOX_CITEST_P4_AUDIO_BASE_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/mod/src/ciTest/resources/ci-audio"
 test -f "${FORMAL}" && test -f "${CITEST}"
 rm -rf "${SERVER_DIR}" "${CLIENT_TEMPLATE}" "${EVIDENCE}" build/ci-client-1 build/ci-client-2
 mkdir -p "${SERVER_DIR}" "${EVIDENCE}"
@@ -29,12 +32,13 @@ curl --fail --location --retry 3 --connect-timeout 20 -o "${SERVER_DIR}/${INSTAL
  mkdir -p mods
  cp "../../${FORMAL}" "../../${CITEST}" mods/
  mkfifo server.stdin
- BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_SCISSORS_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_PIG_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_MARKER_DIR="${EVIDENCE_ABS}" \
+ BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_SCISSORS_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_PIG_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_AUDIO_BASE_URL="${BLINDBOX_CITEST_P4_AUDIO_BASE_URL}" \
    setsid ./run.sh nogui < server.stdin > server.log 2>&1 & echo $! > server.pid
 )
 SERVER_PID="$(cat "${SERVER_DIR}/server.pid")"
 exec 3>"${SERVER_DIR}/server.stdin"
 cleanup() {
+  [ -f "${HOSTS_BACKUP:-}" ] && sudo cp "${HOSTS_BACKUP}" /etc/hosts 2>/dev/null || true
   exec 3>&- 2>/dev/null || true
   kill -KILL -- "-${SERVER_PID}" 2>/dev/null || true
   [ -n "${CLIENT_PID:-}" ] && kill "${CLIENT_PID}" 2>/dev/null || true
@@ -233,7 +237,7 @@ wait "${SERVER_PID}" 2>/dev/null || true
  cd "${SERVER_DIR}"
  rm -f server.stdin
  mkfifo server.stdin
- BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_SCISSORS_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_PIG_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_MARKER_DIR="${EVIDENCE_ABS}" \
+ BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_SCISSORS_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_PIG_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_AUDIO_BASE_URL="${BLINDBOX_CITEST_P4_AUDIO_BASE_URL}" \
    setsid ./run.sh nogui < server.stdin > server.log 2>&1 & echo $! > server.pid
 )
 SERVER_PID="$(cat "${SERVER_DIR}/server.pid")"
@@ -343,6 +347,73 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_MUSIC_NEGATIVE=success' "${SERVER_DIR}/server.log"
+# 八音盒正向路径必须由 Alice 的真实方块右键、生产 MusicBoxScreen 与 C2S 配置开始；两客户端仅在
+# SoundEngine 实际 read 到 PCM 后各自写 marker。服务器不会直调播放服务或伪造网络包。
+printf 'blindboxcitest start_p4_music_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P4_MUSIC_STARTED=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_MUSIC_STARTED=success' "${SERVER_DIR}/server.log"
+for _ in $(seq 1 180); do
+  if grep -q 'BLINDBOX_CITEST_P4_MUSIC=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P4_MUSIC_OGG_FIRST=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_MUSIC_OGG_FIRST=success' "${SERVER_DIR}/server.log"
+# 这是测试阶段开关而非成功 marker：在初次真实 OGG 下载后把 raw 域名解析为回环地址。下一次
+# 同 URL 播放只有先命中并复验本地 SHA 缓存才能到达 PCM read；缓存漏失会被生产公网策略拒绝。
+HOSTS_BACKUP="${EVIDENCE}/hosts-before-p4-music"
+sudo cp /etc/hosts "${HOSTS_BACKUP}"
+printf '127.0.0.1 raw.githubusercontent.com\n::1 raw.githubusercontent.com\n' | sudo tee -a /etc/hosts >/dev/null
+touch "${EVIDENCE}/p4-music-cache-enabled.flag"
+for _ in $(seq 1 180); do
+  if grep -q 'BLINDBOX_CITEST_P4_MUSIC=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P4_MUSIC_CACHE=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_MUSIC_CACHE=success' "${SERVER_DIR}/server.log"
+sudo cp "${HOSTS_BACKUP}" /etc/hosts
+rm -f "${HOSTS_BACKUP}"
+HOSTS_BACKUP=""
+touch "${EVIDENCE}/p4-music-network-restored.flag"
+for _ in $(seq 1 180); do
+  if grep -q 'BLINDBOX_CITEST_P4_MUSIC=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P4_MUSIC_MP3=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_MUSIC_MP3=success' "${SERVER_DIR}/server.log"
+for _ in $(seq 1 180); do
+  if grep -q 'BLINDBOX_CITEST_P4_MUSIC=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P4_MUSIC_FAILURE=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_MUSIC_FAILURE=success' "${SERVER_DIR}/server.log"
+# 新登录的 Bob 只经生产 ConnectScreen 重连；客户端监听 80 tick 期间不得收到历史播放事件。
+printf 'kick BlindBoxBob blindbox-p4-music-no-replay\n' >&3
+for _ in $(seq 1 180); do
+  [ -f "${EVIDENCE}/client-2-reconnected.marker" ] && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+test -f "${EVIDENCE}/client-2-reconnected.marker"
+for _ in $(seq 1 120); do
+  if grep -q 'BLINDBOX_CITEST_P4_MUSIC=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P4_MUSIC_CLIENTS=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_MUSIC_CLIENTS=success' "${SERVER_DIR}/server.log"
+printf 'blindboxcitest cleanup_p4_music_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P4_MUSIC_CLEANUP=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_MUSIC_CLEANUP=success' "${SERVER_DIR}/server.log"
 # P4 小黄鸡必须由正式 Item#use 武装；两个客户端真实跟踪同一实体/Fuse 后，服务端等待默认
 # 1200 tick 倒计时结束并只接受一次以该实体为 exploder 的 TNT 语义爆炸。
 printf 'blindboxcitest start_p4_chicken\n' >&3

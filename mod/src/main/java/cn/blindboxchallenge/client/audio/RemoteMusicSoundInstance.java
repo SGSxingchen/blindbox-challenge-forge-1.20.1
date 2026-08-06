@@ -18,6 +18,7 @@ final class RemoteMusicSoundInstance extends AbstractSoundInstance {
     private final UUID eventId;
     private final RemoteAudioDownload.Kind kind;
     private final boolean cacheHit;
+    private final net.minecraft.core.BlockPos source;
 
     private RemoteMusicSoundInstance(BufferedAudioStream audio, net.minecraft.core.BlockPos source, UUID eventId,
                                      RemoteAudioDownload.Kind kind, boolean cacheHit) {
@@ -26,6 +27,7 @@ final class RemoteMusicSoundInstance extends AbstractSoundInstance {
         this.eventId = eventId;
         this.kind = kind;
         this.cacheHit = cacheHit;
+        this.source = source.immutable();
         x = source.getX() + 0.5D;
         y = source.getY() + 0.5D;
         z = source.getZ() + 0.5D;
@@ -58,5 +60,6 @@ final class RemoteMusicSoundInstance extends AbstractSoundInstance {
     UUID eventId() { return eventId; }
     RemoteAudioDownload.Kind kind() { return kind; }
     boolean cacheHit() { return cacheHit; }
+    net.minecraft.core.BlockPos source() { return source; }
     void discard() { audio.close(); }
 }

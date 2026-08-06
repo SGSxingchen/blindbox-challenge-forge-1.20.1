@@ -2,6 +2,7 @@ package cn.blindboxchallenge.client.audio;
 
 import cn.blindboxchallenge.BlindBoxChallenge;
 import cn.blindboxchallenge.event.MusicBoxPlaybackEvent;
+import cn.blindboxchallenge.event.MusicBoxPlaybackFailedEvent;
 import cn.blindboxchallenge.service.AudioUrlPolicy;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -14,6 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -74,7 +76,10 @@ public final class ClientMusicService {
         }))
                 .exceptionally(exception -> {
                     releaseSlot.run();
-                    Minecraft.getInstance().execute(() -> clientMessage("message.blindboxchallenge.music_box_download_failed"));
+                    Minecraft.getInstance().execute(() -> {
+                        MinecraftForge.EVENT_BUS.post(new MusicBoxPlaybackFailedEvent(event.eventId(), normalized, event.source()));
+                        clientMessage("message.blindboxchallenge.music_box_download_failed");
+                    });
                     return null;
                 });
     }
