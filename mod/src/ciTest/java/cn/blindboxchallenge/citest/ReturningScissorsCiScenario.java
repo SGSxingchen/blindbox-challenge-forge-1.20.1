@@ -46,7 +46,9 @@ import net.minecraftforge.fml.common.Mod;
  */
 @Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class ReturningScissorsCiScenario {
-    private static final int OBSERVATION_TICKS = 100;
+    // 必须小于生产实体的 100 tick 自动返航阈值；观察窗口只用于等真实客户端收到出生同步，
+    // 不能把“未命中自动返航”错误地当成命中返航。
+    private static final int OBSERVATION_TICKS = 60;
     private static final int RESULT_TIMEOUT_TICKS = 220;
     private static final String NORMAL_TOKEN = "normal-hit-return";
     private static final String FULL_TOKEN = "full-inventory-fallback";
