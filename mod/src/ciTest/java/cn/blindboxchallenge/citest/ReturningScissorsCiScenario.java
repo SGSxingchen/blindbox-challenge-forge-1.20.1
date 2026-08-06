@@ -263,7 +263,7 @@ public final class ReturningScissorsCiScenario {
         private void activateNormalHit() {
             // 将真实猪目标放到下一段精确扫掠路径的中心，避免冻结观察后由随机实体碰撞形状
             // 造成“超时自动返航”误代替实体命中；目标仍由生产 AbstractArrow 碰撞代码命中。
-            normalTarget = createTarget(minecraftEntity(normalScissors).position().add(0.0D, 0.0D, 1.0D));
+            normalTarget = createTarget(minecraftEntity(normalScissors).position().add(0.0D, 0.0D, 0.15D));
             expectedTargetId = normalTarget.getUUID();
             normalTargetHealth = normalTarget.getHealth();
             // 保持真实投掷入口产生的实体，只在双端观察窗结束后调整其物理位置/速度来稳定命中时序。
@@ -302,7 +302,7 @@ public final class ReturningScissorsCiScenario {
             // releaseUsing 后的第 0 格会空出；立刻填满它，确保回收只能走主人位置掉落兜底而不能进背包。
             alice.getInventory().setItem(0, new ItemStack(Items.COBBLESTONE, 64));
             freezeForObservation(fullScissors);
-            fullTarget = createTarget(minecraftEntity(fullScissors).position().add(0.0D, 0.0D, 1.0D));
+            fullTarget = createTarget(minecraftEntity(fullScissors).position().add(0.0D, 0.0D, 0.15D));
             minecraftEntity(fullScissors).setNoGravity(true);
             minecraftEntity(fullScissors).setDeltaMovement(new Vec3(0.0D, 0.0D, 0.5D));
             alice.teleportTo(level, base.getX() + 0.5D, base.getY() + 1.0D, base.getZ() - 12.5D, 0.0F, 0.0F);
