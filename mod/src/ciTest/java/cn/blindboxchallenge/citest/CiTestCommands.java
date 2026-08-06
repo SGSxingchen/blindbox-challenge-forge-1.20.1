@@ -41,6 +41,7 @@ public final class CiTestCommands {
                 .then(Commands.literal("export").executes(context -> export(context.getSource())))
                 .then(Commands.literal("seed_recovery_fixture").executes(context -> seedRecoveryFixture(context.getSource())))
                 .then(Commands.literal("run_multi_business").executes(context -> runMultiBusiness(context.getSource())))
+                .then(Commands.literal("run_p2_business").executes(context -> runP2Business(context.getSource())))
                 .then(Commands.literal("prepare_reconnect").executes(context -> prepareReconnect(context.getSource())))
                 .then(Commands.literal("verify_reconnect").executes(context -> verifyReconnect(context.getSource()))));
     }
@@ -81,6 +82,81 @@ public final class CiTestCommands {
             source.sendFailure(Component.literal("CI 重连验证失败：" + exception.getClass().getSimpleName()));
             CiTestProbe.LOGGER.error("Cannot verify reconnect suite", exception);
             return 0;
+        }
+    }
+
+    /** P2 首批基础物品的服务端语义断言；由两个真实客户端在线的专服执行。 */
+    private static int runP2Business(CommandSourceStack source) {
+        try {
+            ServerPlayer player = source.getServer().getPlayerList().getPlayerByName("BlindBoxAlice");
+            if (player == null) throw new IllegalStateException("Alice not online for P2 suite");
+
+            assertFood(ModItems.TRUFFLE_HAM_CRACKER.get(), 2, 0.1F);
+            assertFood(ModItems.SUN_CANDY.get(), 2, 0.1F);
+            assertFood(ModItems.POTATO_SNACK.get(), 8, 0.8F);
+            assertFood(ModItems.RATION_PACK.get(), 20, 1.0F);
+
+            ItemStack adrenaline = new ItemStack(ModItems.ADRENALINE.get(), 2);
+            ModItems.ADRENALINE.get().finishUsingItem(adrenaline, player.serverLevel(), player);
+            if (adrenaline.getCount() != 1) throw new IllegalStateException("adrenaline was not consumed exactly once");
+            assertEffect(player, net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED, 1, 590);
+            assertEffect(player, net.minecraft.world.effect.MobEffects.DAMAGE_BOOST, 1, 590);
+            assertEffect(player, net.minecraft.world.effect.MobEffects.REGENERATION, 3, 590);
+            player.removeAllEffects();
+
+            ItemStack totem = new ItemStack(ModItems.RAT_JERKY_TOTEM.get());
+            player.setItemInHand(InteractionHand.OFF_HAND, totem);
+            player.setHealth(0.5F);
+            LivingDeathEvent death = new LivingDeathEvent(player, player.damageSources().generic());
+            ServerLifecycleEvents.death(death);
+            if (!death.isCanceled() || !totem.isEmpty() || player.getHealth() != 1.0F) {
+                throw new IllegalStateException("rat jerky did not preserve vanilla-totem semantics");
+            }
+            assertEffect(player, net.minecraft.world.effect.MobEffects.REGENERATION, 1, 890);
+            assertEffect(player, net.minecraft.world.effect.MobEffects.ABSORPTION, 1, 90);
+            assertEffect(player, net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE, 0, 790);
+            player.removeAllEffects();
+            player.setHealth(player.getMaxHealth());
+            player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+
+            ItemStack screwdriver = new ItemStack(ModItems.LONG_SCREWDRIVER.get());
+            double reach = ModItems.LONG_SCREWDRIVER.get().getDefaultAttributeModifiers(net.minecraft.world.entity.EquipmentSlot.MAINHAND)
+                    .get(net.minecraftforge.common.ForgeMod.ENTITY_REACH.get()).stream().mapToDouble(net.minecraft.world.entity.ai.attributes.AttributeModifier::getAmount).sum();
+            if (reach != 1.0D || screwdriver.getMaxDamage() != net.minecraft.world.item.Tiers.IRON.getUses()) {
+                throw new IllegalStateException("long screwdriver attributes differ from specification");
+            }
+
+            ItemStack multiTool = new ItemStack(ModItems.PICKAXE_HOE.get());
+            if (!multiTool.canPerformAction(net.minecraftforge.common.ToolActions.PICKAXE_DIG)
+                    || !multiTool.canPerformAction(net.minecraftforge.common.ToolActions.HOE_DIG)
+                    || ModItems.PICKAXE_HOE.get().getDestroySpeed(multiTool, net.minecraft.world.level.block.Blocks.IRON_ORE.defaultBlockState()) != net.minecraft.world.item.Tiers.IRON.getSpeed()
+                    || !ModItems.PICKAXE_HOE.get().isCorrectToolForDrops(net.minecraft.world.level.block.Blocks.DIAMOND_ORE.defaultBlockState())) {
+                throw new IllegalStateException("pickaxe-hoe lacks iron pickaxe/hoe semantics");
+            }
+
+            ItemStack lighter = new ItemStack(ModItems.LIGHTER.get());
+            if (lighter.getMaxDamage() != 64) throw new IllegalStateException("lighter durability is not vanilla flint-and-steel durability");
+
+            source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P2_BUSINESS=success"), false);
+            return 1;
+        } catch (Exception exception) {
+            source.sendFailure(Component.literal("CI P2 业务失败：" + exception.getClass().getSimpleName()));
+            CiTestProbe.LOGGER.error("Cannot run P2 business suite", exception);
+            return 0;
+        }
+    }
+
+    private static void assertFood(net.minecraft.world.item.Item item, int nutrition, float saturation) {
+        net.minecraft.world.food.FoodProperties food = item.getFoodProperties();
+        if (food == null || food.getNutrition() != nutrition || Float.compare(food.getSaturationModifier(), saturation) != 0) {
+            throw new IllegalStateException("food properties mismatch for " + item);
+        }
+    }
+
+    private static void assertEffect(ServerPlayer player, net.minecraft.world.effect.MobEffect effect, int amplifier, int minimumDuration) {
+        net.minecraft.world.effect.MobEffectInstance instance = player.getEffect(effect);
+        if (instance == null || instance.getAmplifier() != amplifier || instance.getDuration() < minimumDuration) {
+            throw new IllegalStateException("effect mismatch: " + effect);
         }
     }
 
