@@ -182,10 +182,10 @@ public final class ClockworkChickenCiScenario {
             if (chickens.size() != 1) throw new IllegalStateException("生产 Item#use 未生成唯一小黄鸡实体");
             ClockworkChickenEntity chicken = chickens.get(0);
             if (!alice.getUUID().equals(chicken.ownerUuid()) || chicken.armedGameTime() != startedAt
-                    || chicken.getFuse() != armedFuse || chicken.explosionPower() != armedPower) {
+                    || chicken.fuse() != armedFuse || chicken.explosionPower() != armedPower) {
                 throw new IllegalStateException("小黄鸡武装字段与服务端配置不一致");
             }
-            chickenId = chicken.getUUID();
+            chickenId = chicken.stableEntityId();
         }
 
         private void tick() throws IOException {
@@ -195,7 +195,7 @@ public final class ClockworkChickenCiScenario {
                 if (Files.isRegularFile(aliceMarker) && Files.isRegularFile(bobMarker)) {
                     verifyObservationMarkers();
                     if (!(level.getEntity(chickenId) instanceof ClockworkChickenEntity chicken)
-                            || chicken.getFuse() <= 0 || chicken.getFuse() >= armedFuse) {
+                            || chicken.fuse() <= 0 || chicken.fuse() >= armedFuse) {
                         throw new IllegalStateException("客户端观察前小黄鸡 Fuse 未按真实服务端 tick 递减");
                     }
                     // 两人已实际跟踪同一实体后才移至爆炸安全距离，绝不由脚本预写观察结果。
@@ -221,7 +221,7 @@ public final class ClockworkChickenCiScenario {
         private void observeExplosion(ExplosionEvent.Detonate event) {
             if (phase != Phase.WAITING_FOR_EXPLOSION || chickenId == null) return;
             if (!(event.getExplosion().getExploder() instanceof ClockworkChickenEntity chicken)
-                    || !chickenId.equals(chicken.getUUID())) return;
+                    || !chickenId.equals(chicken.stableEntityId())) return;
             if (chicken.explosionPower() != armedPower) {
                 fail(new IllegalStateException("爆炸时小黄鸡未保留武装威力"));
                 return;

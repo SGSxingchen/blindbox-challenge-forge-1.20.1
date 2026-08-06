@@ -28,9 +28,9 @@ public final class CiClientClockworkChickenObservation {
         if (minecraft.level == null || minecraft.player == null || minecraft.getConnection() == null) return;
         AABB viewingArea = minecraft.player.getBoundingBox().inflate(96.0D);
         for (ClockworkChickenEntity chicken : minecraft.level.getEntitiesOfClass(ClockworkChickenEntity.class, viewingArea)) {
-            int fuse = chicken.getFuse();
+            int fuse = chicken.fuse();
             if (fuse <= 0) continue;
-            writeMarker(Path.of(configured).toAbsolutePath(), chicken.getUUID(), minecraft.player.getUUID(), fuse);
+            writeMarker(Path.of(configured).toAbsolutePath(), chicken.stableEntityId(), minecraft.player.getUUID(), fuse);
             written = true;
             return;
         }

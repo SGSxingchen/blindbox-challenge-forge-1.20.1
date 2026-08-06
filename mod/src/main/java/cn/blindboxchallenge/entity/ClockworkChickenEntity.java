@@ -5,6 +5,7 @@ import cn.blindboxchallenge.registry.ModEntities;
 import cn.blindboxchallenge.registry.ModItems;
 import java.util.UUID;
 import javax.annotation.Nullable;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -34,7 +35,7 @@ public final class ClockworkChickenEntity extends PrimedTnt implements ItemSuppl
     public ClockworkChickenEntity(Level level, LivingEntity owner) {
         this(level, owner.getUUID(), level.getGameTime(), ModServerConfig.CLOCKWORK_CHICKEN_FUSE_TICKS.get(),
                 ModServerConfig.CLOCKWORK_CHICKEN_EXPLOSION_POWER.get());
-        setPos(owner.getX(), owner.getY() + 0.2D, owner.getZ());
+        super.setPos(owner.getX(), owner.getY() + 0.2D, owner.getZ());
     }
 
     /**
@@ -46,17 +47,22 @@ public final class ClockworkChickenEntity extends PrimedTnt implements ItemSuppl
         this.ownerUuid = ownerUuid;
         this.armedGameTime = armedGameTime;
         this.explosionPower = explosionPower;
-        setFuse(fuse);
+        super.setFuse(fuse);
     }
 
     public long armedGameTime() { return armedGameTime; }
     public UUID ownerUuid() { return ownerUuid; }
     public int explosionPower() { return explosionPower; }
+    /** 以本模组声明的方法暴露原版同步 Fuse，供重混淆后的独立 ciTest 安全调用。 */
+    public int fuse() { return super.getFuse(); }
+    /** 独立 ciTest 不直接以本子类为 owner 调用原版 Entity 方法，避免生产重混淆后符号失配。 */
+    public UUID stableEntityId() { return super.getUUID(); }
+    public BlockPos stableBlockPosition() { return super.blockPosition(); }
 
     @Override
     protected void explode() {
-        if (!level().isClientSide) {
-            level().explode(this, getX(), getY(0.0625D), getZ(), explosionPower,
+        if (!super.level().isClientSide) {
+            super.level().explode(this, super.getX(), super.getY(0.0625D), super.getZ(), explosionPower,
                     Level.ExplosionInteraction.TNT);
         }
     }
@@ -64,7 +70,7 @@ public final class ClockworkChickenEntity extends PrimedTnt implements ItemSuppl
     @Nullable
     @Override
     public LivingEntity getOwner() {
-        if (ownerUuid == null || !(level() instanceof ServerLevel serverLevel)) return null;
+        if (ownerUuid == null || !(super.level() instanceof ServerLevel serverLevel)) return null;
         Entity owner = serverLevel.getEntity(ownerUuid);
         return owner instanceof LivingEntity living ? living : null;
     }

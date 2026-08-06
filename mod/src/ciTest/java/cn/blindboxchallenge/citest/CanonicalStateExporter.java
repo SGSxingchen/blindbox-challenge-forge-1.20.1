@@ -146,15 +146,15 @@ public final class CanonicalStateExporter {
         List<Map<String, Object>> out = new ArrayList<>();
         AABB area = new AABB(level.getSharedSpawnPos()).inflate(96.0D);
         level.getEntitiesOfClass(ClockworkChickenEntity.class, area).stream()
-                .sorted(Comparator.comparing(entity -> entity.getUUID().toString()))
+                .sorted(Comparator.comparing(entity -> entity.stableEntityId().toString()))
                 .forEach(chicken -> {
                     Map<String, Object> entry = new LinkedHashMap<>();
-                    entry.put("id", chicken.getUUID().toString());
+                    entry.put("id", chicken.stableEntityId().toString());
                     entry.put("owner", chicken.ownerUuid() == null ? "" : chicken.ownerUuid().toString());
                     entry.put("armed_game_time", chicken.armedGameTime());
-                    entry.put("fuse", chicken.getFuse());
+                    entry.put("fuse", chicken.fuse());
                     entry.put("explosion_power", chicken.explosionPower());
-                    entry.put("position", chicken.blockPosition().asLong());
+                    entry.put("position", chicken.stableBlockPosition().asLong());
                     out.add(entry);
                 });
         return out;
