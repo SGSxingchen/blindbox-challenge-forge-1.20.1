@@ -94,11 +94,30 @@ public final class BlindBoxService {
         PrizeBundle bundle = data.randomBundle(player.getRandom()).orElse(null);
         if (bundle == null) return fail(player, "全局奖池为空，盲盒未消耗。");
         UUID token = ensureToken(held);
-        if (!canFitAfterOpening(player.getInventory(), held, bundle.stacks())) return fail(player, "背包空间不足，盲盒和奖池均未改变。");
+        if (!canFitAfterOpening(player.getInventory(), token, bundle.stacks())) return fail(player, "背包空间不足，盲盒和奖池均未改变。");
 
         UUID transactionId = UUID.randomUUID();
+        if (!data.reserveOpen(bundle.id(), transactionId)) return fail(player, "奖项刚被其他玩家锁定，请重新开盒。");
+        List<ItemStack> beforeMain = InventoryEvidence.copyMain(player.getInventory());
+        ItemStack beforeOffhand = player.getOffhandItem().copy();
+        int tokenSlot = findTokenSlot(beforeMain, token);
+        boolean tokenInOffhand = tokenSlot < 0 && hasToken(beforeOffhand, token);
+        if (tokenSlot < 0 && !tokenInOffhand) {
+            data.releaseOpen(bundle.id(), transactionId);
+            return fail(player, "手中盲盒状态已变化，未执行开盒。");
+        }
+        List<ItemStack> afterMain = copyStacks(beforeMain);
+        ItemStack afterOffhand = beforeOffhand.copy();
+        if (tokenInOffhand) afterOffhand.shrink(1); else afterMain.get(tokenSlot).shrink(1);
+        if (!insertAll(afterMain, bundle.stacks())) {
+            data.releaseOpen(bundle.id(), transactionId);
+            return fail(player, "背包空间不足，盲盒和奖池均未改变。");
+        }
+        CompoundTag receipts = openReceipts(tokenInOffhand ? -1 : tokenSlot, beforeMain, afterMain, beforeOffhand, afterOffhand, bundle.stacks());
+        String beforeDigest = InventoryEvidence.digest(beforeMain, beforeOffhand, player.containerMenu.getCarried());
+        String afterDigest = InventoryEvidence.digest(afterMain, afterOffhand, player.containerMenu.getCarried());
         data.prepare(TransactionRecord.createV2(transactionId, player.getUUID(), token, bundle.id(), TransactionRecord.Kind.OPEN, bundle,
-                player.level().getGameTime(), new CompoundTag(), "", ""));
+                player.level().getGameTime(), receipts, beforeDigest, afterDigest));
         held.shrink(1);
         for (ItemStack reward : bundle.stacks()) {
             if (!player.getInventory().add(reward.copy())) {
@@ -122,13 +141,14 @@ public final class BlindBoxService {
         int recovered = 0;
         int isolated = 0;
         for (TransactionRecord record : pending) {
-            if (record.schemaVersion() < TransactionRecord.CURRENT_SCHEMA || record.kind() != TransactionRecord.Kind.PACK) {
-                data.markManualReview(record.id(), player.level().getGameTime(), "legacy_or_open_recovery_not_implemented");
+            if (record.schemaVersion() < TransactionRecord.CURRENT_SCHEMA) {
+                data.markManualReview(record.id(), player.level().getGameTime(), "legacy_recovery_not_supported");
                 isolated++;
                 continue;
             }
-            PackRecoveryResult result = recoverPack(player, data, record);
-            if (result == PackRecoveryResult.RECOVERED) recovered++; else isolated++;
+            RecoveryResult result = record.kind() == TransactionRecord.Kind.PACK
+                    ? recoverPack(player, data, record) : recoverOpen(player, data, record);
+            if (result == RecoveryResult.RECOVERED) recovered++; else isolated++;
         }
         player.containerMenu.broadcastChanges();
         if (recovered > 0) player.sendSystemMessage(Component.literal("已幂等恢复 " + recovered + " 个盲盒打包事务。").withStyle(ChatFormatting.GREEN));
@@ -136,12 +156,12 @@ public final class BlindBoxService {
                 .withStyle(ChatFormatting.YELLOW));
     }
 
-    private static PackRecoveryResult recoverPack(ServerPlayer player, BlindBoxPoolSavedData data, TransactionRecord record) {
+    private static RecoveryResult recoverPack(ServerPlayer player, BlindBoxPoolSavedData data, TransactionRecord record) {
         CompoundTag receipts = record.receipts();
         ListTag sources = receipts.getList("source_receipts", net.minecraft.nbt.Tag.TAG_COMPOUND);
         if (sources.isEmpty() || !receipts.contains("token_receipt", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
             data.markManualReview(record.id(), player.level().getGameTime(), "missing_pack_receipts");
-            return PackRecoveryResult.ISOLATED;
+            return RecoveryResult.ISOLATED;
         }
         boolean allBefore = true;
         boolean allAfter = true;
@@ -150,7 +170,7 @@ public final class BlindBoxService {
             int slot = receipt.getInt("slot");
             if (slot < 0 || slot >= 36) {
                 data.markManualReview(record.id(), player.level().getGameTime(), "invalid_source_slot");
-                return PackRecoveryResult.ISOLATED;
+                return RecoveryResult.ISOLATED;
             }
             CompoundTag current = InventoryEvidence.stack(player.getInventory().getItem(slot));
             allBefore &= current.equals(receipt.getCompound("before"));
@@ -163,16 +183,16 @@ public final class BlindBoxService {
 
         if (allBefore && tokenCount == 0 && bundleAbsent) {
             data.resolveRecovery(record.id(), TransactionRecord.Stage.ROLLED_BACK, player.level().getGameTime(), "pack_before_state_intact");
-            return PackRecoveryResult.RECOVERED;
+            return RecoveryResult.RECOVERED;
         }
         if (allAfter && tokenCount == 1 && (bundleAbsent || bundleMatches)) {
             if (!data.ensureBundle(record.payload())) {
                 data.markManualReview(record.id(), player.level().getGameTime(), "bundle_content_conflict");
-                return PackRecoveryResult.ISOLATED;
+                return RecoveryResult.ISOLATED;
             }
             data.resolveRecovery(record.id(), TransactionRecord.Stage.COMMITTED, player.level().getGameTime(),
                     bundleAbsent ? "pack_bundle_reinserted" : "pack_commit_confirmed");
-            return PackRecoveryResult.RECOVERED;
+            return RecoveryResult.RECOVERED;
         }
         if (allAfter && tokenCount == 0 && bundleAbsent) {
             for (int i = 0; i < sources.size(); i++) {
@@ -180,11 +200,11 @@ public final class BlindBoxService {
                 player.getInventory().setItem(receipt.getInt("slot"), ItemStack.of(receipt.getCompound("before")));
             }
             data.resolveRecovery(record.id(), TransactionRecord.Stage.ROLLED_BACK, player.level().getGameTime(), "pack_sources_restored");
-            return PackRecoveryResult.RECOVERED;
+            return RecoveryResult.RECOVERED;
         }
         String reason = tokenCount > 1 ? "duplicate_token" : (!bundleAbsent && !bundleMatches ? "bundle_content_conflict" : "unproven_pack_state");
         data.markManualReview(record.id(), player.level().getGameTime(), reason);
-        return PackRecoveryResult.ISOLATED;
+        return RecoveryResult.ISOLATED;
     }
 
     private static int countToken(ServerPlayer player, UUID tokenId) {
@@ -201,7 +221,94 @@ public final class BlindBoxService {
                 && tokenId.equals(stack.getTag().getUUID(TOKEN_KEY));
     }
 
-    private enum PackRecoveryResult { RECOVERED, ISOLATED }
+    private static RecoveryResult recoverOpen(ServerPlayer player, BlindBoxPoolSavedData data, TransactionRecord record) {
+        CompoundTag receipts = record.receipts();
+        ListTag beforeTag = receipts.getList("before_main", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        ListTag afterTag = receipts.getList("after_main", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        if (beforeTag.size() != 36 || afterTag.size() != 36 || !receipts.contains("token_slot", net.minecraft.nbt.Tag.TAG_INT)) {
+            data.markManualReview(record.id(), player.level().getGameTime(), "missing_open_receipts");
+            return RecoveryResult.ISOLATED;
+        }
+        List<ItemStack> before = loadMain(beforeTag);
+        List<ItemStack> after = loadMain(afterTag);
+        ItemStack beforeOffhand = ItemStack.of(receipts.getCompound("before_offhand"));
+        ItemStack afterOffhand = ItemStack.of(receipts.getCompound("after_offhand"));
+        boolean isBefore = mainMatches(player.getInventory(), before)
+                && InventoryEvidence.stack(player.getOffhandItem()).equals(InventoryEvidence.stack(beforeOffhand));
+        boolean isAfter = mainMatches(player.getInventory(), after)
+                && InventoryEvidence.stack(player.getOffhandItem()).equals(InventoryEvidence.stack(afterOffhand));
+        int tokenCount = countToken(player, record.tokenId());
+        PrizeBundle existing = data.bundle(record.bundleId()).orElse(null);
+        boolean bundleMatches = existing != null && existing.save().equals(record.payload().save());
+        boolean bundleAbsent = existing == null;
+        if (isBefore && tokenCount == 1 && bundleMatches) {
+            data.releaseOpen(record.bundleId(), record.id());
+            data.resolveRecovery(record.id(), TransactionRecord.Stage.ROLLED_BACK, player.level().getGameTime(), "open_before_state_intact");
+            return RecoveryResult.RECOVERED;
+        }
+        if (isAfter && tokenCount == 0 && (bundleAbsent || bundleMatches)) {
+            if (!bundleAbsent && !data.removeReservedBundle(record.bundleId(), record.id())) {
+                data.markManualReview(record.id(), player.level().getGameTime(), "open_reservation_conflict");
+                return RecoveryResult.ISOLATED;
+            }
+            data.resolveRecovery(record.id(), TransactionRecord.Stage.COMMITTED, player.level().getGameTime(),
+                    bundleAbsent ? "open_commit_confirmed" : "open_bundle_removed");
+            return RecoveryResult.RECOVERED;
+        }
+        if (tokenCount > 1) {
+            data.markManualReview(record.id(), player.level().getGameTime(), "duplicate_token");
+        } else if (existing != null && !bundleMatches) {
+            data.markManualReview(record.id(), player.level().getGameTime(), "bundle_content_conflict");
+        } else {
+            data.markManualReview(record.id(), player.level().getGameTime(), "unproven_open_state");
+        }
+        return RecoveryResult.ISOLATED;
+    }
+
+    private static List<ItemStack> loadMain(ListTag tag) {
+        List<ItemStack> result = new ArrayList<>(36);
+        for (int i = 0; i < 36; i++) result.add(ItemStack.of(tag.getCompound(i).getCompound("stack")));
+        return result;
+    }
+
+    private static boolean mainMatches(Inventory inventory, List<ItemStack> expected) {
+        for (int i = 0; i < 36; i++) {
+            if (!InventoryEvidence.stack(inventory.getItem(i)).equals(InventoryEvidence.stack(expected.get(i)))) return false;
+        }
+        return true;
+    }
+
+    private static int findTokenSlot(List<ItemStack> main, UUID token) {
+        for (int i = 0; i < main.size(); i++) if (hasToken(main.get(i), token)) return i;
+        return -1;
+    }
+
+    private static CompoundTag openReceipts(int tokenSlot, List<ItemStack> before, List<ItemStack> after,
+                                            ItemStack beforeOffhand, ItemStack afterOffhand, List<ItemStack> payload) {
+        CompoundTag receipts = new CompoundTag();
+        receipts.putInt("token_slot", tokenSlot);
+        receipts.put("before_main", saveMain(before));
+        receipts.put("after_main", saveMain(after));
+        receipts.put("before_offhand", InventoryEvidence.stack(beforeOffhand));
+        receipts.put("after_offhand", InventoryEvidence.stack(afterOffhand));
+        ListTag payloadReceipts = new ListTag();
+        for (ItemStack stack : payload) payloadReceipts.add(InventoryEvidence.stack(stack));
+        receipts.put("payload_receipts", payloadReceipts);
+        return receipts;
+    }
+
+    private static ListTag saveMain(List<ItemStack> stacks) {
+        ListTag result = new ListTag();
+        for (int i = 0; i < 36; i++) {
+            CompoundTag entry = new CompoundTag();
+            entry.putInt("slot", i);
+            entry.put("stack", InventoryEvidence.stack(stacks.get(i)));
+            result.add(entry);
+        }
+        return result;
+    }
+
+    private enum RecoveryResult { RECOVERED, ISOLATED }
 
     private static boolean canFitAfterRemoving(Inventory inventory, List<Selection> selections, List<ItemStack> additions) {
         List<ItemStack> virtual = copyMain(inventory);
@@ -209,12 +316,11 @@ public final class BlindBoxService {
         return canInsertAll(virtual, additions);
     }
 
-    private static boolean canFitAfterOpening(Inventory inventory, ItemStack held, List<ItemStack> rewards) {
+    private static boolean canFitAfterOpening(Inventory inventory, UUID token, List<ItemStack> rewards) {
         List<ItemStack> virtual = copyMain(inventory);
-        // 盲盒仅堆叠为 1；按同一物品引用的主背包槽位扣一件。
-        for (ItemStack stack : virtual) {
-            if (ItemStack.isSameItemSameTags(stack, held) && stack.getCount() > 0) { stack.shrink(1); break; }
-        }
+        int tokenSlot = findTokenSlot(virtual, token);
+        if (tokenSlot >= 0) virtual.get(tokenSlot).shrink(1);
+        else if (!hasToken(inventory.player.getOffhandItem(), token)) return false;
         return canInsertAll(virtual, rewards);
     }
 

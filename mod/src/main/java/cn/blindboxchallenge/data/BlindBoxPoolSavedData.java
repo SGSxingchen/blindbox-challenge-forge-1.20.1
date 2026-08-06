@@ -18,6 +18,8 @@ public final class BlindBoxPoolSavedData extends SavedData {
     public static final String DATA_NAME = "blindboxchallenge_pool";
     private final Map<UUID, PrizeBundle> bundles = new LinkedHashMap<>();
     private final Map<UUID, TransactionRecord> transactions = new LinkedHashMap<>();
+    /** bundle UUID -> unfinished OPEN transaction UUID. Persisted so restart cannot hand one prize to two players. */
+    private final Map<UUID, UUID> openReservations = new LinkedHashMap<>();
     private long nextVersion = 1L;
 
     public static BlindBoxPoolSavedData get(ServerLevel level) {
@@ -32,6 +34,13 @@ public final class BlindBoxPoolSavedData extends SavedData {
         for (int i = 0; i < savedBundles.size(); i++) {
             PrizeBundle bundle = PrizeBundle.load(savedBundles.getCompound(i));
             data.bundles.put(bundle.id(), bundle);
+        }
+        ListTag savedReservations = tag.getList("open_reservations", Tag.TAG_COMPOUND);
+        for (int i = 0; i < savedReservations.size(); i++) {
+            CompoundTag reservation = savedReservations.getCompound(i);
+            if (reservation.hasUUID("bundle_id") && reservation.hasUUID("transaction_id")) {
+                data.openReservations.put(reservation.getUUID("bundle_id"), reservation.getUUID("transaction_id"));
+            }
         }
         ListTag savedTransactions = tag.getList("transactions", Tag.TAG_COMPOUND);
         for (int i = 0; i < savedTransactions.size(); i++) {
@@ -68,6 +77,9 @@ public final class BlindBoxPoolSavedData extends SavedData {
     }
 
     public synchronized void commitOpen(UUID transactionId, UUID bundleId, long gameTime) {
+        UUID owner = openReservations.get(bundleId);
+        if (owner != null && !owner.equals(transactionId)) return;
+        openReservations.remove(bundleId);
         bundles.remove(bundleId);
         TransactionRecord record = transactions.get(transactionId);
         if (record != null) transactions.put(transactionId, record.withStage(TransactionRecord.Stage.COMMITTED, gameTime));
@@ -75,9 +87,40 @@ public final class BlindBoxPoolSavedData extends SavedData {
     }
 
     public synchronized Optional<PrizeBundle> randomBundle(net.minecraft.util.RandomSource random) {
-        List<PrizeBundle> available = bundles.values().stream().filter(bundle -> !bundle.stacks().isEmpty()).toList();
+        List<PrizeBundle> available = bundles.values().stream()
+                .filter(bundle -> !bundle.stacks().isEmpty() && !openReservations.containsKey(bundle.id())).toList();
         if (available.isEmpty()) return Optional.empty();
         return Optional.of(available.get(random.nextInt(available.size())));
+    }
+
+
+    public synchronized boolean reserveOpen(UUID bundleId, UUID transactionId) {
+        if (!bundles.containsKey(bundleId)) return false;
+        UUID existing = openReservations.get(bundleId);
+        if (existing != null && !existing.equals(transactionId)) return false;
+        openReservations.put(bundleId, transactionId);
+        setDirty();
+        return true;
+    }
+
+    public synchronized boolean reservedBy(UUID bundleId, UUID transactionId) {
+        return transactionId.equals(openReservations.get(bundleId));
+    }
+
+    public synchronized void releaseOpen(UUID bundleId, UUID transactionId) {
+        if (transactionId.equals(openReservations.get(bundleId))) {
+            openReservations.remove(bundleId);
+            setDirty();
+        }
+    }
+
+    public synchronized boolean removeReservedBundle(UUID bundleId, UUID transactionId) {
+        UUID owner = openReservations.get(bundleId);
+        if (owner != null && !owner.equals(transactionId)) return false;
+        openReservations.remove(bundleId);
+        bundles.remove(bundleId);
+        setDirty();
+        return true;
     }
 
     public synchronized boolean containsBundle(UUID id) { return bundles.containsKey(id); }
@@ -111,6 +154,14 @@ public final class BlindBoxPoolSavedData extends SavedData {
         ListTag savedBundles = new ListTag();
         for (PrizeBundle bundle : bundles.values()) savedBundles.add(bundle.save());
         tag.put("bundles", savedBundles);
+        ListTag savedReservations = new ListTag();
+        for (Map.Entry<UUID, UUID> entry : openReservations.entrySet()) {
+            CompoundTag reservation = new CompoundTag();
+            reservation.putUUID("bundle_id", entry.getKey());
+            reservation.putUUID("transaction_id", entry.getValue());
+            savedReservations.add(reservation);
+        }
+        tag.put("open_reservations", savedReservations);
         ListTag savedTransactions = new ListTag();
         for (TransactionRecord record : transactions.values()) savedTransactions.add(record.save());
         tag.put("transactions", savedTransactions);
