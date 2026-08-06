@@ -168,6 +168,7 @@ public final class ReturningScissorsCiScenario {
         private int normalPreTickCount = -1;
         private Vec3 normalPrePosition = Vec3.ZERO;
         private Vec3 normalPreMovement = Vec3.ZERO;
+        private final List<String> normalFlightTrace = new ArrayList<>();
         private int normalImpactCount;
         private String normalImpact = "无";
         private Vec3 normalLastPosition = Vec3.ZERO;
@@ -344,6 +345,12 @@ public final class ReturningScissorsCiScenario {
                     projectile.getBoundingBox().expandTowards(movement).inflate(1.0D), candidate -> candidate == normalTarget);
             normalRawTargetInSegment = targetHit != null && targetHit.getEntity() == normalTarget;
             normalPreBlockHit = describeBlockHit(blockHit);
+            if (normalFlightTrace.size() < 12) {
+                normalFlightTrace.add("tick=" + normalPreTickCount + ", arrow=" + start + ", move=" + movement
+                        + ", target=" + target.position() + ", raw=" + normalRawTargetInSegment
+                        + ", block=" + normalPreBlockHit + ", inGround=" + normalPreInGround
+                        + ", noPhysics=" + normalPreNoPhysics);
+            }
             if (normalRawTargetInSegment && "无".equals(normalFirstTargetSegment)) {
                 normalFirstTargetSegment = "tick=" + normalPreTickCount + ", start=" + start + ", movement=" + movement
                         + ", block=" + normalPreBlockHit;
@@ -399,6 +406,7 @@ public final class ReturningScissorsCiScenario {
                         + ", preLeftOwner=" + normalPreLeftOwner + ", targetCanBeHit=" + normalTargetCanBeHit
                         + ", targetAlive=" + normalTargetAlive + ", targetSpectator=" + normalTargetSpectator
                         + ", targetSameOwnerVehicle=" + normalTargetSameOwnerVehicle
+                        + ", trace=" + normalFlightTrace
                         + ", impactCount=" + normalImpactCount + ", impact=" + normalImpact
                         + ", lastPosition=" + normalLastPosition + ", lastMovement=" + normalLastMovement
                         + ", lastReturning=" + normalLastReturning + ", lastNoPhysics=" + normalLastNoPhysics);
