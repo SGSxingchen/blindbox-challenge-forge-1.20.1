@@ -3,6 +3,7 @@ package cn.blindboxchallenge.citest;
 import cn.blindboxchallenge.data.BlindBoxPoolSavedData;
 import cn.blindboxchallenge.data.PrizeBundle;
 import cn.blindboxchallenge.data.TransactionRecord;
+import cn.blindboxchallenge.event.ServerLifecycleEvents;
 import cn.blindboxchallenge.item.BlindBoxItem;
 import cn.blindboxchallenge.menu.PackingMenu;
 import cn.blindboxchallenge.network.CommitPackingPacket;
@@ -23,6 +24,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -113,14 +115,26 @@ public final class CiTestCommands {
             alice.closeContainer();
             if (CommitPackingPacket.isAuthorized(alice, validShape)) throw new IllegalStateException("closed menu replay accepted");
 
-            // 换手、松开、死亡和掉线最终都走 cancel/clear 路径；这里在真实 ServerPlayer 上断言状态与减速同时清理。
-            ItemStack cancelledBox = BlindBoxService.createBlindBox(UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
-            alice.setItemInHand(InteractionHand.MAIN_HAND, cancelledBox);
-            // 经原版 Item 声明调用，确保 ForgeGradle 能把覆写方法引用正确重混淆到生产命名。
-            cancelledBox.getItem().use(alice.serverLevel(), alice, InteractionHand.MAIN_HAND);
-            if (!BlindBoxItem.hasActiveUseState(alice, cancelledBox)) throw new IllegalStateException("opening lifecycle state missing");
-            BlindBoxItem.cancelUse(alice);
-            if (BlindBoxItem.hasActiveUseState(alice, cancelledBox)) throw new IllegalStateException("opening lifecycle state leaked after cancel");
+            // 换手/松开走原版 releaseUsing；死亡走 Forge 事件入口。两条真实路径都必须同时清理使用态和减速。
+            ItemStack swappedBox = BlindBoxService.createBlindBox(UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
+            alice.setItemInHand(InteractionHand.MAIN_HAND, swappedBox);
+            swappedBox.getItem().use(alice.serverLevel(), alice, InteractionHand.MAIN_HAND);
+            if (!BlindBoxItem.hasActiveUseState(alice, swappedBox)) throw new IllegalStateException("swap opening state missing");
+            swappedBox.getItem().releaseUsing(swappedBox, alice.serverLevel(), alice, 39);
+            alice.stopUsingItem();
+            if (BlindBoxItem.hasActiveUseState(alice, swappedBox) || alice.isUsingItem()) {
+                throw new IllegalStateException("opening lifecycle state leaked after swap/release");
+            }
+
+            ItemStack deathBox = BlindBoxService.createBlindBox(UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"));
+            alice.setItemInHand(InteractionHand.MAIN_HAND, deathBox);
+            deathBox.getItem().use(alice.serverLevel(), alice, InteractionHand.MAIN_HAND);
+            if (!BlindBoxItem.hasActiveUseState(alice, deathBox)) throw new IllegalStateException("death opening state missing");
+            ServerLifecycleEvents.death(new LivingDeathEvent(alice, alice.damageSources().generic()));
+            alice.stopUsingItem();
+            if (BlindBoxItem.hasActiveUseState(alice, deathBox) || alice.isUsingItem()) {
+                throw new IllegalStateException("opening lifecycle state leaked after death event");
+            }
             clearInventory(alice);
 
             ItemStack staleSource = uniqueStack("citest-stale-source", 2, 3);
@@ -169,6 +183,12 @@ public final class CiTestCommands {
             }
             if (!bob.getInventory().getItem(0).is(ModItems.BLIND_BOX.get()) || bob.getInventory().getItem(0).getCount() != 1) {
                 throw new IllegalStateException("failed open consumed Bob token");
+            }
+            int transactionCountAfterCompetition = data.transactions().size();
+            if (BlindBoxService.open(bob, bobBox)) throw new IllegalStateException("duplicate exhausted-pool open was accepted");
+            if (data.transactions().size() != transactionCountAfterCompetition || data.bundleCount() != 0
+                    || !bob.getInventory().getItem(0).is(ModItems.BLIND_BOX.get()) || bob.getInventory().getItem(0).getCount() != 1) {
+                throw new IllegalStateException("duplicate open request changed conserved assets");
             }
             if (data.transactions().size() != 2 || data.transactions().stream().anyMatch(record -> record.stage() != TransactionRecord.Stage.COMMITTED)) {
                 throw new IllegalStateException("unexpected transaction terminal state");
