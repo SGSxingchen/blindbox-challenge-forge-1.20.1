@@ -134,6 +134,10 @@ public final class BlindBoxPoolSavedData extends SavedData {
     }
     public synchronized int bundleCount() { return bundles.size(); }
     public synchronized Collection<PrizeBundle> bundles() { return List.copyOf(bundles.values()); }
+    /** CI/管理员审计只读快照；返回不可变副本，调用方不能修改 SavedData。 */
+    public synchronized Collection<TransactionRecord> transactions() { return List.copyOf(transactions.values()); }
+    /** CI/管理员审计只读快照：bundle UUID -> OPEN transaction UUID。 */
+    public synchronized Map<UUID, UUID> openReservations() { return Map.copyOf(openReservations); }
     public synchronized Collection<TransactionRecord> pendingFor(UUID playerId) {
         return transactions.values().stream().filter(record -> record.playerId().equals(playerId) && !record.stage().terminal()).toList();
     }
