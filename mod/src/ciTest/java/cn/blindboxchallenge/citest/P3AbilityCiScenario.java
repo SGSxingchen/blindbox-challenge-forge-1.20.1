@@ -18,6 +18,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
@@ -192,6 +194,7 @@ public final class P3AbilityCiScenario {
         private BlockPos bobSupport;
         private BlockState originalAliceSupport;
         private BlockState originalBobSupport;
+        private MobEffectInstance originalSlowFalling;
         private final Map<BlockPos, BlockState> originalLandingBlocks = new HashMap<>();
         private Phase phase = Phase.WAITING_DETRACK;
         private int phaseTicks;
@@ -256,6 +259,8 @@ public final class P3AbilityCiScenario {
             }
             alice.stopRiding();
             bob.stopRiding();
+            MobEffectInstance slowFalling = alice.getEffect(MobEffects.SLOW_FALLING);
+            originalSlowFalling = slowFalling == null ? null : new MobEffectInstance(slowFalling);
             alice.teleportTo(origin, x, 121.0D, z, 0.0F, 0.0F);
             alice.setDeltaMovement(0.0D, 0.0D, 0.0D);
             alice.hurtMarked = true;
@@ -354,6 +359,7 @@ public final class P3AbilityCiScenario {
             if (!clientPathVerified || phase != Phase.WAITING_FOR_CLIENT_KEY) {
                 throw new IllegalStateException("必须先通过真实客户端 C2S 与 StartTracking 核验");
             }
+            restoreSlowFalling(player(server, "BlindBoxAlice"));
             server.getGameRules().getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(true, server);
             phase = Phase.WAITING_FOR_CLONE;
             phaseTicks = 0;
@@ -450,6 +456,10 @@ public final class P3AbilityCiScenario {
 
         /** 平台只在客户端已收到自身 S2C 后移除，留出小于 anti-fly 阈值的真实腾空窗口。 */
         private void releaseAliceForAirJump(ServerPlayer alice) {
+            // Hosted Runner 偶发的服务端追帧会在网络包抵达前一次推进多个物理 tick；只对
+            // 这段隔离夹具施加原版缓降，保留真实腾空/onGround 校验并避免短落差被追帧耗尽。
+            alice.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING,
+                    CLIENT_KEY_RESULT_TIMEOUT_TICKS + 40, 0, false, false, false));
             if (aliceSupport != null) origin.setBlock(aliceSupport, Blocks.AIR.defaultBlockState(), 3);
             alice.setOnGround(false);
             alice.setDeltaMovement(0.0D, -0.08D, 0.0D);
@@ -460,6 +470,7 @@ public final class P3AbilityCiScenario {
             ServerPlayer alice = server.getPlayerList().getPlayer(aliceUuid);
             if (alice != null) {
                 resetAbility(alice);
+                restoreSlowFalling(alice);
                 alice.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
                 alice.containerMenu.broadcastChanges();
             }
@@ -467,6 +478,11 @@ public final class P3AbilityCiScenario {
             if (bobSupport != null && originalBobSupport != null) origin.setBlock(bobSupport, originalBobSupport, 3);
             originalLandingBlocks.forEach((position, state) -> origin.setBlock(position, state, 3));
             server.getGameRules().getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(originalImmediateRespawn, server);
+        }
+
+        private void restoreSlowFalling(ServerPlayer player) {
+            player.removeEffect(MobEffects.SLOW_FALLING);
+            if (originalSlowFalling != null) player.addEffect(new MobEffectInstance(originalSlowFalling));
         }
 
         private static void clearClientMarkers() {
