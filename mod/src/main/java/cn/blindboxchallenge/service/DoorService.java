@@ -31,7 +31,8 @@ public final class DoorService {
     private DoorService() {}
 
     public static void selectOrPair(ServerPlayer player, Level level, BlockPos clicked) {
-        if (!(level instanceof ServerLevel sourceLevel) || !(sourceLevel.getBlockEntity(clicked) instanceof AnywhereDoorBlockEntity current)) return;
+        if (!player.mayBuild(clicked) || !(level instanceof ServerLevel sourceLevel)
+                || !(sourceLevel.getBlockEntity(clicked) instanceof AnywhereDoorBlockEntity current)) return;
         reconcileInvalidatedDoor(sourceLevel, current);
         if (current.linked()) {
             player.displayClientMessage(Component.translatable("message.blindboxchallenge.door_already_linked"), true);

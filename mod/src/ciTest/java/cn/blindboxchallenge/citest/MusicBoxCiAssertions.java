@@ -94,7 +94,8 @@ public final class MusicBoxCiAssertions {
                 new byte[] {0, 100, (byte) 0xff, (byte) 0x9b, 0, 0, 0, 0, 0, 0, 0, 0, (byte) 192, (byte) 168, 1, 1},
                 new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (byte) 0xff, (byte) 0xff, 127, 0, 0, 1},
                 new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 1},
-                new byte[] {0x20, 0x01, 0x0d, (byte) 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})) {
+                new byte[] {0x20, 0x01, 0x0d, (byte) 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                new byte[] {0x20, 0x01, 0x00, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})) {
             if (AudioUrlPolicy.isPublicAddress(InetAddress.getByAddress(unsafe))) {
                 throw new IllegalStateException("IPv6 私网、映射或保留地址被错误接受");
             }

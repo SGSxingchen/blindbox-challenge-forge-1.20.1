@@ -5,9 +5,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URI;
-import java.net.URL;
+import java.net.Socket;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -18,15 +19,24 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 import net.minecraft.client.Minecraft;
 
 /** 纯客户端 HTTPS 下载与缓存。每一跳都重新解析并把已校验公网 IP 固定到 TLS 连接，避免 DNS 重绑定。 */
@@ -35,6 +45,7 @@ public final class RemoteAudioDownload {
     public static final int MAX_CACHE_BYTES = 64 * 1024 * 1024;
     private static final int TIMEOUT_MILLIS = (int) Duration.ofSeconds(10).toMillis();
     private static final int MAX_REDIRECTS = 3;
+    private static final int MAX_HEADER_BYTES = 32 * 1024;
     private static final long STALE_PART_MILLIS = Duration.ofMinutes(1).toMillis();
     private static final ConcurrentHashMap<String, CompletableFuture<CachedAudio>> IN_FLIGHT = new ConcurrentHashMap<>();
     /** 原生 DNS 无可用连接超时参数；单个 daemon 解析器超时后失效关闭，避免任意 URL 堆积请求线程。 */
@@ -43,6 +54,12 @@ public final class RemoteAudioDownload {
         thread.setDaemon(true);
         return thread;
     });
+    private static final ScheduledExecutorService DEADLINE_ENFORCER = Executors.newSingleThreadScheduledExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "blindboxchallenge-audio-timeout");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private static final SSLSocketFactory TLS_FACTORY = (SSLSocketFactory) SSLSocketFactory.getDefault();
 
     private RemoteAudioDownload() {}
 
@@ -81,28 +98,34 @@ public final class RemoteAudioDownload {
         for (int redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
             ensureBeforeDeadline(deadlineNanos);
             current = URI.create(AudioUrlPolicy.normalizeHttpsUrl(current.toString()));
-            HttpsURLConnection connection = openPinned(current, deadlineNanos);
-            try {
-                int status = connection.getResponseCode();
+            try (DownloadResponse response = openPinned(current, deadlineNanos)) {
+                int status = response.status();
                 ensureBeforeDeadline(deadlineNanos);
                 if (isRedirect(status)) {
                     if (redirects == MAX_REDIRECTS) throw new IOException("在线音频重定向超过上限");
-                    String location = connection.getHeaderField("Location");
+                    String location = response.header("location");
                     if (location == null || location.isBlank()) throw new IOException("重定向缺少 Location");
                     current = current.resolve(location);
                     continue;
                 }
-                if (status != HttpsURLConnection.HTTP_OK) throw new IOException("在线音频 HTTP 状态不允许：" + status);
-                String encoding = connection.getHeaderField("Content-Encoding");
+                if (status != 200) throw new IOException("在线音频 HTTP 状态不允许：" + status);
+                String encoding = response.header("content-encoding");
                 if (encoding != null && !encoding.isBlank() && !"identity".equalsIgnoreCase(encoding)) {
                     throw new IOException("不允许压缩传输编码");
                 }
-                String contentType = connection.getContentType();
+                String contentType = response.header("content-type");
                 if (!isAudioContentType(contentType)) throw new IOException("响应 Content-Type 不是 OGG 或 MP3");
-                connection.setReadTimeout(remainingMillis(deadlineNanos));
-                return saveResponse(connection.getInputStream(), cache, urlHash, deadlineNanos);
-            } finally {
-                connection.disconnect();
+                String contentLength = response.header("content-length");
+                if (contentLength != null && !contentLength.isBlank()) {
+                    try {
+                        long declaredLength = Long.parseLong(contentLength.trim());
+                        if (declaredLength < 0L) throw new IOException("在线音频 Content-Length 非法");
+                        if (declaredLength > MAX_DOWNLOAD_BYTES) throw new IOException("在线音频超过 16 MiB 上限");
+                    } catch (NumberFormatException exception) {
+                        throw new IOException("在线音频 Content-Length 非法", exception);
+                    }
+                }
+                return saveResponse(response.body(), cache, urlHash, deadlineNanos);
             }
         }
         throw new IOException("在线音频重定向流程异常");
@@ -123,22 +146,197 @@ public final class RemoteAudioDownload {
         }
     }
 
-    private static HttpsURLConnection openPinned(URI uri, long deadlineNanos) throws IOException {
+    /**
+     * 不使用 HttpsURLConnection：其无参 SocketFactory 回退会重新按域名建连，且全局 CookieHandler/
+     * Authenticator 可悄然插入身份头。这里直接向已验证 IP 的 TLS socket 写固定 GET，因而既无
+     * DNS 重绑定窗口，也绝不继承客户端其它网页会话的 Cookie、认证或代理配置。
+     */
+    private static DownloadResponse openPinned(URI uri, long deadlineNanos) throws IOException {
         InetAddress[] addresses = resolvePublicAddresses(uri.getHost(), deadlineNanos);
-        URL url = uri.toURL();
-        HttpsURLConnection connection = (HttpsURLConnection) url.openConnection(Proxy.NO_PROXY);
-        connection.setSSLSocketFactory(new PinnedTlsSocketFactory(uri.getHost(), addresses, deadlineNanos));
-        connection.setHostnameVerifier(HttpsURLConnection.getDefaultHostnameVerifier());
-        connection.setInstanceFollowRedirects(false);
-        connection.setUseCaches(false);
-        connection.setConnectTimeout(remainingMillis(deadlineNanos));
-        connection.setReadTimeout(remainingMillis(deadlineNanos));
-        connection.setRequestProperty("Accept", "audio/ogg,audio/mpeg");
-        connection.setRequestProperty("Accept-Encoding", "identity");
-        connection.setRequestProperty("User-Agent", "BlindBoxChallenge/1.20.1");
-        connection.setRequestProperty("Cookie", "");
-        connection.setRequestProperty("Authorization", "");
-        return connection;
+        IOException failure = null;
+        for (InetAddress address : addresses) {
+            try {
+                return openPinnedAtAddress(uri, address, deadlineNanos);
+            } catch (IOException exception) {
+                failure = exception;
+                ensureBeforeDeadline(deadlineNanos);
+            }
+        }
+        throw new IOException("在线音频所有已验证公网地址均无法连接", failure);
+    }
+
+    private static DownloadResponse openPinnedAtAddress(URI uri, InetAddress address, long deadlineNanos) throws IOException {
+        Socket plain = new Socket(Proxy.NO_PROXY);
+        SSLSocket tls = null;
+        ScheduledFuture<?> closeAtDeadline = null;
+        try {
+            plain.connect(new InetSocketAddress(address, 443), remainingMillis(deadlineNanos));
+            plain.setSoTimeout(remainingMillis(deadlineNanos));
+            tls = (SSLSocket) TLS_FACTORY.createSocket(plain, uri.getHost(), 443, true);
+            SSLParameters parameters = tls.getSSLParameters();
+            parameters.setEndpointIdentificationAlgorithm("HTTPS");
+            parameters.setServerNames(java.util.List.of(new SNIHostName(uri.getHost())));
+            tls.setSSLParameters(parameters);
+            long closeDelay = remainingNanos(deadlineNanos);
+            SSLSocket pinnedSocket = tls;
+            closeAtDeadline = DEADLINE_ENFORCER.schedule(() -> closeQuietly(pinnedSocket), closeDelay, TimeUnit.NANOSECONDS);
+            tls.setSoTimeout(remainingMillis(deadlineNanos));
+            tls.startHandshake();
+            ensureBeforeDeadline(deadlineNanos);
+            if (!HttpsURLConnection.getDefaultHostnameVerifier().verify(uri.getHost(), tls.getSession())) {
+                throw new IOException("在线音频 TLS 证书主机名不匹配");
+            }
+            writeRequest(tls.getOutputStream(), uri);
+            InputStream input = tls.getInputStream();
+            int status = readStatus(input, deadlineNanos);
+            Map<String, String> headers = readHeaders(input, deadlineNanos);
+            String transfer = headers.get("transfer-encoding");
+            if (transfer != null && !transfer.isBlank() && !"chunked".equalsIgnoreCase(transfer.trim())) {
+                throw new IOException("在线音频不允许 Transfer-Encoding：" + transfer);
+            }
+            InputStream body = "chunked".equalsIgnoreCase(transfer == null ? "" : transfer.trim())
+                    ? new ChunkedInputStream(input, deadlineNanos) : input;
+            return new DownloadResponse(status, headers, body, tls, closeAtDeadline);
+        } catch (IOException | RuntimeException exception) {
+            if (closeAtDeadline != null) closeAtDeadline.cancel(false);
+            if (tls != null) closeQuietly(tls);
+            else closeQuietly(plain);
+            throw exception;
+        }
+    }
+
+    private static void writeRequest(OutputStream output, URI uri) throws IOException {
+        String path = uri.getRawPath();
+        if (path == null || path.isBlank()) path = "/";
+        if (uri.getRawQuery() != null) path += "?" + uri.getRawQuery();
+        String request = "GET " + path + " HTTP/1.1\r\n"
+                + "Host: " + uri.getHost() + "\r\n"
+                + "Accept: audio/ogg,audio/mpeg\r\n"
+                + "Accept-Encoding: identity\r\n"
+                + "User-Agent: BlindBoxChallenge/1.20.1\r\n"
+                + "Connection: close\r\n\r\n";
+        output.write(request.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        output.flush();
+    }
+
+    private static int readStatus(InputStream input, long deadlineNanos) throws IOException {
+        String line = readHttpLine(input, deadlineNanos, MAX_HEADER_BYTES);
+        String[] parts = line.split(" ", 3);
+        if (parts.length < 2 || !parts[0].startsWith("HTTP/")) throw new IOException("在线音频 HTTP 状态行非法");
+        try { return Integer.parseInt(parts[1]); }
+        catch (NumberFormatException exception) { throw new IOException("在线音频 HTTP 状态码非法", exception); }
+    }
+
+    private static Map<String, String> readHeaders(InputStream input, long deadlineNanos) throws IOException {
+        Map<String, String> headers = new LinkedHashMap<>();
+        int total = 0;
+        for (int lines = 0; lines < 100; lines++) {
+            String line = readHttpLine(input, deadlineNanos, MAX_HEADER_BYTES - total);
+            total += line.length() + 2;
+            if (line.isEmpty()) return headers;
+            int separator = line.indexOf(':');
+            if (separator <= 0) throw new IOException("在线音频 HTTP 响应头非法");
+            String name = line.substring(0, separator).trim().toLowerCase(Locale.ROOT);
+            String value = line.substring(separator + 1).trim();
+            if (headers.putIfAbsent(name, value) != null) throw new IOException("在线音频响应头重复：" + name);
+        }
+        throw new IOException("在线音频响应头过多");
+    }
+
+    private static String readHttpLine(InputStream input, long deadlineNanos, int limit) throws IOException {
+        if (limit <= 0) throw new IOException("在线音频响应头超过上限");
+        java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+        for (;;) {
+            ensureBeforeDeadline(deadlineNanos);
+            int value = input.read();
+            if (value < 0) throw new IOException("在线音频 HTTP 响应意外结束");
+            if (value == '\n') break;
+            if (value != '\r') bytes.write(value);
+            if (bytes.size() > limit) throw new IOException("在线音频响应头超过上限");
+        }
+        return bytes.toString(java.nio.charset.StandardCharsets.ISO_8859_1);
+    }
+
+    private static void closeQuietly(Socket socket) {
+        try { socket.close(); }
+        catch (IOException ignored) { }
+    }
+
+    private record DownloadResponse(int status, Map<String, String> headers, InputStream body, SSLSocket socket,
+                                    ScheduledFuture<?> closeAtDeadline) implements AutoCloseable {
+        String header(String name) { return headers.get(name); }
+
+        @Override
+        public void close() {
+            closeAtDeadline.cancel(false);
+            closeQuietly(socket);
+        }
+    }
+
+    /** 仅接受标准 HTTP/1.1 分块传输；分块大小仍由 saveResponse 的 16 MiB 总量限制。 */
+    private static final class ChunkedInputStream extends InputStream {
+        private final InputStream input;
+        private final long deadlineNanos;
+        private long remaining;
+        private boolean finished;
+
+        private ChunkedInputStream(InputStream input, long deadlineNanos) {
+            this.input = input;
+            this.deadlineNanos = deadlineNanos;
+        }
+
+        @Override
+        public int read() throws IOException {
+            byte[] byteValue = new byte[1];
+            return read(byteValue, 0, 1) < 0 ? -1 : Byte.toUnsignedInt(byteValue[0]);
+        }
+
+        @Override
+        public int read(byte[] target, int offset, int length) throws IOException {
+            if (length == 0) return 0;
+            prepareChunk();
+            if (finished) return -1;
+            ensureBeforeDeadline(deadlineNanos);
+            int read = input.read(target, offset, (int) Math.min(length, remaining));
+            if (read < 0) throw new IOException("在线音频分块响应意外结束");
+            remaining -= read;
+            if (remaining == 0L) afterChunkData = true;
+            return read;
+        }
+
+        @Override
+        public void close() throws IOException { input.close(); }
+
+        private void prepareChunk() throws IOException {
+            while (!finished && remaining == 0L) {
+                if (afterChunkData) consumeChunkTerminator();
+                String line = readHttpLine(input, deadlineNanos, 1024);
+                int extension = line.indexOf(';');
+                String sizeText = (extension < 0 ? line : line.substring(0, extension)).trim();
+                final long size;
+                try { size = Long.parseLong(sizeText, 16); }
+                catch (NumberFormatException exception) { throw new IOException("在线音频分块长度非法", exception); }
+                if (size < 0L) throw new IOException("在线音频分块长度非法");
+                if (size == 0L) {
+                    for (int lines = 0; lines < 32; lines++) {
+                        if (readHttpLine(input, deadlineNanos, 1024).isEmpty()) {
+                            finished = true;
+                            return;
+                        }
+                    }
+                    throw new IOException("在线音频分块尾部过长");
+                }
+                remaining = size;
+            }
+        }
+
+        private boolean afterChunkData;
+
+        private void consumeChunkTerminator() throws IOException {
+            ensureBeforeDeadline(deadlineNanos);
+            if (input.read() != '\r' || input.read() != '\n') throw new IOException("在线音频分块结尾非法");
+            afterChunkData = false;
+        }
     }
 
     private static InetAddress[] resolvePublicAddresses(String host, long deadlineNanos) throws IOException {
@@ -207,7 +405,7 @@ public final class RemoteAudioDownload {
             throw exception;
         }
         trimCache(cache);
-        return new CachedAudio(target, kind, contentHash);
+        return new CachedAudio(target, kind, contentHash, false);
     }
 
     private static void moveNewFile(Path temporary, Path target) throws IOException {
@@ -266,7 +464,7 @@ public final class RemoteAudioDownload {
             return null;
         }
         Files.setLastModifiedTime(cached, java.nio.file.attribute.FileTime.fromMillis(System.currentTimeMillis()));
-        return new CachedAudio(cached, kind, namedHash);
+        return new CachedAudio(cached, kind, namedHash, true);
     }
 
     private static boolean isCacheFileName(String name, String urlHash) {
@@ -306,10 +504,14 @@ public final class RemoteAudioDownload {
 
     private static void ensureBeforeDeadline(long deadlineNanos) throws IOException { remainingMillis(deadlineNanos); }
     private static int remainingMillis(long deadlineNanos) throws IOException {
-        long remaining = deadlineNanos - System.nanoTime();
-        if (remaining <= 0L) throw new IOException("在线音频总下载超时");
+        long remaining = remainingNanos(deadlineNanos);
         long millis = TimeUnit.NANOSECONDS.toMillis(remaining);
         return (int) Math.min(Integer.MAX_VALUE, Math.max(1L, millis + 1L));
+    }
+    private static long remainingNanos(long deadlineNanos) throws IOException {
+        long remaining = deadlineNanos - System.nanoTime();
+        if (remaining <= 0L) throw new IOException("在线音频总下载超时");
+        return remaining;
     }
     private static long lastModified(Path path) {
         try { return Files.getLastModifiedTime(path, LinkOption.NOFOLLOW_LINKS).toMillis(); }
@@ -332,5 +534,5 @@ public final class RemoteAudioDownload {
     private static String hex(byte[] bytes) { return java.util.HexFormat.of().formatHex(bytes); }
 
     public enum Kind { OGG(".ogg"), MP3(".mp3"); private final String extension; Kind(String extension) { this.extension = extension; } }
-    public record CachedAudio(Path path, Kind kind, String contentHash) {}
+    public record CachedAudio(Path path, Kind kind, String contentHash, boolean cacheHit) {}
 }

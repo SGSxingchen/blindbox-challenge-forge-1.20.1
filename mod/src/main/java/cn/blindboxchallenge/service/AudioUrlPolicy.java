@@ -59,7 +59,8 @@ public final class AudioUrlPolicy {
         if (first == 0x20 && second == 0x01 && (unsigned(value, 2) & 0xfe) == 0x00) return false; // 2001::/23
         if (first == 0x20 && second == 0x01 && unsigned(value, 2) == 0x00 && unsigned(value, 3) == 0x02
                 && unsigned(value, 4) == 0x00 && unsigned(value, 5) == 0x00) return false; // 2001:2::/48
-        if (first == 0x20 && second == 0x01 && unsigned(value, 2) == 0x00 && (unsigned(value, 3) & 0xf0) == 0x10) return false; // 2001:10::/28
+        if (first == 0x20 && second == 0x01 && unsigned(value, 2) == 0x00
+                && ((unsigned(value, 3) & 0xf0) == 0x10 || (unsigned(value, 3) & 0xf0) == 0x20)) return false; // 2001:10::/28、2001:20::/28
         return !(first == 0x20 && second == 0x01 && unsigned(value, 2) == 0x0d && unsigned(value, 3) == 0xb8); // 2001:db8::/32
     }
 
@@ -101,11 +102,8 @@ public final class AudioUrlPolicy {
     private static int unsigned(byte[] value, int index) { return Byte.toUnsignedInt(value[index]); }
 
     private static boolean looksLikeIpv4(String value) {
-        if (!value.matches("[0-9.]+")) return false;
-        try {
-            return InetAddress.getByName(value).getAddress().length == 4;
-        } catch (Exception ignored) {
-            return true;
-        }
+        // 该函数会在服务端 C2S 提交时调用；数字/点主机名本身没有合法域名用途，直接拒绝而不做 DNS，
+        // 避免模糊数字表示触发网络解析、阻塞服务端 tick 或绕过 IP 字面量策略。
+        return value.matches("[0-9.]+");
     }
 }

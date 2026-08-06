@@ -26,6 +26,7 @@ jobs:
           FORMAL_JAR="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*.jar' ! -name '*-sources.jar' ! -name '*-citest.jar' -print -quit)"
           test -n "$FORMAL_JAR"
           ! jar tf "$FORMAL_JAR" | grep -q '^cn/blindboxchallenge/citest/'
+          ! jar tf "$FORMAL_JAR" | grep -q '^ci-audio/'
           jar tf "$FORMAL_JAR" | grep -q '^META-INF/jarjar/.*jlayer.*\.jar$'
           jar tf "$FORMAL_JAR" | grep -q '^META-INF/licenses/JLayer-LGPL-2.1.txt$'
           jar tf "$FORMAL_JAR" | grep -q '^META-INF/licenses/JLayer-NOTICE.txt$'
@@ -33,6 +34,7 @@ jobs:
           test -f "$CITEST_JAR"
           jar tf "$CITEST_JAR" | grep -q '^cn/blindboxchallenge/citest/CiTestProbe.class$'
           jar tf "$CITEST_JAR" | grep -q '^META-INF/mods.toml$'
+          jar tf "$CITEST_JAR" | grep -q '^ci-audio/blindbox-ci-tone.ogg$'
       - name: 校验网络包方向与一次性提交门闩
         run: |
           grep -A1 'CommitPackingPacket.class' src/main/java/cn/blindboxchallenge/network/ModNetwork.java | grep -q 'PLAY_TO_SERVER'

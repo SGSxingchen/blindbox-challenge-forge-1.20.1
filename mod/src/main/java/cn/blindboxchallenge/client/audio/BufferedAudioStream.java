@@ -15,6 +15,7 @@ class BufferedAudioStream implements AudioStream {
     private final AudioFormat format;
     private ByteBuffer remaining;
     private boolean closed;
+    private Runnable closeCallback = () -> {};
 
     BufferedAudioStream(AudioFormat format, byte[] pcm) throws IOException {
         if (pcm.length > MAX_BUFFERED_PCM_BYTES) throw new IOException("在线音频解码 PCM 超过 128 MiB 上限");
@@ -46,6 +47,8 @@ class BufferedAudioStream implements AudioStream {
         return new BufferedAudioStream(format, output.toByteArray());
     }
 
+    void setCloseCallback(Runnable closeCallback) { this.closeCallback = closeCallback; }
+
     @Override
     public AudioFormat getFormat() { return format; }
 
@@ -64,7 +67,9 @@ class BufferedAudioStream implements AudioStream {
 
     @Override
     public void close() {
+        if (closed) return;
         closed = true;
         remaining = ByteBuffer.allocateDirect(0);
+        closeCallback.run();
     }
 }

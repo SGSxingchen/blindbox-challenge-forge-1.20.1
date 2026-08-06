@@ -9,6 +9,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
@@ -24,6 +26,8 @@ public final class ClientMusicService {
         thread.setDaemon(true);
         return thread;
     });
+    /** 下载、预解码及正在播放的远程 PCM 至多两条，避免恶意全服事件让客户端积压无界任务/内存。 */
+    private static final Semaphore REMOTE_AUDIO_SLOTS = new Semaphore(2);
     private static final Set<UUID> PLAYED_EVENTS = new LinkedHashSet<>();
     private static long connectionEpoch;
 
@@ -44,15 +48,32 @@ public final class ClientMusicService {
             clientMessage("message.blindboxchallenge.music_box_download_failed");
             return;
         }
+        if (!REMOTE_AUDIO_SLOTS.tryAcquire()) {
+            clientMessage("message.blindboxchallenge.music_box_download_failed");
+            return;
+        }
+        AtomicBoolean released = new AtomicBoolean();
+        Runnable releaseSlot = () -> {
+            if (released.compareAndSet(false, true)) REMOTE_AUDIO_SLOTS.release();
+        };
         CompletableFuture.supplyAsync(() -> {
             try { return RemoteAudioDownload.fetch(normalized); }
             catch (Exception exception) { throw new IllegalStateException(exception); }
-        }, AUDIO_EXECUTOR).thenApplyAsync(audio -> RemoteMusicSoundInstance.prepare(audio, event.source()), AUDIO_EXECUTOR)
+        }, AUDIO_EXECUTOR).thenApplyAsync(audio -> RemoteMusicSoundInstance.prepare(audio, event.source(), event.eventId(), releaseSlot), AUDIO_EXECUTOR)
                 .thenAccept(sound -> Minecraft.getInstance().execute(() -> {
-            if (!isCurrentConnection(eventEpoch)) return;
-            Minecraft.getInstance().getSoundManager().play(sound);
+            if (!isCurrentConnection(eventEpoch)) {
+                sound.discard();
+                return;
+            }
+            try {
+                Minecraft.getInstance().getSoundManager().play(sound);
+            } catch (RuntimeException exception) {
+                sound.discard();
+                clientMessage("message.blindboxchallenge.music_box_download_failed");
+            }
         }))
                 .exceptionally(exception -> {
+                    releaseSlot.run();
                     Minecraft.getInstance().execute(() -> clientMessage("message.blindboxchallenge.music_box_download_failed"));
                     return null;
                 });
