@@ -35,7 +35,9 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class P3AbilityCiScenario {
     private static final int DETRACK_SETTLE_TICKS = 60;
-    private static final int TRACKING_SETTLE_TICKS = 20;
+    /** 先让真实客户端在平台上收到自身 S2C，再释放为腾空，避免网络到达与落地窗口竞争。 */
+    private static final int SELF_SYNC_SETTLE_TICKS = 20;
+    private static final int TRACKING_REQUEST_TICKS = 40;
     private static ActiveScenario active;
 
     private P3AbilityCiScenario() {
@@ -266,14 +268,19 @@ public final class P3AbilityCiScenario {
             phaseTicks++;
             if (phase == Phase.WAITING_DETRACK && phaseTicks >= DETRACK_SETTLE_TICKS) {
                 ServerPlayer alice = player(server, "BlindBoxAlice");
-                releaseAliceForAirJump(alice);
+                // 必须先走生产书本入口并在平台上给 S2C 一个真实到达窗口；此前先释放再同步会让
+                // 客户端刚收到能力时已落地，真实 KeyMapping 的 C2S 被服务端物理校验正确拒绝。
                 learnThroughProductionItem(alice);
                 phase = Phase.WAITING_FOR_CLIENT_KEY;
                 phaseTicks = 0;
                 CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P3_ABILITY_SYNC_DISPATCHED=success entity={}", initialAliceEntityId);
                 return;
             }
-            if (phase == Phase.WAITING_FOR_CLIENT_KEY && phaseTicks == TRACKING_SETTLE_TICKS) {
+            if (phase == Phase.WAITING_FOR_CLIENT_KEY && phaseTicks == SELF_SYNC_SETTLE_TICKS) {
+                releaseAliceForAirJump(player(server, "BlindBoxAlice"));
+                return;
+            }
+            if (phase == Phase.WAITING_FOR_CLIENT_KEY && phaseTicks == TRACKING_REQUEST_TICKS) {
                 ServerPlayer alice = player(server, "BlindBoxAlice");
                 ServerPlayer bob = player(server, "BlindBoxBob");
                 bob.teleportTo(origin, alice.getX() + 2.0D, alice.getY(), alice.getZ() + 2.0D, 0.0F, 0.0F);
