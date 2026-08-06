@@ -34,7 +34,7 @@ def stop(process):
 
 
 def launch(directory: Path, username: str, uuid: str, marker: Path, pillow_marker: Path, scissors_marker: Path, pig_marker: Path, release: Path, reconnect_marker: Path,
-           ability_role: str, ability_key_marker: Path, ability_tracking_marker: Path, ability_lifecycle_marker: Path,
+           ability_role: str, ability_self_sync_marker: Path, ability_key_marker: Path, ability_tracking_marker: Path, ability_lifecycle_marker: Path,
            ability_recovery_marker: Path, server_recovery_marker: Path):
     options = minecraft_launcher_lib.utils.generate_test_options()
     jvm_arguments = ["-Xms768M", "-Xmx2G", "-Dblindbox.ci.multiplayerSmoke=true",
@@ -49,6 +49,8 @@ def launch(directory: Path, username: str, uuid: str, marker: Path, pillow_marke
                      f"-Dblindbox.ci.abilityRole={ability_role}"]
     if ability_key_marker is not None:
         jvm_arguments.append(f"-Dblindbox.ci.abilityKeyMarker={ability_key_marker}")
+    if ability_self_sync_marker is not None:
+        jvm_arguments.append(f"-Dblindbox.ci.abilitySelfSyncMarker={ability_self_sync_marker}")
     if ability_tracking_marker is not None:
         jvm_arguments.append(f"-Dblindbox.ci.abilityTrackingMarker={ability_tracking_marker}")
     if ability_lifecycle_marker is not None:
@@ -118,6 +120,7 @@ def main():
             pig_marker = evidence / f"client-{index}-p3-pig-observed.marker"
             reconnect_marker = evidence / f"client-{index}-reconnected.marker"
             recovery_connection_marker = evidence / f"client-{index}-sigkill-recovered.marker"
+            ability_self_sync_marker = evidence / "client-1-p3-ability-self-sync.marker" if username == "BlindBoxAlice" else None
             ability_key_marker = evidence / "client-1-p3-ability-key.marker" if username == "BlindBoxAlice" else None
             ability_tracking_marker = evidence / "client-2-p3-ability-tracking.marker" if username == "BlindBoxBob" else None
             ability_lifecycle_marker = evidence / "client-1-p3-ability-lifecycle.marker" if username == "BlindBoxAlice" else None
@@ -128,11 +131,11 @@ def main():
             pig_marker.unlink(missing_ok=True)
             reconnect_marker.unlink(missing_ok=True)
             recovery_connection_marker.unlink(missing_ok=True)
-            for ability_marker in (ability_key_marker, ability_tracking_marker, ability_lifecycle_marker, ability_recovery_marker):
+            for ability_marker in (ability_self_sync_marker, ability_key_marker, ability_tracking_marker, ability_lifecycle_marker, ability_recovery_marker):
                 if ability_marker is not None:
                     ability_marker.unlink(missing_ok=True)
             clients.append((*launch(directory, username, uuid, marker, pillow_marker, scissors_marker, pig_marker, release, reconnect_marker,
-                                    "alice" if username == "BlindBoxAlice" else "bob", ability_key_marker,
+                                    "alice" if username == "BlindBoxAlice" else "bob", ability_self_sync_marker, ability_key_marker,
                                     ability_tracking_marker, ability_lifecycle_marker, ability_recovery_marker,
                                     recovery_connection_marker), marker, pillow_marker, scissors_marker, pig_marker, username, uuid, directory,
                             recovery_connection_marker))

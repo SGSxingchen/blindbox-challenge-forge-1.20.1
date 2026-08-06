@@ -35,11 +35,11 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class P3AbilityCiScenario {
     private static final int DETRACK_SETTLE_TICKS = 60;
-    /** 先让真实客户端在平台上收到自身 S2C，再释放为腾空，避免网络到达与落地窗口竞争。 */
-    private static final int SELF_SYNC_SETTLE_TICKS = 20;
+    /** 等待客户端由真实 true S2C 写出观察标记的上限；不以固定 tick 猜测网络已到达。 */
+    private static final int SELF_SYNC_MARKER_TIMEOUT_TICKS = 180;
     private static final int TRACKING_REQUEST_TICKS = 40;
-    /** 约一秒真实下落窗口；干草块同时保证失败时不以摔死掩盖 C2S 物理校验。 */
-    private static final int AIR_JUMP_DROP_BLOCKS = 20;
+    /** 40 格真实下落窗口；干草块保证失败时不以摔死掩盖 C2S 物理校验。 */
+    private static final int AIR_JUMP_DROP_BLOCKS = 40;
     /** C2S/速度同步超时只生成真实服务端物理快照，不得以超时当成功。 */
     private static final int CLIENT_KEY_RESULT_TIMEOUT_TICKS = 140;
     private static ActiveScenario active;
@@ -201,6 +201,8 @@ public final class P3AbilityCiScenario {
         private boolean cloneEventSeen;
         private boolean dimensionEventSeen;
         private boolean airJumpReleased;
+        private boolean selfSyncMarkerVerified;
+        private int airJumpReleasePhaseTick = -1;
         private String lastClientKeyPhysics = "尚未释放腾空平台";
         private String failure;
 
@@ -277,7 +279,10 @@ public final class P3AbilityCiScenario {
                                 + ", cooldown=" + data.isDoubleJumpOnCooldown(alice.serverLevel().getGameTime());
                     }
                 });
-                if (airJumpReleased && phaseTicks > CLIENT_KEY_RESULT_TIMEOUT_TICKS && !clientKeyAcceptedByServer) {
+                if (!airJumpReleased && phaseTicks > SELF_SYNC_MARKER_TIMEOUT_TICKS) {
+                    throw new IllegalStateException("真实客户端未在平台上收到易筋经 true S2C；不撤去平台伪造腾空");
+                }
+                if (airJumpReleased && phaseTicks - airJumpReleasePhaseTick > CLIENT_KEY_RESULT_TIMEOUT_TICKS && !clientKeyAcceptedByServer) {
                     throw new IllegalStateException("真实 KeyMapping 注入后服务端未接受二段跳 C2S：" + lastClientKeyPhysics);
                 }
             }
@@ -292,12 +297,14 @@ public final class P3AbilityCiScenario {
                 CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P3_ABILITY_SYNC_DISPATCHED=success entity={}", initialAliceEntityId);
                 return;
             }
-            if (phase == Phase.WAITING_FOR_CLIENT_KEY && phaseTicks == SELF_SYNC_SETTLE_TICKS) {
+            if (phase == Phase.WAITING_FOR_CLIENT_KEY && !airJumpReleased && verifySelfSyncMarker()) {
                 releaseAliceForAirJump(player(server, "BlindBoxAlice"));
                 airJumpReleased = true;
+                airJumpReleasePhaseTick = phaseTicks;
                 return;
             }
-            if (phase == Phase.WAITING_FOR_CLIENT_KEY && phaseTicks == TRACKING_REQUEST_TICKS) {
+            if (phase == Phase.WAITING_FOR_CLIENT_KEY && airJumpReleased
+                    && phaseTicks - airJumpReleasePhaseTick == TRACKING_REQUEST_TICKS) {
                 ServerPlayer alice = player(server, "BlindBoxAlice");
                 ServerPlayer bob = player(server, "BlindBoxBob");
                 bob.teleportTo(origin, alice.getX() + 2.0D, alice.getY(), alice.getZ() + 2.0D, 0.0F, 0.0F);
@@ -318,6 +325,9 @@ public final class P3AbilityCiScenario {
             }
             if (!startTrackingEventSeen) {
                 throw new IllegalStateException("Bob 回到范围后未触发真实 PlayerEvent.StartTracking");
+            }
+            if (!selfSyncMarkerVerified) {
+                throw new IllegalStateException("平台撤去前未核验客户端真实 true S2C 标记");
             }
             Path directory = markerDirectory();
             Map<String, String> aliceMarker = readMarker(directory.resolve("client-1-p3-ability-key.marker"), 7);
@@ -463,12 +473,29 @@ public final class P3AbilityCiScenario {
             Path directory = markerDirectory();
             try {
                 Files.deleteIfExists(directory.resolve("client-1-p3-ability-key.marker"));
+                Files.deleteIfExists(directory.resolve("client-1-p3-ability-self-sync.marker"));
                 Files.deleteIfExists(directory.resolve("client-2-p3-ability-tracking.marker"));
                 Files.deleteIfExists(directory.resolve("client-1-p3-ability-lifecycle.marker"));
                 Files.deleteIfExists(directory.resolve("client-1-p3-ability-recovered.marker"));
             } catch (IOException exception) {
                 throw new IllegalStateException("无法清理上轮 P3 易筋经观察 marker", exception);
             }
+        }
+
+        /** 只接受本轮 Alice 对当前服务端实体的真实 S2C 观察；缺失时保持平台而不是猜网络时序。 */
+        private boolean verifySelfSyncMarker() throws IOException {
+            if (selfSyncMarkerVerified) return true;
+            Path markerPath = markerDirectory().resolve("client-1-p3-ability-self-sync.marker");
+            if (!Files.isRegularFile(markerPath)) return false;
+            Map<String, String> marker = readMarker(markerPath, 5);
+            if (!"1".equals(marker.get("schema")) || !"alice".equals(marker.get("role"))
+                    || !aliceUuid.toString().equals(marker.get("self_uuid"))
+                    || !Integer.toString(initialAliceEntityId).equals(marker.get("self_entity_id"))
+                    || !"true".equals(marker.get("received_self_sync"))) {
+                throw new IllegalStateException("Alice true S2C 观察 marker 与当前服务端实体不一致");
+            }
+            selfSyncMarkerVerified = true;
+            return true;
         }
 
         private void fail(Exception exception) {

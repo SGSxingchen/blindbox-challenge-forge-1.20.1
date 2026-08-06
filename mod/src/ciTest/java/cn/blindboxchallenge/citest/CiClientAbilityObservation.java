@@ -32,6 +32,7 @@ public final class CiClientAbilityObservation {
     private static boolean initialSelfSync;
     private static int initialEntityId = -1;
     private static int learnedSelfSyncCount;
+    private static boolean selfSyncMarkerWritten;
     private static boolean keyInjected;
     private static boolean serverVelocityObserved;
     private static boolean keyMarkerWritten;
@@ -71,6 +72,12 @@ public final class CiClientAbilityObservation {
                 learnedSelfSyncCount++;
                 CiTestProbe.LOGGER.info("P3 易筋经客户端收到自身能力同步，次数={}，实体={}", learnedSelfSyncCount, player.getId());
                 if (initialEntityId < 0) initialEntityId = player.getId();
+                // 平台只能在客户端实际收到本次 true S2C 后由服务端撤去；这个标记只记录
+                // 已收到的网络事实，不能代表按键、C2S 或服务器速度成功。
+                if (!selfSyncMarkerWritten) {
+                    writeSelfSyncMarker(player);
+                    selfSyncMarkerWritten = true;
+                }
                 if (clientCloneEvent && learnedSelfSyncCount >= 2) learnedAfterClone = true;
                 if (isNether(minecraft) && learnedSelfSyncCount >= 3) dimensionSyncObserved = true;
                 // 断线标志仅由 ClientPlayerNetworkEvent.LoggingOut 写入；因此这里证明的是
@@ -97,6 +104,7 @@ public final class CiClientAbilityObservation {
         initialSelfSync = false;
         initialEntityId = -1;
         learnedSelfSyncCount = 0;
+        selfSyncMarkerWritten = false;
         keyInjected = false;
         serverVelocityObserved = false;
         keyMarkerWritten = false;
@@ -205,6 +213,14 @@ public final class CiClientAbilityObservation {
                 + "received_self_sync=true\n"
                 + "key_injected=true\n"
                 + "server_velocity_observed=true\n");
+    }
+
+    private static void writeSelfSyncMarker(LocalPlayer player) {
+        write(Path.of(required("blindbox.ci.abilitySelfSyncMarker")).toAbsolutePath(), "schema=1\n"
+                + "role=alice\n"
+                + "self_uuid=" + player.getUUID() + "\n"
+                + "self_entity_id=" + initialEntityId + "\n"
+                + "received_self_sync=true\n");
     }
 
     private static void writeTrackingMarker(java.util.UUID selfUuid, java.util.UUID trackedUuid, int trackedEntityId) {
