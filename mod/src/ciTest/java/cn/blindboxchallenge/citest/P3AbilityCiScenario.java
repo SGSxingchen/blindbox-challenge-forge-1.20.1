@@ -264,7 +264,7 @@ public final class P3AbilityCiScenario {
             bob.hurtMarked = true;
         }
 
-        private void tick() {
+        private void tick() throws Exception {
             if (phase == Phase.FAILED) return;
             tickAfterPhase();
             if (phase == Phase.CLONE_READY || phase == Phase.DIMENSION_READY) return;
