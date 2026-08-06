@@ -144,11 +144,6 @@ public final class P3AbilityCiScenario {
         }
     }
 
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onCloneSourceSnapshot(PlayerEvent.Clone event) {
-        if (active != null) active.captureCloneSource(event);
-    }
-
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onClone(PlayerEvent.Clone event) {
         if (active != null) active.onClone(event);
@@ -209,8 +204,7 @@ public final class P3AbilityCiScenario {
         private boolean startTrackingEventSeen;
         private boolean cloneEventSeen;
         private ServerPlayer cloneReplacement;
-        private boolean cloneOriginalLearnedBeforeProduction;
-        private boolean cloneOriginalLearned;
+        private boolean cloneSourceLearnedBeforeKill;
         private boolean cloneReplacementLearnedAtEvent;
         private boolean dimensionEventSeen;
         private boolean airJumpReleased;
@@ -370,7 +364,14 @@ public final class P3AbilityCiScenario {
             if (!clientPathVerified || phase != Phase.WAITING_FOR_CLIENT_KEY) {
                 throw new IllegalStateException("必须先通过真实客户端 C2S 与 StartTracking 核验");
             }
-            restoreSlowFalling(player(server, "BlindBoxAlice"));
+            ServerPlayer alice = player(server, "BlindBoxAlice");
+            // 在真实原版 kill 前直接记录当前在线实体的事实。Clone 监听器的同优先级顺序
+            // 不受 API 保证，不能将其中任何一次读取误称为“生产监听器之前”的证据。
+            requireLearned(alice);
+            cloneSourceLearnedBeforeKill = alice.getCapability(ModCapabilities.PLAYER_ABILITY)
+                    .map(data -> data.hasLearnedYiJin()).orElse(false);
+            if (!cloneSourceLearnedBeforeKill) throw new IllegalStateException("原版 kill 前易筋经状态丢失");
+            restoreSlowFalling(alice);
             server.getGameRules().getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(true, server);
             phase = Phase.WAITING_FOR_CLONE;
             phaseTicks = 0;
@@ -389,25 +390,13 @@ public final class P3AbilityCiScenario {
             if (result <= 0) throw new IllegalStateException("原版跨维 tp 命令没有执行成功");
         }
 
-        private void captureCloneSource(PlayerEvent.Clone event) {
-            if (phase != Phase.WAITING_FOR_CLONE || !(event.getEntity() instanceof ServerPlayer replacement)
-                    || !aliceUuid.equals(replacement.getUUID()) || !event.isWasDeath()) return;
-            // 在生产监听器复制前读取原实体的真实 Capability；只 revive 供读取，后续由生产监听器
-            // 统一 invalidate，绝不写入数据或代替生产复制。
-            event.getOriginal().reviveCaps();
-            cloneOriginalLearnedBeforeProduction = event.getOriginal().getCapability(ModCapabilities.PLAYER_ABILITY)
-                    .map(data -> data.hasLearnedYiJin()).orElse(false);
-        }
-
         private void onClone(PlayerEvent.Clone event) {
             if (phase != Phase.WAITING_FOR_CLONE || !(event.getEntity() instanceof ServerPlayer replacement)
                     || !aliceUuid.equals(replacement.getUUID()) || !event.isWasDeath()) return;
             cloneEventSeen = true;
             cloneReplacement = replacement;
-            // 此监听器位于 LOWEST，生产 Clone 复制已执行；仅记录两个真实 Capability 的状态，
-            // 以便失败时区分原状态丢失和 replacement 复制失败，绝不写入数据。
-            cloneOriginalLearned = event.getOriginal().getCapability(ModCapabilities.PLAYER_ABILITY)
-                    .map(data -> data.hasLearnedYiJin()).orElse(false);
+            // 此监听器位于 LOWEST，生产 Clone 复制已执行；只记录 replacement 的真实状态，
+            // 不写入数据，也不把已由生产代码 invalidate 的原实体当作失败来源。
             cloneReplacementLearnedAtEvent = replacement.getCapability(ModCapabilities.PLAYER_ABILITY)
                     .map(data -> data.hasLearnedYiJin()).orElse(false);
         }
@@ -465,9 +454,9 @@ public final class P3AbilityCiScenario {
                 try {
                     requireLearned(cloneReplacement);
                 } catch (IllegalStateException exception) {
-                    throw new IllegalStateException("Clone Capability 对账失败：originalBeforeProduction="
-                            + cloneOriginalLearnedBeforeProduction + ", originalAtLow=" + cloneOriginalLearned
-                            + ", replacementLearnedAtEvent=" + cloneReplacementLearnedAtEvent, exception);
+                    throw new IllegalStateException("Clone Capability 对账失败：sourceBeforeKill="
+                            + cloneSourceLearnedBeforeKill + ", replacementAtLow="
+                            + cloneReplacementLearnedAtEvent, exception);
                 }
                 phase = Phase.CLONE_READY;
                 phaseTicks = 0;
