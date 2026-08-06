@@ -9,8 +9,11 @@ import cn.blindboxchallenge.item.EggyEyeMaskItem;
 import cn.blindboxchallenge.menu.PackingMenu;
 import cn.blindboxchallenge.network.CommitPackingPacket;
 import cn.blindboxchallenge.registry.ModItems;
+import cn.blindboxchallenge.registry.ModBlocks;
 import cn.blindboxchallenge.service.BlindBoxService;
 import cn.blindboxchallenge.util.StackFingerprint;
+import cn.blindboxchallenge.block.BmlCheerStickBlock;
+import cn.blindboxchallenge.item.RestrictedFluidContainerItem;
 import com.mojang.brigadier.CommandDispatcher;
 import java.nio.file.Path;
 import java.util.List;
@@ -269,6 +272,8 @@ public final class CiTestCommands {
             player.setHealth(player.getMaxHealth());
             player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
 
+            assertContainersAndLighting(player);
+
             source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P2_BUSINESS=success"), false);
             return 1;
         } catch (Exception exception) {
@@ -296,6 +301,86 @@ public final class CiTestCommands {
                                          net.minecraft.world.entity.ai.attributes.Attribute attribute) {
         return item.getDefaultAttributeModifiers(slot)
                 .get(attribute).stream().mapToDouble(net.minecraft.world.entity.ai.attributes.AttributeModifier::getAmount).sum();
+    }
+
+    /** 在两个真实客户端在线的专服中，直接走生产右键入口验证容器和方块状态。 */
+    private static void assertContainersAndLighting(ServerPlayer player) {
+        if (!(ModItems.GLOW_STICK.get() instanceof net.minecraft.world.item.StandingAndWallBlockItem)
+                || !(ModItems.BML_CHEER_STICK.get() instanceof net.minecraft.world.item.StandingAndWallBlockItem)
+                || !(ModBlocks.GLOW_STICK.get() instanceof net.minecraft.world.level.block.TorchBlock)
+                || !(ModBlocks.BML_CHEER_STICK.get() instanceof net.minecraft.world.level.block.TorchBlock)) {
+            throw new IllegalStateException("lighting items are not registered as vanilla-torch block items");
+        }
+        net.minecraft.server.level.ServerLevel level = player.serverLevel();
+        net.minecraft.core.BlockPos fluidPos = player.blockPosition().offset(0, 3, -4);
+        net.minecraft.core.BlockPos pourPos = fluidPos.north();
+        net.minecraft.core.BlockPos cheerPos = fluidPos.east(2);
+        net.minecraft.core.BlockPos cheerSupport = cheerPos.below();
+        net.minecraft.world.level.block.state.BlockState oldFluid = level.getBlockState(fluidPos);
+        net.minecraft.world.level.block.state.BlockState oldPour = level.getBlockState(pourPos);
+        net.minecraft.world.level.block.state.BlockState oldCheer = level.getBlockState(cheerPos);
+        net.minecraft.world.level.block.state.BlockState oldCheerSupport = level.getBlockState(cheerSupport);
+        double oldX = player.getX(), oldY = player.getY(), oldZ = player.getZ();
+        float oldYaw = player.getYRot(), oldPitch = player.getXRot();
+        try {
+            // 眼高落在水源方块内部，朝正北的真实射线必经 fluidPos。
+            player.setPos(fluidPos.getX() + 0.5D, fluidPos.getY() - 1.0D, fluidPos.getZ() + 3.5D);
+            player.setYRot(180.0F);
+            player.setXRot(0.0F);
+
+            ItemStack bath = new ItemStack(ModItems.BATH_BUCKET.get());
+            if (bath.getMaxDamage() != 10) throw new IllegalStateException("bath bucket durability is not ten");
+            player.setItemInHand(InteractionHand.MAIN_HAND, bath);
+            level.setBlock(fluidPos, net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 3);
+            if (!bath.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
+                    || RestrictedFluidContainerItem.getContainedFluid(bath) != net.minecraft.world.level.material.Fluids.WATER) {
+                throw new IllegalStateException("bath bucket did not retain water in its own stack");
+            }
+
+            level.setBlock(fluidPos, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+            if (!bath.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
+                    || RestrictedFluidContainerItem.getContainedFluid(bath) != net.minecraft.world.level.material.Fluids.EMPTY) {
+                throw new IllegalStateException("bath bucket did not use vanilla-safe emptying semantics");
+            }
+
+            level.setBlock(fluidPos, net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState(), 3);
+            if (!bath.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
+                    || bath.getDamageValue() != 1
+                    || RestrictedFluidContainerItem.getContainedFluid(bath) != net.minecraft.world.level.material.Fluids.LAVA) {
+                throw new IllegalStateException("bath bucket lava pickup lost durability or container state");
+            }
+
+            ItemStack cup = new ItemStack(ModItems.PAPER_CUP.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, cup);
+            level.setBlock(fluidPos, net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState(), 3);
+            if (cup.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
+                    || RestrictedFluidContainerItem.getContainedFluid(cup) != net.minecraft.world.level.material.Fluids.EMPTY) {
+                throw new IllegalStateException("paper cup accepted lava");
+            }
+            level.setBlock(fluidPos, net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 3);
+            if (!cup.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
+                    || RestrictedFluidContainerItem.getContainedFluid(cup) != net.minecraft.world.level.material.Fluids.WATER) {
+                throw new IllegalStateException("paper cup did not pick up water");
+            }
+
+            level.setBlock(cheerSupport, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+            level.setBlock(cheerPos, ModBlocks.BML_CHEER_STICK.get().defaultBlockState(), 3);
+            net.minecraft.world.level.block.state.BlockState cheerState = level.getBlockState(cheerPos);
+            ModBlocks.BML_CHEER_STICK.get().use(cheerState, level, cheerPos, player, InteractionHand.MAIN_HAND,
+                    new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(cheerPos), net.minecraft.core.Direction.UP, cheerPos, false));
+            if (!level.getBlockState(cheerPos).getValue(BmlCheerStickBlock.LIT)) {
+                throw new IllegalStateException("BML cheer stick did not switch LIT on the logical server");
+            }
+        } finally {
+            level.setBlock(fluidPos, oldFluid, 3);
+            level.setBlock(pourPos, oldPour, 3);
+            level.setBlock(cheerPos, oldCheer, 3);
+            level.setBlock(cheerSupport, oldCheerSupport, 3);
+            player.setPos(oldX, oldY, oldZ);
+            player.setYRot(oldYaw);
+            player.setXRot(oldPitch);
+            player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        }
     }
 
     /** 004 的四个 UUID 必须不同，否则 Forge 会将两只手的同属性 Modifier 去重。 */

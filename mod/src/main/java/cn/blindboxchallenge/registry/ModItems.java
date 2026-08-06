@@ -2,6 +2,7 @@ package cn.blindboxchallenge.registry;
 
 import cn.blindboxchallenge.BlindBoxChallenge;
 import cn.blindboxchallenge.item.AdrenalineItem;
+import cn.blindboxchallenge.item.BathBucketItem;
 import cn.blindboxchallenge.item.BlindBoxItem;
 import cn.blindboxchallenge.item.ChainsawSwordItem;
 import cn.blindboxchallenge.item.EggyEyeMaskItem;
@@ -11,12 +12,15 @@ import cn.blindboxchallenge.item.KazooItem;
 import cn.blindboxchallenge.item.LongScrewdriverItem;
 import cn.blindboxchallenge.item.NailItem;
 import cn.blindboxchallenge.item.PackingToolItem;
+import cn.blindboxchallenge.item.PaperCupItem;
 import cn.blindboxchallenge.item.PickaxeHoeItem;
+import net.minecraft.core.Direction;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterials;
 import net.minecraft.world.item.ElytraItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.StandingAndWallBlockItem;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.Tiers;
 import net.minecraftforge.registries.DeferredRegister;
@@ -33,6 +37,14 @@ public final class ModItems {
     public static final RegistryObject<Item> LONG_SCREWDRIVER = ITEMS.register("long_screwdriver", LongScrewdriverItem::new);
     public static final RegistryObject<Item> PICKAXE_HOE = ITEMS.register("pickaxe_hoe", PickaxeHoeItem::new);
     public static final RegistryObject<Item> LIGHTER = ITEMS.register("lighter", LighterItem::new);
+    public static final RegistryObject<Item> BATH_BUCKET = ITEMS.register("bath_bucket", BathBucketItem::new);
+    public static final RegistryObject<Item> GLOW_STICK = ITEMS.register("glow_stick",
+            () -> new StandingAndWallBlockItem(ModBlocks.GLOW_STICK.get(), ModBlocks.GLOW_STICK_WALL.get(),
+                    new Item.Properties(), Direction.DOWN));
+    public static final RegistryObject<Item> BML_CHEER_STICK = ITEMS.register("bml_cheer_stick",
+            () -> new StandingAndWallBlockItem(ModBlocks.BML_CHEER_STICK.get(), ModBlocks.BML_CHEER_STICK_WALL.get(),
+                    new Item.Properties(), Direction.DOWN));
+    public static final RegistryObject<Item> PAPER_CUP = ITEMS.register("paper_cup", PaperCupItem::new);
     public static final RegistryObject<Item> KAZOO = ITEMS.register("kazoo", KazooItem::new);
     public static final RegistryObject<Item> TRUFFLE_HAM_CRACKER = ITEMS.register("truffle_ham_cracker", () -> food(2, 0.1F));
     public static final RegistryObject<Item> POTATO_SNACK = ITEMS.register("potato_snack", () -> food(8, 0.8F));
