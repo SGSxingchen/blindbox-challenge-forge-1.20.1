@@ -15,5 +15,6 @@ P1 的盲盒、打包、全局奖池、事务隔离与调试命令，以及 P2 �
 * [P2 验收矩阵](docs/P2_ACCEPTANCE.md)
 * [P3 持久能力、抱枕投掷与返航剪刀实施记录](docs/P3_IMPLEMENTATION.md)
 * [P3 持久能力、抱枕投掷与返航剪刀验收矩阵](docs/P3_ACCEPTANCE.md)
+* [P4 交互、传送与在线音频准备记录](docs/P4_PREPARATION.md)
 
 后续新增或变更功能时，必须同步更新对应文档与本索引；所有代码、提交信息和工程文档使用中文。
