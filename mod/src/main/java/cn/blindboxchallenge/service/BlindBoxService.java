@@ -113,16 +113,96 @@ public final class BlindBoxService {
         return true;
     }
 
-    /** 保守恢复：只自动标记并通知。无法从两个独立存档精确证明前后态时不猜测补发或删除。 */
+    /** 登录时只恢复能由逐槽收据、唯一 token 与 bundle 内容共同证明的 PACK 状态。 */
     public static void inspectRecovery(ServerPlayer player) {
         BlindBoxPoolSavedData data = BlindBoxPoolSavedData.get(player.serverLevel());
-        int pending = data.pendingFor(player.getUUID()).size();
-        if (pending > 0) {
-            for (TransactionRecord record : data.pendingFor(player.getUUID())) data.markManualReview(record.id(), player.level().getGameTime(), "legacy_or_unproven_state");
-            player.sendSystemMessage(Component.literal("检测到 " + pending + " 个未完成盲盒事务，已隔离且未自动删改物品；请管理员使用 /blindbox pool count 检查。")
-                    .withStyle(ChatFormatting.YELLOW));
+        List<TransactionRecord> pending = data.pendingFor(player.getUUID()).stream().limit(32).toList();
+        if (pending.isEmpty()) return;
+        player.closeContainer();
+        int recovered = 0;
+        int isolated = 0;
+        for (TransactionRecord record : pending) {
+            if (record.schemaVersion() < TransactionRecord.CURRENT_SCHEMA || record.kind() != TransactionRecord.Kind.PACK) {
+                data.markManualReview(record.id(), player.level().getGameTime(), "legacy_or_open_recovery_not_implemented");
+                isolated++;
+                continue;
+            }
+            PackRecoveryResult result = recoverPack(player, data, record);
+            if (result == PackRecoveryResult.RECOVERED) recovered++; else isolated++;
         }
+        player.containerMenu.broadcastChanges();
+        player.server.getPlayerList().save(player);
+        if (recovered > 0) player.sendSystemMessage(Component.literal("已幂等恢复 " + recovered + " 个盲盒打包事务。").withStyle(ChatFormatting.GREEN));
+        if (isolated > 0) player.sendSystemMessage(Component.literal("另有 " + isolated + " 个事务证据冲突，已隔离且未自动增删资产。")
+                .withStyle(ChatFormatting.YELLOW));
     }
+
+    private static PackRecoveryResult recoverPack(ServerPlayer player, BlindBoxPoolSavedData data, TransactionRecord record) {
+        CompoundTag receipts = record.receipts();
+        ListTag sources = receipts.getList("source_receipts", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        if (sources.isEmpty() || !receipts.contains("token_receipt", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+            data.markManualReview(record.id(), player.level().getGameTime(), "missing_pack_receipts");
+            return PackRecoveryResult.ISOLATED;
+        }
+        boolean allBefore = true;
+        boolean allAfter = true;
+        for (int i = 0; i < sources.size(); i++) {
+            CompoundTag receipt = sources.getCompound(i);
+            int slot = receipt.getInt("slot");
+            if (slot < 0 || slot >= 36) {
+                data.markManualReview(record.id(), player.level().getGameTime(), "invalid_source_slot");
+                return PackRecoveryResult.ISOLATED;
+            }
+            CompoundTag current = InventoryEvidence.stack(player.getInventory().getItem(slot));
+            allBefore &= current.equals(receipt.getCompound("before"));
+            allAfter &= current.equals(receipt.getCompound("after"));
+        }
+        int tokenCount = countToken(player, record.tokenId());
+        PrizeBundle existing = data.bundle(record.bundleId()).orElse(null);
+        boolean bundleMatches = existing != null && existing.save().equals(record.payload().save());
+        boolean bundleAbsent = existing == null;
+
+        if (allBefore && tokenCount == 0 && bundleAbsent) {
+            data.resolveRecovery(record.id(), TransactionRecord.Stage.ROLLED_BACK, player.level().getGameTime(), "pack_before_state_intact");
+            return PackRecoveryResult.RECOVERED;
+        }
+        if (allAfter && tokenCount == 1 && (bundleAbsent || bundleMatches)) {
+            if (!data.ensureBundle(record.payload())) {
+                data.markManualReview(record.id(), player.level().getGameTime(), "bundle_content_conflict");
+                return PackRecoveryResult.ISOLATED;
+            }
+            data.resolveRecovery(record.id(), TransactionRecord.Stage.COMMITTED, player.level().getGameTime(),
+                    bundleAbsent ? "pack_bundle_reinserted" : "pack_commit_confirmed");
+            return PackRecoveryResult.RECOVERED;
+        }
+        if (allAfter && tokenCount == 0 && bundleAbsent) {
+            for (int i = 0; i < sources.size(); i++) {
+                CompoundTag receipt = sources.getCompound(i);
+                player.getInventory().setItem(receipt.getInt("slot"), ItemStack.of(receipt.getCompound("before")));
+            }
+            data.resolveRecovery(record.id(), TransactionRecord.Stage.ROLLED_BACK, player.level().getGameTime(), "pack_sources_restored");
+            return PackRecoveryResult.RECOVERED;
+        }
+        String reason = tokenCount > 1 ? "duplicate_token" : (!bundleAbsent && !bundleMatches ? "bundle_content_conflict" : "unproven_pack_state");
+        data.markManualReview(record.id(), player.level().getGameTime(), reason);
+        return PackRecoveryResult.ISOLATED;
+    }
+
+    private static int countToken(ServerPlayer player, UUID tokenId) {
+        int count = 0;
+        for (int slot = 0; slot < 36; slot++) if (hasToken(player.getInventory().getItem(slot), tokenId)) count += player.getInventory().getItem(slot).getCount();
+        if (hasToken(player.getOffhandItem(), tokenId)) count += player.getOffhandItem().getCount();
+        ItemStack carried = player.containerMenu.getCarried();
+        if (hasToken(carried, tokenId)) count += carried.getCount();
+        return count;
+    }
+
+    private static boolean hasToken(ItemStack stack, UUID tokenId) {
+        return stack.is(ModItems.BLIND_BOX.get()) && stack.hasTag() && stack.getTag().hasUUID(TOKEN_KEY)
+                && tokenId.equals(stack.getTag().getUUID(TOKEN_KEY));
+    }
+
+    private enum PackRecoveryResult { RECOVERED, ISOLATED }
 
     private static boolean canFitAfterRemoving(Inventory inventory, List<Selection> selections, List<ItemStack> additions) {
         List<ItemStack> virtual = copyMain(inventory);

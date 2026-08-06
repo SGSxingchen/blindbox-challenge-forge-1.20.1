@@ -81,15 +81,26 @@ public final class BlindBoxPoolSavedData extends SavedData {
     }
 
     public synchronized boolean containsBundle(UUID id) { return bundles.containsKey(id); }
+    public synchronized Optional<PrizeBundle> bundle(UUID id) { return Optional.ofNullable(bundles.get(id)); }
+    public synchronized boolean ensureBundle(PrizeBundle bundle) {
+        PrizeBundle existing = bundles.get(bundle.id());
+        if (existing != null) return existing.save().equals(bundle.save());
+        bundles.put(bundle.id(), bundle);
+        setDirty();
+        return true;
+    }
     public synchronized int bundleCount() { return bundles.size(); }
     public synchronized Collection<PrizeBundle> bundles() { return List.copyOf(bundles.values()); }
     public synchronized Collection<TransactionRecord> pendingFor(UUID playerId) {
         return transactions.values().stream().filter(record -> record.playerId().equals(playerId) && !record.stage().terminal()).toList();
     }
-    public synchronized void markManualReview(UUID id, long gameTime, String reason) {
+    public synchronized void resolveRecovery(UUID id, TransactionRecord.Stage stage, long gameTime, String result) {
         TransactionRecord record = transactions.get(id);
-        if (record != null) transactions.put(id, record.withRecoveryResult(TransactionRecord.Stage.MANUAL_REVIEW, gameTime, reason));
+        if (record != null && !record.stage().terminal()) transactions.put(id, record.withRecoveryResult(stage, gameTime, result));
         setDirty();
+    }
+    public synchronized void markManualReview(UUID id, long gameTime, String reason) {
+        resolveRecovery(id, TransactionRecord.Stage.MANUAL_REVIEW, gameTime, reason);
     }
     public synchronized void clearForDebug() { bundles.clear(); setDirty(); }
     public synchronized void injectForDebug(PrizeBundle bundle) { bundles.put(bundle.id(), bundle); setDirty(); }
