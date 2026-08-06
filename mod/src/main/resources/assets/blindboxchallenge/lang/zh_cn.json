@@ -59,5 +59,9 @@
   "item.blindboxchallenge.safety_exit_sign_shield": "安全出口牌子盾牌",
   "item.blindboxchallenge.decision_coin": "决策币",
   "item.blindboxchallenge.birthday_candle": "生日蜡烛",
-  "item.blindboxchallenge.rainbow_hoop": "彩虹圈"
+  "item.blindboxchallenge.rainbow_hoop": "彩虹圈",
+  "item.blindboxchallenge.yijin_manual": "易筋经",
+  "item.blindboxchallenge.road_barrier_helmet": "路障头饰",
+  "key.blindboxchallenge.double_jump": "二段跳",
+  "key.categories.blindboxchallenge": "盲盒挑战生存"
 }

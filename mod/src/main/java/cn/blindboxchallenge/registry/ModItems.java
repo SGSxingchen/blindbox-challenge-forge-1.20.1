@@ -22,6 +22,8 @@ import cn.blindboxchallenge.item.SafetyExitSignShieldItem;
 import cn.blindboxchallenge.item.DecisionCoinItem;
 import cn.blindboxchallenge.item.BirthdayCandleItem;
 import cn.blindboxchallenge.item.RainbowHoopItem;
+import cn.blindboxchallenge.item.RoadBarrierHelmetItem;
+import cn.blindboxchallenge.item.YiJinJingItem;
 import net.minecraft.core.Direction;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ArmorItem;
@@ -51,6 +53,9 @@ public final class ModItems {
     public static final RegistryObject<Item> DECISION_COIN = ITEMS.register("decision_coin", DecisionCoinItem::new);
     public static final RegistryObject<Item> BIRTHDAY_CANDLE = ITEMS.register("birthday_candle", BirthdayCandleItem::new);
     public static final RegistryObject<Item> RAINBOW_HOOP = ITEMS.register("rainbow_hoop", RainbowHoopItem::new);
+    public static final RegistryObject<Item> YIJIN_MANUAL = ITEMS.register("yijin_manual", YiJinJingItem::new);
+    public static final RegistryObject<Item> ROAD_BARRIER_HELMET = ITEMS.register("road_barrier_helmet",
+            () -> new RoadBarrierHelmetItem(ArmorMaterials.IRON));
     public static final RegistryObject<Item> RAT_JERKY_TOTEM = ITEMS.register("rat_jerky_totem", () -> new Item(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> LONG_SCREWDRIVER = ITEMS.register("long_screwdriver", LongScrewdriverItem::new);
     public static final RegistryObject<Item> PICKAXE_HOE = ITEMS.register("pickaxe_hoe", PickaxeHoeItem::new);

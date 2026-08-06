@@ -59,5 +59,9 @@
   "item.blindboxchallenge.safety_exit_sign_shield": "Safety Exit Sign Shield",
   "item.blindboxchallenge.decision_coin": "Decision Coin",
   "item.blindboxchallenge.birthday_candle": "Birthday Candle",
-  "item.blindboxchallenge.rainbow_hoop": "Rainbow Hoop"
+  "item.blindboxchallenge.rainbow_hoop": "Rainbow Hoop",
+  "item.blindboxchallenge.yijin_manual": "Muscle and Tendon Manual",
+  "item.blindboxchallenge.road_barrier_helmet": "Road Barrier Helmet",
+  "key.blindboxchallenge.double_jump": "Double Jump",
+  "key.categories.blindboxchallenge": "Blind Box Challenge"
 }

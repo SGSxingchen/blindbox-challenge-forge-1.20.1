@@ -3,6 +3,7 @@ package cn.blindboxchallenge.citest;
 import cn.blindboxchallenge.data.BlindBoxPoolSavedData;
 import cn.blindboxchallenge.data.PrizeBundle;
 import cn.blindboxchallenge.data.TransactionRecord;
+import cn.blindboxchallenge.capability.ModCapabilities;
 import cn.blindboxchallenge.event.ServerLifecycleEvents;
 import cn.blindboxchallenge.item.BlindBoxItem;
 import cn.blindboxchallenge.item.EggyEyeMaskItem;
@@ -14,6 +15,7 @@ import cn.blindboxchallenge.item.SafetyExitSignShieldItem;
 import cn.blindboxchallenge.item.DecisionCoinItem;
 import cn.blindboxchallenge.item.BirthdayCandleItem;
 import cn.blindboxchallenge.item.RainbowHoopItem;
+import cn.blindboxchallenge.service.PlayerAbilityService;
 import cn.blindboxchallenge.menu.PackingMenu;
 import cn.blindboxchallenge.network.CommitPackingPacket;
 import cn.blindboxchallenge.registry.ModItems;
@@ -56,6 +58,7 @@ public final class CiTestCommands {
                 .then(Commands.literal("seed_recovery_fixture").executes(context -> seedRecoveryFixture(context.getSource())))
                 .then(Commands.literal("run_multi_business").executes(context -> runMultiBusiness(context.getSource())))
                 .then(Commands.literal("run_p2_business").executes(context -> runP2Business(context.getSource())))
+                .then(Commands.literal("run_p3_business").executes(context -> runP3Business(context.getSource())))
                 .then(Commands.literal("prepare_reconnect").executes(context -> prepareReconnect(context.getSource())))
                 .then(Commands.literal("verify_reconnect").executes(context -> verifyReconnect(context.getSource()))));
     }
@@ -66,6 +69,10 @@ public final class CiTestCommands {
         try {
             ServerPlayer alice = source.getServer().getPlayerList().getPlayerByName("BlindBoxAlice");
             if (alice == null) throw new IllegalStateException("Alice not online before reconnect test");
+            if (!PlayerAbilityService.learnYiJin(alice)) {
+                throw new IllegalStateException("P3 reconnect fixture could not learn Yi Jin exactly once");
+            }
+            assertYiJinAttributes(alice);
             ItemStack box = BlindBoxService.createBlindBox(RECONNECT_TOKEN);
             alice.getInventory().selected = 1;
             alice.setItemInHand(InteractionHand.MAIN_HAND, box);
@@ -90,6 +97,17 @@ public final class CiTestCommands {
             if (BlindBoxItem.hasActiveUseState(alice, box) || alice.isUsingItem()) {
                 throw new IllegalStateException("opening state survived disconnect/reconnect");
             }
+            var capability = alice.getCapability(ModCapabilities.PLAYER_ABILITY).resolve()
+                    .orElseThrow(() -> new IllegalStateException("P3 reconnect capability missing after player reload"));
+            if (!capability.hasLearnedYiJin()) {
+                throw new IllegalStateException("Yi Jin learned state did not survive real disconnect/reconnect");
+            }
+            assertYiJinAttributes(alice);
+            capability.setLearnedYiJin(false);
+            capability.setUsedDoubleJump(false);
+            capability.setNextDoubleJumpTick(0L);
+            PlayerAbilityService.reconcileAttributes(alice, capability);
+            PlayerAbilityService.syncTrackingAndSelf(alice, capability);
             source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_RECONNECT=success"), false);
             return 1;
         } catch (Exception exception) {
@@ -300,6 +318,136 @@ public final class CiTestCommands {
                 player.setHealth(Math.min(originalHealth, player.getMaxHealth()));
                 player.containerMenu.broadcastChanges();
             }
+        }
+    }
+
+    /** P3 第一批：真实逻辑服务端的易筋经状态、固定属性与二段跳拒绝/允许路径。 */
+    private static int runP3Business(CommandSourceStack source) {
+        ServerPlayer player = null;
+        ItemStack originalMainHand = ItemStack.EMPTY;
+        float originalHealth = 0.0F;
+        net.minecraft.world.phys.Vec3 originalVelocity = net.minecraft.world.phys.Vec3.ZERO;
+        boolean originalOnGround = false;
+        float originalFallDistance = 0.0F;
+        boolean originalHurtMarked = false;
+        boolean originalLearned = false;
+        boolean originalUsedDoubleJump = false;
+        long originalNextDoubleJumpTick = 0L;
+        try {
+            player = source.getServer().getPlayerList().getPlayerByName("BlindBoxAlice");
+            if (player == null) throw new IllegalStateException("Alice not online for P3 suite");
+            originalMainHand = player.getMainHandItem().copy();
+            originalHealth = player.getHealth();
+            originalVelocity = player.getDeltaMovement();
+            originalOnGround = player.onGround();
+            originalFallDistance = player.fallDistance;
+            originalHurtMarked = player.hurtMarked;
+            var capability = player.getCapability(ModCapabilities.PLAYER_ABILITY).resolve()
+                    .orElseThrow(() -> new IllegalStateException("P3 player capability was not attached"));
+            originalLearned = capability.hasLearnedYiJin();
+            originalUsedDoubleJump = capability.hasUsedDoubleJump();
+            originalNextDoubleJumpTick = capability.nextDoubleJumpTick();
+
+            capability.setLearnedYiJin(false);
+            capability.setUsedDoubleJump(false);
+            capability.setNextDoubleJumpTick(0L);
+            PlayerAbilityService.reconcileAttributes(player, capability);
+            player.setOnGround(false);
+            if (PlayerAbilityService.requestDoubleJump(player)) {
+                throw new IllegalStateException("unlearned player was allowed to double jump");
+            }
+
+            ItemStack manual = new ItemStack(ModItems.YIJIN_MANUAL.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, manual);
+            if (!manual.getItem().use(player.serverLevel(), player, InteractionHand.MAIN_HAND).getResult().consumesAction()
+                    || !manual.isEmpty() || !capability.hasLearnedYiJin()) {
+                throw new IllegalStateException("first Yi Jin manual use did not learn and consume exactly once");
+            }
+            assertYiJinAttributes(player);
+
+            ItemStack duplicateManual = new ItemStack(ModItems.YIJIN_MANUAL.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, duplicateManual);
+            if (duplicateManual.getItem().use(player.serverLevel(), player, InteractionHand.MAIN_HAND).getResult()
+                    != net.minecraft.world.InteractionResult.FAIL || duplicateManual.getCount() != 1) {
+                throw new IllegalStateException("duplicate Yi Jin manual use was not rejected without consumption");
+            }
+
+            player.setDeltaMovement(0.12D, -0.18D, -0.08D);
+            if (!PlayerAbilityService.requestDoubleJump(player)
+                    || !approximately(player.getDeltaMovement().x, 0.12D)
+                    || !approximately(player.getDeltaMovement().z, -0.08D)
+                    || !approximately(player.getDeltaMovement().y, PlayerAbilityService.DOUBLE_JUMP_VELOCITY)
+                    || PlayerAbilityService.requestDoubleJump(player)) {
+                throw new IllegalStateException("server double-jump permission, velocity or one-air-use limit mismatch");
+            }
+            if (!capability.isDoubleJumpOnCooldown(player.serverLevel().getGameTime())) {
+                throw new IllegalStateException("server double-jump did not write a personal cooldown");
+            }
+            player.setOnGround(true);
+            PlayerAbilityService.resetAirJumpWhenGrounded(player);
+            player.setOnGround(false);
+            if (PlayerAbilityService.requestDoubleJump(player)) {
+                throw new IllegalStateException("server double-jump cooldown was bypassed after grounding");
+            }
+            capability.setNextDoubleJumpTick(player.serverLevel().getGameTime());
+            if (!PlayerAbilityService.requestDoubleJump(player)) {
+                throw new IllegalStateException("server grounding did not reset one-air double-jump permission after cooldown");
+            }
+
+            ItemStack roadBarrier = new ItemStack(ModItems.ROAD_BARRIER_HELMET.get());
+            ItemStack ironHelmet = new ItemStack(Items.IRON_HELMET);
+            if (!(roadBarrier.getItem() instanceof cn.blindboxchallenge.item.RoadBarrierHelmetItem)
+                    || roadBarrier.getMaxDamage() != ironHelmet.getMaxDamage()
+                    || !approximately(stackAttributeTotal(roadBarrier, net.minecraft.world.entity.EquipmentSlot.HEAD,
+                            net.minecraft.world.entity.ai.attributes.Attributes.ARMOR),
+                            stackAttributeTotal(ironHelmet, net.minecraft.world.entity.EquipmentSlot.HEAD,
+                                    net.minecraft.world.entity.ai.attributes.Attributes.ARMOR))
+                    || !approximately(stackAttributeTotal(roadBarrier, net.minecraft.world.entity.EquipmentSlot.HEAD,
+                            net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS),
+                            stackAttributeTotal(ironHelmet, net.minecraft.world.entity.EquipmentSlot.HEAD,
+                                    net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS))) {
+                throw new IllegalStateException("road barrier helmet differs from vanilla iron helmet attributes or durability");
+            }
+
+            source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P3_BUSINESS=success"), false);
+            return 1;
+        } catch (Exception exception) {
+            source.sendFailure(Component.literal("CI P3 业务失败：" + exception.getClass().getSimpleName()));
+            CiTestProbe.LOGGER.error("Cannot run P3 business suite", exception);
+            return 0;
+        } finally {
+            if (player != null) {
+                player.setItemInHand(InteractionHand.MAIN_HAND, originalMainHand);
+                player.setHealth(Math.min(originalHealth, player.getMaxHealth()));
+                player.setDeltaMovement(originalVelocity);
+                player.setOnGround(originalOnGround);
+                player.fallDistance = originalFallDistance;
+                player.hurtMarked = originalHurtMarked;
+                ServerPlayer restoredPlayer = player;
+                restoredPlayer.getCapability(ModCapabilities.PLAYER_ABILITY).ifPresent(data -> {
+                    data.setLearnedYiJin(originalLearned);
+                    data.setUsedDoubleJump(originalUsedDoubleJump);
+                    data.setNextDoubleJumpTick(originalNextDoubleJumpTick);
+                    PlayerAbilityService.reconcileAttributes(restoredPlayer, data);
+                    PlayerAbilityService.syncTrackingAndSelf(restoredPlayer, data);
+                });
+                player.containerMenu.broadcastChanges();
+            }
+        }
+    }
+
+    private static void assertYiJinAttributes(ServerPlayer player) {
+        net.minecraft.world.entity.ai.attributes.AttributeInstance health = player.getAttribute(
+                net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+        net.minecraft.world.entity.ai.attributes.AttributeInstance attack = player.getAttribute(
+                net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+        if (health == null || attack == null || health.getModifier(PlayerAbilityService.YIJIN_MAX_HEALTH_UUID) == null
+                || attack.getModifier(PlayerAbilityService.YIJIN_ATTACK_DAMAGE_UUID) == null
+                || !approximately(health.getModifier(PlayerAbilityService.YIJIN_MAX_HEALTH_UUID).getAmount(),
+                        PlayerAbilityService.YIJIN_MAX_HEALTH_BONUS)
+                || !approximately(attack.getModifier(PlayerAbilityService.YIJIN_ATTACK_DAMAGE_UUID).getAmount(),
+                        PlayerAbilityService.YIJIN_ATTACK_DAMAGE_BONUS)) {
+            throw new IllegalStateException("Yi Jin capability did not reconcile its fixed UUID attributes");
         }
     }
 
@@ -568,7 +716,12 @@ public final class CiTestCommands {
 
     /** 必须经由 ItemStack 查询，以真实触发 Forge 的 ItemAttributeModifierEvent。 */
     private static double stackAttributeTotal(ItemStack stack, net.minecraft.world.entity.ai.attributes.Attribute attribute) {
-        return stack.getAttributeModifiers(net.minecraft.world.entity.EquipmentSlot.MAINHAND)
+        return stackAttributeTotal(stack, net.minecraft.world.entity.EquipmentSlot.MAINHAND, attribute);
+    }
+
+    private static double stackAttributeTotal(ItemStack stack, net.minecraft.world.entity.EquipmentSlot slot,
+                                              net.minecraft.world.entity.ai.attributes.Attribute attribute) {
+        return stack.getAttributeModifiers(slot)
                 .get(attribute).stream().mapToDouble(net.minecraft.world.entity.ai.attributes.AttributeModifier::getAmount).sum();
     }
 

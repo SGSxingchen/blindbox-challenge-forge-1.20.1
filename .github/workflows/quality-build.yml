@@ -32,8 +32,9 @@ jobs:
           jar tf "$CITEST_JAR" | grep -q '^META-INF/mods.toml$'
       - name: 校验网络包方向与一次性提交门闩
         run: |
-          grep -q 'Optional.of(NetworkDirection.PLAY_TO_SERVER)' src/main/java/cn/blindboxchallenge/network/ModNetwork.java
-          ! grep -q 'PLAY_TO_CLIENT' src/main/java/cn/blindboxchallenge/network/ModNetwork.java
+          grep -A1 'CommitPackingPacket.class' src/main/java/cn/blindboxchallenge/network/ModNetwork.java | grep -q 'PLAY_TO_SERVER'
+          grep -A1 'RequestDoubleJumpPacket.class' src/main/java/cn/blindboxchallenge/network/ModNetwork.java | grep -q 'PLAY_TO_SERVER'
+          grep -A1 'SyncPlayerAbilityPacket.class' src/main/java/cn/blindboxchallenge/network/ModNetwork.java | grep -q 'PLAY_TO_CLIENT'
           grep -q 'authorizeAndConsume(player, packet)' src/main/java/cn/blindboxchallenge/network/CommitPackingPacket.java
           grep -q 'consumeSubmission()' src/main/java/cn/blindboxchallenge/menu/PackingMenu.java
       - name: 生成 Jar 校验和
