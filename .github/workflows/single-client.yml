@@ -1,0 +1,54 @@
+name: 真实单客户端启动
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  single-client-main-menu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 安装 Xvfb、Mesa 与固定客户端启动库
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri libglx-mesa0
+          python -m pip install 'minecraft-launcher-lib==8.0'
+      - name: 构建正式模组与隔离测试探针
+        run: |
+          chmod +x gradlew scripts/ci/install-client.py scripts/ci/run-client-smoke.py
+          ./gradlew --no-daemon build ciTestJar
+      - name: 安装固定 Forge 客户端并部署本次产物
+        run: |
+          python scripts/ci/install-client.py build/ci-client
+          mkdir -p build/ci-client/mods build/ci-client/config
+          formal="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*.jar' ! -name '*-sources.jar' ! -name '*-citest.jar' -print -quit)"
+          test -n "$formal"
+          cp "$formal" build/ci-client/mods/
+          cp build/libs/blindboxchallenge-0.1.0-p1-citest.jar build/ci-client/mods/
+          printf 'earlyWindowControl=false\n' > build/ci-client/config/fml.toml
+      - name: Xvfb 启动真实 Forge 客户端并稳定进入主菜单
+        run: python scripts/ci/run-client-smoke.py build/ci-client
+      - name: 上传客户端证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: single-client-evidence
+          path: |
+            mod/build/ci-client/ci-client-result.json
+            mod/build/ci-client/ci-client-main-menu.marker
+            mod/build/ci-client/logs/
+            mod/build/ci-client/crash-reports/
+          if-no-files-found: warn
