@@ -204,6 +204,8 @@ public final class P3AbilityCiScenario {
         private boolean startTrackingEventSeen;
         private boolean cloneEventSeen;
         private ServerPlayer cloneReplacement;
+        private boolean cloneOriginalLearned;
+        private boolean cloneReplacementLearnedAtEvent;
         private boolean dimensionEventSeen;
         private boolean airJumpReleased;
         private boolean selfSyncMarkerVerified;
@@ -386,6 +388,17 @@ public final class P3AbilityCiScenario {
                     || !aliceUuid.equals(replacement.getUUID()) || !event.isWasDeath()) return;
             cloneEventSeen = true;
             cloneReplacement = replacement;
+            // 此监听器位于 LOWEST，生产 Clone 复制已执行；仅记录两个真实 Capability 的状态，
+            // 以便失败时区分原状态丢失和 replacement 复制失败，绝不写入数据。
+            event.getOriginal().reviveCaps();
+            try {
+                cloneOriginalLearned = event.getOriginal().getCapability(ModCapabilities.PLAYER_ABILITY)
+                        .map(data -> data.hasLearnedYiJin()).orElse(false);
+                cloneReplacementLearnedAtEvent = replacement.getCapability(ModCapabilities.PLAYER_ABILITY)
+                        .map(data -> data.hasLearnedYiJin()).orElse(false);
+            } finally {
+                event.getOriginal().invalidateCaps();
+            }
         }
 
         private void onDimensionChange(PlayerEvent.PlayerChangedDimensionEvent event) {
@@ -438,7 +451,12 @@ public final class P3AbilityCiScenario {
                 // Clone 事件直接提供新 replacement；PlayerList 在死亡切换阶段仍可能保留旧实例，
                 // 因而不能用名称查找代替该真实 replacement 的 Capability/属性核验。
                 if (cloneReplacement == null) throw new IllegalStateException("Clone 事件缺少 replacement 实体");
-                requireLearned(cloneReplacement);
+                try {
+                    requireLearned(cloneReplacement);
+                } catch (IllegalStateException exception) {
+                    throw new IllegalStateException("Clone Capability 对账失败：originalLearned=" + cloneOriginalLearned
+                            + ", replacementLearnedAtEvent=" + cloneReplacementLearnedAtEvent, exception);
+                }
                 phase = Phase.CLONE_READY;
                 phaseTicks = 0;
                 CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P3_ABILITY_CLONE=success entity={}", cloneReplacement.getId());
