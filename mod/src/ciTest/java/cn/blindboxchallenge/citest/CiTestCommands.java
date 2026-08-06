@@ -482,13 +482,16 @@ public final class CiTestCommands {
             net.minecraft.world.entity.animal.Pig second = spawnFixturePig(level, player.getX() - 2.0D, player.getY(), player.getZ());
             fixturePigs.add(first.getUUID());
             fixturePigs.add(second.getUUID());
-            net.minecraft.world.entity.animal.Pig outsideSphere = spawnFixturePig(level, player.getX() + 9.0D,
-                    player.getY() + 9.0D, player.getZ());
+            // +10.1 仍落在玩家 AABB inflate(10) 的粗筛边缘，但必在精确 10 格球形之外。
+            net.minecraft.world.entity.animal.Pig outsideSphere = spawnFixturePig(level, player.getX() + 10.1D,
+                    player.getY(), player.getZ());
             fixturePigs.add(outsideSphere.getUUID());
             PigBreedingService.BreedingResult spherical = PigBreedingService.breedNearby(player);
             if (spherical.scannedPigCount() != 2 || spherical.eligiblePigCount() != 2 || spherical.bredPairCount() != 1
                     || !outsideSphere.canFallInLove()) {
-                throw new IllegalStateException("pig breeding did not enforce the declared 10-block spherical range");
+                throw new IllegalStateException("pig breeding sphere mismatch: scanned=" + spherical.scannedPigCount()
+                        + ", eligible=" + spherical.eligiblePigCount() + ", pairs=" + spherical.bredPairCount()
+                        + ", outside_can_love=" + outsideSphere.canFallInLove());
             }
             collectFixturePigChildren(level, fixtureArea, fixturePigs);
             discardFixturePigs(level, fixtureArea, fixturePigs);
