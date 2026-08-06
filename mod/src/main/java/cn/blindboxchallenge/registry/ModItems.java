@@ -16,6 +16,12 @@ import cn.blindboxchallenge.item.PackingToolItem;
 import cn.blindboxchallenge.item.PaperCupItem;
 import cn.blindboxchallenge.item.PickaxeHoeItem;
 import cn.blindboxchallenge.item.PurpleToyPickaxeSwordItem;
+import cn.blindboxchallenge.item.VodkaItem;
+import cn.blindboxchallenge.item.HeadphonesItem;
+import cn.blindboxchallenge.item.SafetyExitSignShieldItem;
+import cn.blindboxchallenge.item.DecisionCoinItem;
+import cn.blindboxchallenge.item.BirthdayCandleItem;
+import cn.blindboxchallenge.item.RainbowHoopItem;
 import net.minecraft.core.Direction;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ArmorItem;
@@ -39,6 +45,12 @@ public final class ModItems {
     public static final RegistryObject<Item> PURPLE_TOY_PICKAXE_SWORD = ITEMS.register("purple_toy_pickaxe_sword",
             PurpleToyPickaxeSwordItem::new);
     public static final RegistryObject<Item> ADRENALINE = ITEMS.register("adrenaline", AdrenalineItem::new);
+    public static final RegistryObject<Item> VODKA = ITEMS.register("vodka", VodkaItem::new);
+    public static final RegistryObject<Item> HEADPHONES = ITEMS.register("headphones", HeadphonesItem::new);
+    public static final RegistryObject<Item> SAFETY_EXIT_SIGN_SHIELD = ITEMS.register("safety_exit_sign_shield", SafetyExitSignShieldItem::new);
+    public static final RegistryObject<Item> DECISION_COIN = ITEMS.register("decision_coin", DecisionCoinItem::new);
+    public static final RegistryObject<Item> BIRTHDAY_CANDLE = ITEMS.register("birthday_candle", BirthdayCandleItem::new);
+    public static final RegistryObject<Item> RAINBOW_HOOP = ITEMS.register("rainbow_hoop", RainbowHoopItem::new);
     public static final RegistryObject<Item> RAT_JERKY_TOTEM = ITEMS.register("rat_jerky_totem", () -> new Item(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> LONG_SCREWDRIVER = ITEMS.register("long_screwdriver", LongScrewdriverItem::new);
     public static final RegistryObject<Item> PICKAXE_HOE = ITEMS.register("pickaxe_hoe", PickaxeHoeItem::new);

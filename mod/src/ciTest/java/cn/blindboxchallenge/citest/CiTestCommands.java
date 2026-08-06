@@ -8,6 +8,12 @@ import cn.blindboxchallenge.item.BlindBoxItem;
 import cn.blindboxchallenge.item.EggyEyeMaskItem;
 import cn.blindboxchallenge.item.BlackKnightTelescopicKnifeItem;
 import cn.blindboxchallenge.item.PurpleToyPickaxeSwordItem;
+import cn.blindboxchallenge.item.VodkaItem;
+import cn.blindboxchallenge.item.HeadphonesItem;
+import cn.blindboxchallenge.item.SafetyExitSignShieldItem;
+import cn.blindboxchallenge.item.DecisionCoinItem;
+import cn.blindboxchallenge.item.BirthdayCandleItem;
+import cn.blindboxchallenge.item.RainbowHoopItem;
 import cn.blindboxchallenge.menu.PackingMenu;
 import cn.blindboxchallenge.network.CommitPackingPacket;
 import cn.blindboxchallenge.registry.ModItems;
@@ -276,6 +282,7 @@ public final class CiTestCommands {
 
             assertTransformingWeapons(player);
             assertContainersAndLighting(player);
+            assertRemainingP2Items(source, player);
 
             source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P2_BUSINESS=success"), false);
             return 1;
@@ -383,6 +390,179 @@ public final class CiTestCommands {
                 || !purpleToy.hasTag() || !purpleToy.getTag().contains(PurpleToyPickaxeSwordItem.PICKAXE_FORM_KEY, net.minecraft.nbt.Tag.TAG_BYTE)
                 || !PurpleToyPickaxeSwordItem.isPickaxeForm(purpleToy)) {
             throw new IllegalStateException("紫色玩具工具未由服务端写回镐形态 NBT");
+        }
+    }
+
+    /**
+     * P2 最后六项：在两客户端在线的逻辑服务端走生产入口。随机分支用生产共用的固定输入穷尽，
+     * 而真实随机入口只验证其结果属于已声明分支，不能使 CI 依赖概率。
+     */
+    private static void assertRemainingP2Items(CommandSourceStack source, ServerPlayer player) {
+        ServerPlayer bob = source.getServer().getPlayerList().getPlayerByName("BlindBoxBob");
+        if (bob == null) throw new IllegalStateException("Bob not online for final P2 item suite");
+
+        ItemStack playerMain = player.getMainHandItem().copy();
+        ItemStack playerOff = player.getOffhandItem().copy();
+        List<net.minecraft.world.effect.MobEffectInstance> playerEffects = player.getActiveEffects().stream()
+                .map(net.minecraft.world.effect.MobEffectInstance::new).toList();
+        float playerHealth = player.getHealth();
+        net.minecraft.world.phys.Vec3 playerVelocity = player.getDeltaMovement();
+        boolean playerHurtMarked = player.hurtMarked;
+        ItemStack bobMain = bob.getMainHandItem().copy();
+        ItemStack bobOff = bob.getOffhandItem().copy();
+        List<net.minecraft.world.effect.MobEffectInstance> bobEffects = bob.getActiveEffects().stream()
+                .map(net.minecraft.world.effect.MobEffectInstance::new).toList();
+        float bobHealth = bob.getHealth();
+        net.minecraft.world.phys.Vec3 bobVelocity = bob.getDeltaMovement();
+        boolean bobHurtMarked = bob.hurtMarked;
+        try {
+            net.minecraft.server.level.ServerLevel level = player.serverLevel();
+            if (player.isUsingItem() || bob.isUsingItem()
+                    || player.getCooldowns().isOnCooldown(ModItems.HEADPHONES.get())
+                    || player.getCooldowns().isOnCooldown(ModItems.BIRTHDAY_CANDLE.get())) {
+                throw new IllegalStateException("final P2 fixture was not clean before cooldown/use-state assertions");
+            }
+
+            ItemStack vodka = new ItemStack(ModItems.VODKA.get(), 2);
+            ModItems.VODKA.get().finishUsingItem(vodka, level, player);
+            if (vodka.getCount() != 1 || vodka.getMaxStackSize() != 16) {
+                throw new IllegalStateException("vodka was not consumed exactly once");
+            }
+            assertEffect(player, net.minecraft.world.effect.MobEffects.CONFUSION, 0,
+                    VodkaItem.DRUNK_DURATION_TICKS - 10);
+            player.removeAllEffects();
+
+            ItemStack headphones = new ItemStack(ModItems.HEADPHONES.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, headphones);
+            if (!headphones.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
+                    || !player.getCooldowns().isOnCooldown(ModItems.HEADPHONES.get())
+                    || headphones.getCount() != 1 || headphones.getMaxStackSize() != 1) {
+                throw new IllegalStateException("headphones lack server-original-sound cooldown semantics");
+            }
+            if (headphones.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult()
+                    != net.minecraft.world.InteractionResult.FAIL) {
+                throw new IllegalStateException("headphones cooldown did not reject repeated server request");
+            }
+            player.getCooldowns().removeCooldown(ModItems.HEADPHONES.get());
+
+            ItemStack shield = new ItemStack(ModItems.SAFETY_EXIT_SIGN_SHIELD.get());
+            if (shield.getMaxDamage() != SafetyExitSignShieldItem.DURABILITY
+                    || !approximately(SafetyExitSignShieldItem.reflectedDamage(8.0F), 4.0D)
+                    || SafetyExitSignShieldItem.reflectedDamage(-1.0F) != 0.0F) {
+                throw new IllegalStateException("safety exit shield durability or reflection ratio mismatch");
+            }
+            player.removeAllEffects();
+            bob.removeAllEffects();
+            player.setHealth(player.getMaxHealth());
+            bob.setHealth(bob.getMaxHealth());
+            player.setItemInHand(InteractionHand.OFF_HAND, shield);
+            player.startUsingItem(InteractionHand.OFF_HAND);
+            float bobBeforeReflection = bob.getHealth();
+            ServerLifecycleEvents.shieldBlock(new net.minecraftforge.event.entity.living.ShieldBlockEvent(player,
+                    bob.damageSources().playerAttack(bob), 4.0F));
+            if (!(bob.getHealth() < bobBeforeReflection)) {
+                throw new IllegalStateException("safety exit shield event adapter did not damage the direct server-side attacker");
+            }
+            // 反伤调用栈结束后允许下一次格挡，证明防递归状态没有泄漏。
+            bob.setHealth(bob.getMaxHealth());
+            if (!approximately(ServerLifecycleEvents.reflectSuccessfulShieldBlock(player,
+                    bob.damageSources().playerAttack(bob), 2.0F), 1.0D)) {
+                throw new IllegalStateException("safety exit shield reflection guard leaked after one successful block");
+            }
+            player.stopUsingItem();
+
+            ItemStack decisionCoin = new ItemStack(ModItems.DECISION_COIN.get(), 2);
+            player.setItemInHand(InteractionHand.MAIN_HAND, decisionCoin);
+            player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED, 100, 0));
+            player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WEAKNESS, 100, 0));
+            if (!decisionCoin.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
+                    || decisionCoin.getCount() != 1) {
+                throw new IllegalStateException("decision coin was not consumed by the server use path");
+            }
+            boolean randomHeads = player.getEffect(net.minecraft.world.effect.MobEffects.DAMAGE_BOOST) != null
+                    && player.getEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED) != null
+                    && player.getEffect(net.minecraft.world.effect.MobEffects.WEAKNESS) != null;
+            boolean randomTails = player.getEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED) == null
+                    && player.getEffect(net.minecraft.world.effect.MobEffects.DAMAGE_BOOST) == null
+                    && player.getEffect(net.minecraft.world.effect.MobEffects.WEAKNESS) != null;
+            if (!randomHeads && !randomTails) {
+                throw new IllegalStateException("decision coin server random outcome was outside declared heads/tails branches");
+            }
+            DecisionCoinItem.applyOutcome(player, true);
+            assertEffect(player, net.minecraft.world.effect.MobEffects.DAMAGE_BOOST, 1,
+                    DecisionCoinItem.STRENGTH_DURATION_TICKS - 10);
+            DecisionCoinItem.applyOutcome(player, false);
+            if (player.getEffect(net.minecraft.world.effect.MobEffects.WEAKNESS) == null
+                    || player.getActiveEffects().stream().anyMatch(effect -> effect.getEffect().isBeneficial())) {
+                throw new IllegalStateException("decision coin tails did not clear only beneficial self effects");
+            }
+            player.removeAllEffects();
+
+            ItemStack candle = new ItemStack(ModItems.BIRTHDAY_CANDLE.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, candle);
+            if (!candle.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
+                    || candle.getMaxStackSize() != 1) {
+                throw new IllegalStateException("birthday candle did not start its long-use server path");
+            }
+            ModItems.BIRTHDAY_CANDLE.get().finishUsingItem(candle, level, player);
+            if (!player.getCooldowns().isOnCooldown(ModItems.BIRTHDAY_CANDLE.get())) {
+                throw new IllegalStateException("birthday candle did not write its server cooldown");
+            }
+            boolean candleAppliedPositiveEffect = false;
+            for (net.minecraft.world.effect.MobEffect effect : List.of(net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED,
+                    net.minecraft.world.effect.MobEffects.DAMAGE_BOOST, net.minecraft.world.effect.MobEffects.DAMAGE_RESISTANCE,
+                    net.minecraft.world.effect.MobEffects.REGENERATION)) {
+                net.minecraft.world.effect.MobEffectInstance instance = player.getEffect(effect);
+                candleAppliedPositiveEffect |= instance != null && instance.getAmplifier() == 0
+                        && instance.getDuration() >= BirthdayCandleItem.EFFECT_DURATION_TICKS - 10;
+            }
+            if (!candleAppliedPositiveEffect) throw new IllegalStateException("birthday candle did not apply a declared positive effect");
+            player.getCooldowns().removeCooldown(ModItems.BIRTHDAY_CANDLE.get());
+            player.removeAllEffects();
+            for (int roll = 0; roll < BirthdayCandleItem.positiveEffectCount(); roll++) {
+                BirthdayCandleItem.applyPositiveEffect(player, roll);
+                long active = player.getActiveEffects().stream().filter(effect -> effect.getDuration()
+                        >= BirthdayCandleItem.EFFECT_DURATION_TICKS - 10 && effect.getAmplifier() == 0).count();
+                if (active != 1L) throw new IllegalStateException("birthday candle deterministic positive-effect branch missing: " + roll);
+                player.removeAllEffects();
+            }
+
+            ItemStack hoop = new ItemStack(ModItems.RAINBOW_HOOP.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, hoop);
+            player.setDeltaMovement(0.13D, -0.2D, -0.14D);
+            hoop.getItem().releaseUsing(hoop, level, player, hoop.getItem().getUseDuration(hoop)
+                    - RainbowHoopItem.MAX_CHARGE_TICKS);
+            net.minecraft.world.phys.Vec3 launched = player.getDeltaMovement();
+            if (!approximately(launched.x, 0.13D) || !approximately(launched.z, -0.14D)
+                    || !approximately(launched.y, RainbowHoopItem.MAX_LAUNCH_VELOCITY)
+                    || RainbowHoopItem.launchVelocity(RainbowHoopItem.MIN_CHARGE_TICKS - 1) != 0.0F
+                    || !approximately(RainbowHoopItem.launchVelocity(RainbowHoopItem.MIN_CHARGE_TICKS),
+                            RainbowHoopItem.MIN_LAUNCH_VELOCITY)
+                    || !approximately(RainbowHoopItem.launchVelocity(RainbowHoopItem.MAX_CHARGE_TICKS + 100),
+                            RainbowHoopItem.MAX_LAUNCH_VELOCITY)) {
+                throw new IllegalStateException("rainbow hoop server-side charge velocity bounds mismatch");
+            }
+        } finally {
+            player.stopUsingItem();
+            player.setItemInHand(InteractionHand.MAIN_HAND, playerMain);
+            player.setItemInHand(InteractionHand.OFF_HAND, playerOff);
+            player.removeAllEffects();
+            for (net.minecraft.world.effect.MobEffectInstance effect : playerEffects) player.addEffect(effect);
+            player.setHealth(Math.min(playerHealth, player.getMaxHealth()));
+            player.setDeltaMovement(playerVelocity);
+            player.hurtMarked = playerHurtMarked;
+            player.getCooldowns().removeCooldown(ModItems.HEADPHONES.get());
+            player.getCooldowns().removeCooldown(ModItems.BIRTHDAY_CANDLE.get());
+
+            bob.setItemInHand(InteractionHand.MAIN_HAND, bobMain);
+            bob.setItemInHand(InteractionHand.OFF_HAND, bobOff);
+            bob.removeAllEffects();
+            for (net.minecraft.world.effect.MobEffectInstance effect : bobEffects) bob.addEffect(effect);
+            bob.setHealth(Math.min(bobHealth, bob.getMaxHealth()));
+            bob.setDeltaMovement(bobVelocity);
+            bob.hurtMarked = bobHurtMarked;
+            bob.containerMenu.broadcastChanges();
+            player.containerMenu.broadcastChanges();
         }
     }
 
