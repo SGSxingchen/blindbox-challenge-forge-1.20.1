@@ -2,24 +2,22 @@ package cn.blindboxchallenge.citest;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 /** 仅在 CI 客户端启用：要求标题界面连续稳定 20 tick，再写出机器标志并正常退出。 */
+@Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class CiClientSmokeEvents {
     private static int stableTitleTicks;
     private static boolean completed;
 
     private CiClientSmokeEvents() {
-    }
-
-    public static void register() {
-        MinecraftForge.EVENT_BUS.register(CiClientSmokeEvents.class);
     }
 
     @SubscribeEvent

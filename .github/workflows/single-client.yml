@@ -24,7 +24,7 @@ jobs:
       - name: 安装 Xvfb、Mesa 与固定客户端启动库
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri libglx-mesa0
+          sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri libglx-mesa0 libflite1
           python -m pip install 'minecraft-launcher-lib==8.0'
       - name: 构建正式模组与隔离测试探针
         run: |

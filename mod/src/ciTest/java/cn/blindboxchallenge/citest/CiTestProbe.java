@@ -1,8 +1,6 @@
 package cn.blindboxchallenge.citest;
 
 import com.mojang.logging.LogUtils;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.common.Mod;
 import org.slf4j.Logger;
 
@@ -16,7 +14,6 @@ public final class CiTestProbe {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public CiTestProbe() {
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> CiClientSmokeEvents::register);
         LOGGER.info("盲盒挑战 CI 探针已注册");
     }
 }

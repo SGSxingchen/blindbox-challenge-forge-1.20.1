@@ -28,7 +28,8 @@ def main() -> None:
         "fullscreen:false\n"
         "enableVsync:false\n"
         "renderDistance:4\n"
-        "simulationDistance:4\n",
+        "simulationDistance:5\n"
+        "narrator:0\n",
         encoding="utf-8",
     )
     (directory / "ci-installed-version.txt").write_text(installed + "\n", encoding="utf-8")
