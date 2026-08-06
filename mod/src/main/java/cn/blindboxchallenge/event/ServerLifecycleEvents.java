@@ -3,10 +3,12 @@ package cn.blindboxchallenge.event;
 import cn.blindboxchallenge.BlindBoxChallenge;
 import cn.blindboxchallenge.command.BlindBoxCommands;
 import cn.blindboxchallenge.item.BlindBoxItem;
+import cn.blindboxchallenge.item.EggyEyeMaskItem;
 import cn.blindboxchallenge.service.BlindBoxService;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import cn.blindboxchallenge.registry.ModItems;
 import net.minecraft.tags.DamageTypeTags;
@@ -44,7 +46,7 @@ public final class ServerLifecycleEvents {
 
         for (InteractionHand hand : InteractionHand.values()) {
             ItemStack stack = event.getEntity().getItemInHand(hand);
-            if (!stack.is(ModItems.RAT_JERKY_TOTEM.get())) continue;
+            if (!isCustomTotem(stack)) continue;
             event.setCanceled(true);
             stack.shrink(1);
             event.getEntity().setHealth(1.0F);
@@ -55,6 +57,20 @@ public final class ServerLifecycleEvents {
             event.getEntity().level().broadcastEntityEvent(event.getEntity(), (byte) 35);
             return;
         }
+    }
+
+    /** 头部栏的实际变化由服务端事件驱动，客户端不自行施加或清除失明。 */
+    @SubscribeEvent
+    public static void equipmentChange(LivingEquipmentChangeEvent event) {
+        if (event.getEntity().level().isClientSide || event.getSlot() != net.minecraft.world.entity.EquipmentSlot.HEAD) return;
+        boolean wasEyeMask = event.getFrom().is(ModItems.EGGY_EYE_MASK.get());
+        boolean isEyeMask = event.getTo().is(ModItems.EGGY_EYE_MASK.get());
+        if (!wasEyeMask && isEyeMask) EggyEyeMaskItem.onEquipped(event.getEntity());
+        if (wasEyeMask && !isEyeMask) EggyEyeMaskItem.onUnequipped(event.getEntity());
+    }
+
+    private static boolean isCustomTotem(ItemStack stack) {
+        return stack.is(ModItems.RAT_JERKY_TOTEM.get()) || stack.is(ModItems.WENXU_STANDEE.get());
     }
 
     private ServerLifecycleEvents() {}

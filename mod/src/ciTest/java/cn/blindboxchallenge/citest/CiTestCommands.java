@@ -5,6 +5,7 @@ import cn.blindboxchallenge.data.PrizeBundle;
 import cn.blindboxchallenge.data.TransactionRecord;
 import cn.blindboxchallenge.event.ServerLifecycleEvents;
 import cn.blindboxchallenge.item.BlindBoxItem;
+import cn.blindboxchallenge.item.EggyEyeMaskItem;
 import cn.blindboxchallenge.menu.PackingMenu;
 import cn.blindboxchallenge.network.CommitPackingPacket;
 import cn.blindboxchallenge.registry.ModItems;
@@ -13,6 +14,8 @@ import cn.blindboxchallenge.util.StackFingerprint;
 import com.mojang.brigadier.CommandDispatcher;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -90,6 +93,7 @@ public final class CiTestCommands {
         ServerPlayer player = null;
         ItemStack originalMainHand = ItemStack.EMPTY;
         ItemStack originalOffhand = ItemStack.EMPTY;
+        ItemStack originalHead = ItemStack.EMPTY;
         float originalHealth = 0.0F;
         List<net.minecraft.world.effect.MobEffectInstance> originalEffects = List.of();
         try {
@@ -98,6 +102,7 @@ public final class CiTestCommands {
             // 此套件在 P1 多人资产守恒断言之后运行，绝不能覆盖主副手中的真实业务产物。
             originalMainHand = player.getMainHandItem().copy();
             originalOffhand = player.getOffhandItem().copy();
+            originalHead = player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).copy();
             originalHealth = player.getHealth();
             originalEffects = player.getActiveEffects().stream().map(net.minecraft.world.effect.MobEffectInstance::new).toList();
 
@@ -195,6 +200,75 @@ public final class CiTestCommands {
                         + sharkDamage + ", speed=" + sharkSpeed);
             }
 
+            assertNailArt();
+
+            ItemStack wings = new ItemStack(ModItems.PINK_BUTTERFLY_WINGS.get());
+            if (!(wings.getItem() instanceof net.minecraft.world.item.ElytraItem elytra)
+                    || elytra.getEquipmentSlot() != net.minecraft.world.entity.EquipmentSlot.CHEST
+                    || wings.getMaxDamage() != 432
+                    || !net.minecraft.world.item.ElytraItem.isFlyEnabled(wings)) {
+                throw new IllegalStateException("pink butterfly wings lack vanilla elytra chest-slot semantics");
+            }
+            wings.setDamageValue(wings.getMaxDamage() - 1);
+            if (net.minecraft.world.item.ElytraItem.isFlyEnabled(wings)) {
+                throw new IllegalStateException("pink butterfly wings remain flyable at vanilla broken threshold");
+            }
+
+            ItemStack toyKnife = new ItemStack(ModItems.TOY_KNIFE.get());
+            double knifeDamage = attributeTotal(ModItems.TOY_KNIFE.get(), net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+            double knifeSpeed = attributeTotal(ModItems.TOY_KNIFE.get(), net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED);
+            if (toyKnife.getMaxDamage() != net.minecraft.world.item.Tiers.WOOD.getUses()
+                    || !approximately(knifeDamage, 1.0D) || !approximately(knifeSpeed, -2.4D)) {
+                throw new IllegalStateException("toy knife is not the conservative low-damage wooden melee profile");
+            }
+
+            ItemStack chainsaw = new ItemStack(ModItems.CHAINSAW_SWORD.get());
+            double chainsawDamage = attributeTotal(ModItems.CHAINSAW_SWORD.get(), net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+            double chainsawSpeed = attributeTotal(ModItems.CHAINSAW_SWORD.get(), net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED);
+            double chainsawReach = attributeTotal(ModItems.CHAINSAW_SWORD.get(), net.minecraftforge.common.ForgeMod.ENTITY_REACH.get());
+            double stoneAxeDamage = attributeTotal(Items.STONE_AXE, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+            double stoneAxeSpeed = attributeTotal(Items.STONE_AXE, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED);
+            if (!(chainsaw.getItem() instanceof net.minecraft.world.item.AxeItem)
+                    || chainsaw.getMaxDamage() != net.minecraft.world.item.Tiers.STONE.getUses()
+                    || !approximately(chainsawDamage, stoneAxeDamage) || !approximately(chainsawSpeed, stoneAxeSpeed)
+                    || !approximately(chainsawReach, 2.0D)) {
+                throw new IllegalStateException("chainsaw sword differs from stone-axe and +2 entity-reach semantics");
+            }
+
+            ItemStack eyeMask = new ItemStack(ModItems.EGGY_EYE_MASK.get());
+            assertHeadwear(eyeMask, "eggy eye mask");
+            EggyEyeMaskItem.onEquipped(player);
+            net.minecraft.world.effect.MobEffectInstance eyeMaskBlindness = player.getEffect(net.minecraft.world.effect.MobEffects.BLINDNESS);
+            if (eyeMaskBlindness == null || !eyeMaskBlindness.isInfiniteDuration()) {
+                throw new IllegalStateException("eggy eye mask did not write server-authoritative blindness");
+            }
+            EggyEyeMaskItem.onUnequipped(player);
+            if (player.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS)) {
+                throw new IllegalStateException("eggy eye mask blindness survived removing the headwear");
+            }
+
+            assertHeadwear(new ItemStack(ModItems.FACE_MASK.get()), "face mask");
+            ItemStack catDoll = new ItemStack(ModItems.CAT_DOLL.get());
+            if (catDoll.getMaxStackSize() != 64
+                    || !ModItems.CAT_DOLL.get().getDefaultAttributeModifiers(net.minecraft.world.entity.EquipmentSlot.MAINHAND).isEmpty()) {
+                throw new IllegalStateException("cat doll must remain a stackable no-effect collectible");
+            }
+
+            ItemStack standee = new ItemStack(ModItems.WENXU_STANDEE.get());
+            player.setItemInHand(InteractionHand.OFF_HAND, standee);
+            player.setHealth(0.5F);
+            LivingDeathEvent standeeDeath = new LivingDeathEvent(player, player.damageSources().generic());
+            ServerLifecycleEvents.death(standeeDeath);
+            if (!standeeDeath.isCanceled() || !standee.isEmpty() || player.getHealth() != 1.0F) {
+                throw new IllegalStateException("wenxu standee did not preserve vanilla-totem semantics");
+            }
+            assertEffect(player, net.minecraft.world.effect.MobEffects.REGENERATION, 1, 890);
+            assertEffect(player, net.minecraft.world.effect.MobEffects.ABSORPTION, 1, 90);
+            assertEffect(player, net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE, 0, 790);
+            player.removeAllEffects();
+            player.setHealth(player.getMaxHealth());
+            player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+
             source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P2_BUSINESS=success"), false);
             return 1;
         } catch (Exception exception) {
@@ -205,6 +279,7 @@ public final class CiTestCommands {
             if (player != null) {
                 player.setItemInHand(InteractionHand.MAIN_HAND, originalMainHand);
                 player.setItemInHand(InteractionHand.OFF_HAND, originalOffhand);
+                player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, originalHead);
                 player.removeAllEffects();
                 for (net.minecraft.world.effect.MobEffectInstance effect : originalEffects) player.addEffect(effect);
                 player.setHealth(Math.min(originalHealth, player.getMaxHealth()));
@@ -214,8 +289,39 @@ public final class CiTestCommands {
     }
 
     private static double attributeTotal(net.minecraft.world.item.Item item, net.minecraft.world.entity.ai.attributes.Attribute attribute) {
-        return item.getDefaultAttributeModifiers(net.minecraft.world.entity.EquipmentSlot.MAINHAND)
+        return attributeTotal(item, net.minecraft.world.entity.EquipmentSlot.MAINHAND, attribute);
+    }
+
+    private static double attributeTotal(net.minecraft.world.item.Item item, net.minecraft.world.entity.EquipmentSlot slot,
+                                         net.minecraft.world.entity.ai.attributes.Attribute attribute) {
+        return item.getDefaultAttributeModifiers(slot)
                 .get(attribute).stream().mapToDouble(net.minecraft.world.entity.ai.attributes.AttributeModifier::getAmount).sum();
+    }
+
+    /** 004 的四个 UUID 必须不同，否则 Forge 会将两只手的同属性 Modifier 去重。 */
+    private static void assertNailArt() {
+        net.minecraft.world.item.Item nail = ModItems.NAIL_ART.get();
+        net.minecraft.world.entity.EquipmentSlot mainHand = net.minecraft.world.entity.EquipmentSlot.MAINHAND;
+        net.minecraft.world.entity.EquipmentSlot offHand = net.minecraft.world.entity.EquipmentSlot.OFFHAND;
+        if (!approximately(attributeTotal(nail, mainHand, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE), 1.0D)
+                || !approximately(attributeTotal(nail, offHand, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE), 1.0D)
+                || !approximately(attributeTotal(nail, mainHand, net.minecraftforge.common.ForgeMod.ENTITY_REACH.get()), 2.0D)
+                || !approximately(attributeTotal(nail, offHand, net.minecraftforge.common.ForgeMod.ENTITY_REACH.get()), 2.0D)) {
+            throw new IllegalStateException("nail art lacks +1 damage and +2 entity reach in both hands");
+        }
+        Set<UUID> modifierIds = new HashSet<>();
+        nail.getDefaultAttributeModifiers(mainHand).values().forEach(modifier -> modifierIds.add(modifier.getId()));
+        nail.getDefaultAttributeModifiers(offHand).values().forEach(modifier -> modifierIds.add(modifier.getId()));
+        if (modifierIds.size() != 4) {
+            throw new IllegalStateException("nail art reuses modifier UUIDs and cannot stack across hands");
+        }
+    }
+
+    private static void assertHeadwear(ItemStack stack, String name) {
+        if (!(stack.getItem() instanceof net.minecraft.world.item.ArmorItem armor)
+                || armor.getEquipmentSlot() != net.minecraft.world.entity.EquipmentSlot.HEAD) {
+            throw new IllegalStateException(name + " is not equipable in the head armor slot");
+        }
     }
 
     private static boolean approximately(double actual, double expected) {

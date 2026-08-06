@@ -3,16 +3,23 @@ package cn.blindboxchallenge.registry;
 import cn.blindboxchallenge.BlindBoxChallenge;
 import cn.blindboxchallenge.item.AdrenalineItem;
 import cn.blindboxchallenge.item.BlindBoxItem;
+import cn.blindboxchallenge.item.ChainsawSwordItem;
+import cn.blindboxchallenge.item.EggyEyeMaskItem;
 import cn.blindboxchallenge.item.FairyWandItem;
 import cn.blindboxchallenge.item.LighterItem;
 import cn.blindboxchallenge.item.KazooItem;
 import cn.blindboxchallenge.item.LongScrewdriverItem;
+import cn.blindboxchallenge.item.NailItem;
 import cn.blindboxchallenge.item.PackingToolItem;
 import cn.blindboxchallenge.item.PickaxeHoeItem;
 import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.ArmorMaterials;
+import net.minecraft.world.item.ElytraItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.Tiers;
+import net.minecraft.world.item.TotemItem;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -45,6 +52,20 @@ public final class ModItems {
     public static final RegistryObject<Item> POTATO_CHIPS = ITEMS.register("potato_chips", () -> food(6, 0.5F));
     public static final RegistryObject<Item> BLACK_TRUFFLE_HAM_CRACKER = ITEMS.register("black_truffle_ham_cracker", () -> food(2, 0.1F));
     public static final RegistryObject<Item> MAGIC_CRISPY_NOODLES = ITEMS.register("magic_crispy_noodles", () -> food(6, 0.5F));
+
+    public static final RegistryObject<Item> NAIL_ART = ITEMS.register("nail_art", NailItem::new);
+    public static final RegistryObject<Item> PINK_BUTTERFLY_WINGS = ITEMS.register("pink_butterfly_wings",
+            () -> new ElytraItem(new Item.Properties().durability(432)));
+    public static final RegistryObject<Item> TOY_KNIFE = ITEMS.register("toy_knife",
+            () -> new SwordItem(Tiers.WOOD, 1, -2.4F, new Item.Properties().durability(Tiers.WOOD.getUses())));
+    public static final RegistryObject<Item> CHAINSAW_SWORD = ITEMS.register("chainsaw_sword", ChainsawSwordItem::new);
+    public static final RegistryObject<Item> EGGY_EYE_MASK = ITEMS.register("eggy_eye_mask",
+            () -> new EggyEyeMaskItem(ArmorMaterials.LEATHER));
+    public static final RegistryObject<Item> WENXU_STANDEE = ITEMS.register("wenxu_standee",
+            () -> new TotemItem(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> CAT_DOLL = ITEMS.register("cat_doll", ModItems::collectible);
+    public static final RegistryObject<Item> FACE_MASK = ITEMS.register("face_mask",
+            () -> new ArmorItem(ArmorMaterials.LEATHER, ArmorItem.Type.HELMET, new Item.Properties()));
 
     public static final RegistryObject<Item> FAIRY_WAND = ITEMS.register("fairy_wand", FairyWandItem::new);
     public static final RegistryObject<Item> TOY_CAR = ITEMS.register("toy_car", ModItems::collectible);
