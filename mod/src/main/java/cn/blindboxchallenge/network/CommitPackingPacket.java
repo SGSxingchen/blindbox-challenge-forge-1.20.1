@@ -38,11 +38,16 @@ public record CommitPackingPacket(int containerId, UUID sessionId, List<BlindBox
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
             ServerPlayer player = context.getSender();
-            if (player != null && player.containerMenu instanceof PackingMenu && player.containerMenu.containerId == packet.containerId()
-                    && player.containerMenu.stillValid(player) && ((PackingMenu) player.containerMenu).sessionId().equals(packet.sessionId())) {
-                BlindBoxService.pack(player, packet.selections());
-            }
+            if (isAuthorized(player, packet)) BlindBoxService.pack(player, packet.selections());
         });
         context.setPacketHandled(true);
+    }
+
+    /** 供处理器和隔离 CI 探针共同验证菜单实例、容器编号与一次性会话。 */
+    public static boolean isAuthorized(ServerPlayer player, CommitPackingPacket packet) {
+        return player != null && player.containerMenu instanceof PackingMenu
+                && player.containerMenu.containerId == packet.containerId()
+                && player.containerMenu.stillValid(player)
+                && ((PackingMenu) player.containerMenu).sessionId().equals(packet.sessionId());
     }
 }

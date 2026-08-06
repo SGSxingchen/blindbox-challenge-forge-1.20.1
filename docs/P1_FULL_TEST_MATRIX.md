@@ -51,3 +51,6 @@
 ## 2026-08-06 强杀恢复增量
 
 `lifecycle-recovery.yml` 已从空世界基础链扩展为唯一 NBT 的 PACK/OPEN SavedData 证据夹具：两个 bundle、PACK/OPEN 各一条未完成 schema v2 事务及一条 OPEN reservation 在 `save-all flush → SIGKILL(-9) → 同世界重启` 前后必须 canonical 完全一致。该里程碑验证持久奖品 payload、收据与竞争保留不复制不丢失；在线玩家逐槽变化与登录恢复仍由后续真实客户端矩阵覆盖。
+## 2026-08-06 取消与网络负例增量
+
+双客户端业务探针新增真实 ServerPlayer 断言：菜单关闭后的重放、伪造容器编号、伪造会话 nonce 均拒绝且不改资产；盲盒使用状态与减速修饰在统一取消路径中同时清理。动态结论以对应 GitHub Actions 为准。

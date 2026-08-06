@@ -70,6 +70,13 @@ public final class BlindBoxItem extends Item {
         if (offhand.getItem() instanceof BlindBoxItem && offhand.hasTag()) offhand.getTag().remove(USING_KEY);
     }
 
+    /** 隔离 CI 探针只读取生命周期状态，不暴露修改入口。 */
+    public static boolean hasActiveUseState(ServerPlayer player, ItemStack stack) {
+        AttributeInstance attribute = player.getAttribute(Attributes.MOVEMENT_SPEED);
+        return stack.hasTag() && stack.getTag().getBoolean(USING_KEY)
+                && attribute != null && attribute.getModifier(USING_SLOW_UUID) != null;
+    }
+
     private static void applySlow(ServerPlayer player) {
         AttributeInstance attribute = player.getAttribute(Attributes.MOVEMENT_SPEED);
         if (attribute != null && attribute.getModifier(USING_SLOW_UUID) == null) {

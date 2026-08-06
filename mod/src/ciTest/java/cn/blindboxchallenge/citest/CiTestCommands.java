@@ -3,6 +3,9 @@ package cn.blindboxchallenge.citest;
 import cn.blindboxchallenge.data.BlindBoxPoolSavedData;
 import cn.blindboxchallenge.data.PrizeBundle;
 import cn.blindboxchallenge.data.TransactionRecord;
+import cn.blindboxchallenge.item.BlindBoxItem;
+import cn.blindboxchallenge.menu.PackingMenu;
+import cn.blindboxchallenge.network.CommitPackingPacket;
 import cn.blindboxchallenge.registry.ModItems;
 import cn.blindboxchallenge.service.BlindBoxService;
 import cn.blindboxchallenge.util.StackFingerprint;
@@ -15,6 +18,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantments;
@@ -52,6 +56,30 @@ public final class CiTestCommands {
                 source.sendFailure(Component.literal("CI 多人业务要求空奖池和空事务日志"));
                 return 0;
             }
+
+            // 菜单关闭、容器编号和会话 nonce 任一不匹配时，伪造/重放提交必须被拒绝。
+            UUID menuSession = UUID.fromString("99999999-9999-9999-9999-999999999999");
+            PackingMenu packingMenu = new PackingMenu(91, alice.getInventory(), menuSession);
+            alice.containerMenu = packingMenu;
+            CommitPackingPacket validShape = new CommitPackingPacket(91, menuSession, List.of());
+            if (!CommitPackingPacket.isAuthorized(alice, validShape)) throw new IllegalStateException("valid packing session rejected");
+            if (CommitPackingPacket.isAuthorized(alice, new CommitPackingPacket(92, menuSession, List.of()))) {
+                throw new IllegalStateException("forged container id accepted");
+            }
+            if (CommitPackingPacket.isAuthorized(alice, new CommitPackingPacket(91, UUID.randomUUID(), List.of()))) {
+                throw new IllegalStateException("forged packing nonce accepted");
+            }
+            alice.closeContainer();
+            if (CommitPackingPacket.isAuthorized(alice, validShape)) throw new IllegalStateException("closed menu replay accepted");
+
+            // 换手、松开、死亡和掉线最终都走 cancel/clear 路径；这里在真实 ServerPlayer 上断言状态与减速同时清理。
+            ItemStack cancelledBox = BlindBoxService.createBlindBox(UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
+            alice.setItemInHand(InteractionHand.MAIN_HAND, cancelledBox);
+            ((BlindBoxItem) cancelledBox.getItem()).use(alice.serverLevel(), alice, InteractionHand.MAIN_HAND);
+            if (!BlindBoxItem.hasActiveUseState(alice, cancelledBox)) throw new IllegalStateException("opening lifecycle state missing");
+            BlindBoxItem.cancelUse(alice);
+            if (BlindBoxItem.hasActiveUseState(alice, cancelledBox)) throw new IllegalStateException("opening lifecycle state leaked after cancel");
+            clearInventory(alice);
 
             ItemStack staleSource = uniqueStack("citest-stale-source", 2, 3);
             alice.getInventory().setItem(0, staleSource.copy());
