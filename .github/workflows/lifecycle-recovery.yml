@@ -3,6 +3,8 @@ name: 生命周期强杀恢复
 on:
   push:
   pull_request:
+  # 若 GitHub 漏投递 push，可在同一 master SHA 手动真实执行，不能伪造门禁状态。
+  workflow_dispatch:
 
 jobs:
   flushed-sigkill-recovery:

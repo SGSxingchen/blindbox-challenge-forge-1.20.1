@@ -43,7 +43,9 @@ def latest_required_runs(repo: str, sha: str, token: str) -> dict[str, dict]:
     latest: dict[str, dict] = {}
     for run in payload.get("workflow_runs", []):
         name = run.get("name")
-        if name not in REQUIRED:
+        # API 的 head_sha 查询是必要但不能成为唯一信任来源：报告前再次逐条绑定目标 SHA，
+        # 防止延迟/分页/平台异常时把另一提交的同名 workflow 当成本次门禁。
+        if name not in REQUIRED or run.get("head_sha") != sha:
             continue
         previous = latest.get(name)
         if previous is None or int(run.get("run_number", 0)) > int(previous.get("run_number", 0)):
@@ -64,6 +66,9 @@ def canonical_report(repo: str, sha: str, runs: dict[str, dict]) -> dict:
                 "run_id": None if run is None else run.get("id"),
                 "run_number": None if run is None else run.get("run_number"),
                 "url": None if run is None else run.get("html_url"),
+                "head_sha": None if run is None else run.get("head_sha"),
+                "head_branch": None if run is None else run.get("head_branch"),
+                "event": None if run is None else run.get("event"),
             }
         )
     return {"schema": 1, "repository": repo, "head_sha": sha, "required_workflows": entries}

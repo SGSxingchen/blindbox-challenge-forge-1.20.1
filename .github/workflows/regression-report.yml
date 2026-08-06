@@ -8,6 +8,8 @@ on:
       - 生命周期强杀恢复
       - 真实单客户端启动
       - 真实双客户端联机
+    # 汇总只消费 master 的源运行；TARGET_SHA 仍严格取触发它的源运行，而不是汇总自身的默认分支 SHA。
+    branches: [master]
     types: [completed]
 
 permissions:
