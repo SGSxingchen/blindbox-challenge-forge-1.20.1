@@ -27,8 +27,10 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
@@ -225,17 +227,17 @@ public final class PillowCiScenario {
                 throw new IllegalStateException("石抱枕服务端右键没有消费交互");
             }
             stoneSeat = onlySeatAt(stonePillowPos);
-            if (!alice.isPassenger() || alice.getVehicle() != stoneSeat || stoneSeat.getPassengers().size() != 1) {
+            if (!alice.isPassenger() || alice.getVehicle() != stoneSeat || minecraftEntity(stoneSeat).getPassengers().size() != 1) {
                 throw new IllegalStateException("石抱枕没有让首位玩家坐上唯一座位");
             }
             if (!state.use(level, bob, InteractionHand.MAIN_HAND, hit).consumesAction()) {
                 throw new IllegalStateException("石抱枕第二次服务端右键没有进入生产处理");
             }
-            if (onlySeatAt(stonePillowPos) != stoneSeat || stoneSeat.getPassengers().size() != 1
-                    || !stoneSeat.getPassengers().contains(alice) || bob.isPassenger()) {
+            if (onlySeatAt(stonePillowPos) != stoneSeat || minecraftEntity(stoneSeat).getPassengers().size() != 1
+                    || !minecraftEntity(stoneSeat).getPassengers().contains(alice) || bob.isPassenger()) {
                 throw new IllegalStateException("石抱枕单座位约束失效或为第二位玩家生成了座位");
             }
-            expectedSeatId = stoneSeat.getUUID();
+            expectedSeatId = minecraftEntity(stoneSeat).getUUID();
         }
 
         private void assertBreakCleanup() {
@@ -251,7 +253,7 @@ public final class PillowCiScenario {
             if (!bob.isPassenger() || bob.getVehicle() != diamondSeat) {
                 throw new IllegalStateException("钻石抱枕没有创建可清理座位");
             }
-            if (!level.removeBlock(diamondPillowPos, false) || !diamondSeat.isRemoved()
+            if (!level.removeBlock(diamondPillowPos, false) || !minecraftEntity(diamondSeat).isRemoved()
                     || !seatsAt(diamondPillowPos).isEmpty()) {
                 throw new IllegalStateException("拆除钻石抱枕后没有即时清理座位实体");
             }
@@ -261,8 +263,8 @@ public final class PillowCiScenario {
         private void launchFullChargeProjectiles() {
             stoneProjectile = launchFullCharge(ModItems.STONE_PILLOW.get(), PillowVariant.STONE);
             diamondProjectile = launchFullCharge(ModItems.DIAMOND_PILLOW.get(), PillowVariant.DIAMOND);
-            expectedStoneProjectileId = stoneProjectile.getUUID();
-            expectedDiamondProjectileId = diamondProjectile.getUUID();
+            expectedStoneProjectileId = minecraftEntity(stoneProjectile).getUUID();
+            expectedDiamondProjectileId = minecraftEntity(diamondProjectile).getUUID();
             // 真实入口已写出最大蓄力速度；仅在观察窗口内冻结，防止网络同步前飞出客户端跟踪范围。
             freezeForObservation(stoneProjectile, base.getX() - 1.0D, base.getY() + 2.0D, base.getZ() - 1.5D);
             freezeForObservation(diamondProjectile, base.getX() + 1.5D, base.getY() + 2.0D, base.getZ() - 1.5D);
@@ -283,18 +285,19 @@ public final class PillowCiScenario {
                 throw new IllegalStateException("抱枕满蓄力投掷没有恰好扣除一个物品并生成一个实体：" + item);
             }
             PillowProjectileEntity projectile = after.stream()
-                    .filter(entity -> entity.getOwner() == alice && entity.variant() == expectedVariant)
+                    .filter(entity -> minecraftProjectile(entity).getOwner() == alice && entity.variant() == expectedVariant)
                     .findFirst().orElseThrow(() -> new IllegalStateException("抱枕投掷实体缺少约定变体或主人"));
-            if (projectile.getDeltaMovement().length() < PillowBlockItem.MAX_THROW_SPEED - 0.05D) {
-                throw new IllegalStateException("抱枕满蓄力投掷速度未达到最大蓄力下限：" + projectile.getDeltaMovement().length());
+            if (minecraftEntity(projectile).getDeltaMovement().length() < PillowBlockItem.MAX_THROW_SPEED - 0.05D) {
+                throw new IllegalStateException("抱枕满蓄力投掷速度未达到最大蓄力下限："
+                        + minecraftEntity(projectile).getDeltaMovement().length());
             }
             return projectile;
         }
 
         private void freezeForObservation(PillowProjectileEntity projectile, double x, double y, double z) {
-            projectile.setNoGravity(true);
-            projectile.setDeltaMovement(Vec3.ZERO);
-            projectile.setPos(x, y, z);
+            minecraftEntity(projectile).setNoGravity(true);
+            minecraftEntity(projectile).setDeltaMovement(Vec3.ZERO);
+            minecraftEntity(projectile).setPos(x, y, z);
         }
 
         private void tick() {
@@ -318,19 +321,20 @@ public final class PillowCiScenario {
             Pig target = EntityType.PIG.create(level);
             if (target == null) throw new IllegalStateException("无法创建抱枕命中夹具目标");
             target.setNoGravity(true);
-            target.setPos(stoneProjectile.getX(), stoneProjectile.getY() - 0.45D, stoneProjectile.getZ() - 3.0D);
+            target.setPos(minecraftEntity(stoneProjectile).getX(), minecraftEntity(stoneProjectile).getY() - 0.45D,
+                    minecraftEntity(stoneProjectile).getZ() - 3.0D);
             if (!level.addFreshEntity(target)) throw new IllegalStateException("抱枕命中夹具目标未进入服务端世界");
             hitTarget = target;
             expectedTargetId = target.getUUID();
             targetHealthBeforeHit = target.getHealth();
-            stoneProjectile.setNoGravity(true);
-            stoneProjectile.setDeltaMovement(new Vec3(0.0D, 0.0D, -1.25D));
+            minecraftEntity(stoneProjectile).setNoGravity(true);
+            minecraftEntity(stoneProjectile).setDeltaMovement(new Vec3(0.0D, 0.0D, -1.25D));
             // 此实体仍由真实满蓄力 Item 入口生成；把计时推进到阈值只让超时分支在 CI 时限内可观察。
-            diamondProjectile.tickCount = PillowProjectileEntity.MAX_FLIGHT_TICKS;
+            minecraftEntity(diamondProjectile).tickCount = PillowProjectileEntity.MAX_FLIGHT_TICKS;
         }
 
         private void inspectResultPaths() {
-            if (!stoneProjectile.isRemoved() || !diamondProjectile.isRemoved()) return;
+            if (!minecraftEntity(stoneProjectile).isRemoved() || !minecraftEntity(diamondProjectile).isRemoved()) return;
             stoneReturn = singleReturned(ModItems.STONE_PILLOW.get());
             diamondReturn = singleReturned(ModItems.DIAMOND_PILLOW.get());
             if (stoneReturn == null || diamondReturn == null) return;
@@ -415,7 +419,8 @@ public final class PillowCiScenario {
         }
 
         private List<PillowSeatEntity> seatsAt(BlockPos pos) {
-            return level.getEntitiesOfClass(PillowSeatEntity.class, new AABB(pos), entity -> entity.blockPosition().equals(pos));
+            return level.getEntitiesOfClass(PillowSeatEntity.class, new AABB(pos),
+                    entity -> minecraftEntity(entity).blockPosition().equals(pos));
         }
 
         private List<PillowProjectileEntity> projectiles() {
@@ -443,13 +448,13 @@ public final class PillowCiScenario {
         private void cleanup() {
             if (cleaned) return;
             cleaned = true;
-            if (stoneProjectile != null && !stoneProjectile.isRemoved()) stoneProjectile.discard();
-            if (diamondProjectile != null && !diamondProjectile.isRemoved()) diamondProjectile.discard();
+            if (stoneProjectile != null && !minecraftEntity(stoneProjectile).isRemoved()) minecraftEntity(stoneProjectile).discard();
+            if (diamondProjectile != null && !minecraftEntity(diamondProjectile).isRemoved()) minecraftEntity(diamondProjectile).discard();
             if (stoneReturn != null && !stoneReturn.isRemoved()) stoneReturn.discard();
             if (diamondReturn != null && !diamondReturn.isRemoved()) diamondReturn.discard();
             if (hitTarget != null && !hitTarget.isRemoved()) hitTarget.discard();
-            if (stoneSeat != null && !stoneSeat.isRemoved()) stoneSeat.discard();
-            if (diamondSeat != null && !diamondSeat.isRemoved()) diamondSeat.discard();
+            if (stoneSeat != null && !minecraftEntity(stoneSeat).isRemoved()) minecraftEntity(stoneSeat).discard();
+            if (diamondSeat != null && !minecraftEntity(diamondSeat).isRemoved()) minecraftEntity(diamondSeat).discard();
             for (ItemEntity entity : level.getEntitiesOfClass(ItemEntity.class, fixtureBounds.inflate(4.0D),
                     entity -> entity.getItem().is(ModItems.STONE_PILLOW.get()) || entity.getItem().is(ModItems.DIAMOND_PILLOW.get()))) {
                 entity.discard();
@@ -462,6 +467,18 @@ public final class PillowCiScenario {
             alice.containerMenu.broadcastChanges();
             bob.containerMenu.broadcastChanges();
         }
+    }
+
+    /**
+     * ciTest Jar 与正式 Jar 分离重混淆时，继承自 Minecraft 的方法必须以 Minecraft 基类为调用者，
+     * 否则字节码会错误寻找自定义实体上的开发环境方法名。此转换不改变测试对象或行为。
+     */
+    private static Entity minecraftEntity(Entity entity) {
+        return entity;
+    }
+
+    private static Projectile minecraftProjectile(Projectile projectile) {
+        return projectile;
     }
 
     private record PlayerSnapshot(double x, double y, double z, float yRot, float xRot, ItemStack mainHand, int selected) {

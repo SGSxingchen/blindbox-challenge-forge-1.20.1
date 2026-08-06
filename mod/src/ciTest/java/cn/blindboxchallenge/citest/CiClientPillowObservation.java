@@ -56,20 +56,20 @@ public final class CiClientPillowObservation {
 
     private static void observeSeat(Minecraft minecraft, AABB viewingArea) {
         List<PillowSeatEntity> seats = minecraft.level.getEntitiesOfClass(PillowSeatEntity.class, viewingArea);
-        if (!seats.isEmpty()) seatId = seats.get(0).getUUID();
+        if (!seats.isEmpty()) seatId = minecraftEntity(seats.get(0)).getUUID();
     }
 
     private static void observeProjectiles(Minecraft minecraft, AABB viewingArea) {
         for (PillowProjectileEntity projectile : minecraft.level.getEntitiesOfClass(PillowProjectileEntity.class, viewingArea)) {
             if (projectile.variant() == PillowVariant.STONE) {
-                stoneProjectileId = projectile.getUUID();
+                stoneProjectileId = minecraftEntity(projectile).getUUID();
                 // 生产端保留命中后实体数个服务端 tick；只有真实同步到 impacted 与目标 UUID 才记为命中观察。
                 if (projectile.impacted() && projectile.hitTargetId().isPresent()
                         && tracksEntity(minecraft, viewingArea, projectile.hitTargetId().get())) {
                     hitTargetId = projectile.hitTargetId().get();
                 }
             } else if (projectile.variant() == PillowVariant.DIAMOND) {
-                diamondProjectileId = projectile.getUUID();
+                diamondProjectileId = minecraftEntity(projectile).getUUID();
             }
         }
     }
@@ -101,5 +101,10 @@ public final class CiClientPillowObservation {
         } catch (IOException exception) {
             throw new IllegalStateException("无法写入 P3 抱枕真实观察 marker：" + marker, exception);
         }
+    }
+
+    /** 与正式 Jar 分离重混淆时显式以 Minecraft 基类调用继承方法，避免开发方法名残留。 */
+    private static Entity minecraftEntity(Entity entity) {
+        return entity;
     }
 }
