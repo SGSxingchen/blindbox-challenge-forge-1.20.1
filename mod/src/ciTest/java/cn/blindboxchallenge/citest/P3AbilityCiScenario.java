@@ -221,6 +221,7 @@ public final class P3AbilityCiScenario {
             resetAbility(alice);
             // 先把服务端当前的 false Capability 直接同步给两名真实客户端：客户端只据此清空此前
             // P3 回归留下的临时观察状态；marker 文件也必须在本次场景开始时删除，不能沿用旧结果。
+            PlayerAbilityService.syncTo(alice, alice);
             PlayerAbilityService.syncTo(bob, alice);
             clearClientMarkers();
             // 先让 Bob 离开追踪范围并等待服务器实际撤销追踪，再学习；因此 Bob 的 true 快照只能来自随后真实 StartTracking。

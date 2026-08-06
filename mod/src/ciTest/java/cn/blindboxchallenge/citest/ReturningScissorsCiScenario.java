@@ -24,7 +24,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
@@ -42,8 +41,8 @@ import net.minecraftforge.fml.common.Mod;
  * 045 的独立真实服务端场景。
  *
  * <p>两次投掷都经 {@link ReturningScissorsItem#use} 和 {@link ReturningScissorsItem#releaseUsing} 入口：
- * 第一次命中真实猪并让两个真实客户端观察同一投掷、目标、主人和返航态；第二次在 36 格背包均满时
- * 命中真实猪，断言只能在主人位置产生带原始 NBT 的兜底掉落物。探针不属于正式 Jar。</p>
+ * 第一次命中真实猪并让两个真实客户端观察同一投掷、目标、主人和返航态；第二次命中真实猪后在 36 格背包均满时，
+ * 断言只能在主人位置产生带原始 NBT 的兜底掉落物。探针不属于正式 Jar。</p>
  */
 @Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class ReturningScissorsCiScenario {
@@ -125,7 +124,7 @@ public final class ReturningScissorsCiScenario {
         private final AABB fixtureBounds;
         private ReturningScissorsEntity normalScissors;
         private ReturningScissorsEntity fullScissors;
-        private LivingEntity normalTarget;
+        private Pig normalTarget;
         private Pig fullTarget;
         private ItemEntity fallbackItem;
         private UUID expectedNormalScissorsId;
@@ -133,6 +132,7 @@ public final class ReturningScissorsCiScenario {
         private UUID expectedOwnerId;
         private UUID expectedFallbackId;
         private float normalTargetHealth;
+        private float fullTargetHealth;
         private int phaseTicks;
         private Phase phase = Phase.OBSERVING_NORMAL_THROW;
         private String failure;
@@ -171,8 +171,10 @@ public final class ReturningScissorsCiScenario {
 
         private void setup() {
             saveAndPrepareFixture();
-            alice.teleportTo(level, base.getX() + 0.5D, base.getY() + 1.0D, base.getZ() - 4.5D, 0.0F, 0.0F);
-            bob.teleportTo(level, base.getX() + 4.5D, base.getY() + 1.0D, base.getZ() - 3.0D, 0.0F, 0.0F);
+            // 与已经验证的抱枕命中夹具保持同一稳定扫掠几何：主人在投掷物后方，
+            // 目标位于前方，恢复飞行后由 AbstractArrow 的原生碰撞路径命中。
+            alice.teleportTo(level, base.getX() + 0.5D, base.getY() + 1.0D, base.getZ() + 4.5D, 180.0F, 0.0F);
+            bob.teleportTo(level, base.getX() + 4.5D, base.getY() + 1.0D, base.getZ() + 4.5D, 180.0F, 0.0F);
             normalScissors = throwOne(NORMAL_TOKEN);
             expectedNormalScissorsId = minecraftEntity(normalScissors).getUUID();
             expectedOwnerId = alice.getUUID();
@@ -262,20 +264,14 @@ public final class ReturningScissorsCiScenario {
         }
 
         private void activateNormalHit() {
-            // 采用同服真实 Bob 作为命中目标，避免无 AI 生物的碰撞状态在冻结观察窗口后被引擎
-            // 分区延迟跳过；仍完全由生产 AbstractArrow 的普通 tick 碰撞、伤害和返航路径结算。
-            Vec3 targetPosition = minecraftEntity(normalScissors).position().add(0.0D, 0.0D, 0.15D);
-            bob.teleportTo(level, targetPosition.x, targetPosition.y, targetPosition.z, 0.0F, 0.0F);
-            bob.setDeltaMovement(Vec3.ZERO);
-            bob.hurtMarked = true;
-            normalTarget = bob;
+            // 目标不能与箭矢起点重叠：AbstractArrow 的射线检测以完整扫掠段决定命中。
+            // 沿已通过的抱枕夹具使用真实猪与稳定的前方扫掠，仍只依赖生产 tick 的正常碰撞。
+            normalTarget = createTarget(minecraftEntity(normalScissors).position().add(0.0D, -0.45D, -3.0D));
             expectedTargetId = normalTarget.getUUID();
             normalTargetHealth = normalTarget.getHealth();
-            // 保持真实投掷入口产生的实体，只在双端观察窗结束后调整其物理位置/速度来稳定命中时序。
+            // 保持真实投掷入口产生的实体，只在双端观察窗结束后恢复稳定扫掠速度。
             minecraftEntity(normalScissors).setNoGravity(true);
-            minecraftEntity(normalScissors).setDeltaMovement(new Vec3(0.0D, 0.0D, 0.5D));
-            alice.teleportTo(level, base.getX() + 0.5D, base.getY() + 1.0D, base.getZ() - 20.5D, 0.0F, 0.0F);
-            alice.hurtMarked = true;
+            minecraftEntity(normalScissors).setDeltaMovement(new Vec3(0.0D, 0.0D, -1.25D));
         }
 
         private Pig createTarget(Vec3 position) {
@@ -300,17 +296,18 @@ public final class ReturningScissorsCiScenario {
         }
 
         private void startFullInventoryFallback() {
-            if (normalTarget != null && !normalTarget.isRemoved()) normalTarget.discard();
+            // 第一只真实猪已完成正常命中账本；先清理，避免它遮挡第二次独立扫掠目标。
+            discard(normalTarget);
             fillMainInventory();
-            alice.teleportTo(level, base.getX() + 0.5D, base.getY() + 1.0D, base.getZ() - 4.5D, 0.0F, 0.0F);
+            alice.teleportTo(level, base.getX() + 0.5D, base.getY() + 1.0D, base.getZ() + 4.5D, 180.0F, 0.0F);
             fullScissors = throwOne(FULL_TOKEN);
             // releaseUsing 后的第 0 格会空出；立刻填满它，确保回收只能走主人位置掉落兜底而不能进背包。
             alice.getInventory().setItem(0, new ItemStack(Items.COBBLESTONE, 64));
             freezeForObservation(fullScissors);
-            fullTarget = createTarget(minecraftEntity(fullScissors).position().add(0.0D, 0.0D, 0.15D));
+            fullTarget = createTarget(minecraftEntity(fullScissors).position().add(0.0D, -0.45D, -3.0D));
+            fullTargetHealth = fullTarget.getHealth();
             minecraftEntity(fullScissors).setNoGravity(true);
-            minecraftEntity(fullScissors).setDeltaMovement(new Vec3(0.0D, 0.0D, 0.5D));
-            alice.teleportTo(level, base.getX() + 0.5D, base.getY() + 1.0D, base.getZ() - 12.5D, 0.0F, 0.0F);
+            minecraftEntity(fullScissors).setDeltaMovement(new Vec3(0.0D, 0.0D, -1.25D));
             alice.containerMenu.broadcastChanges();
         }
 
@@ -326,6 +323,10 @@ public final class ReturningScissorsCiScenario {
             }
             fallbackItem = fallbacks.get(0);
             expectedFallbackId = fallbackItem.getUUID();
+            if (fullTarget.getHealth() >= fullTargetHealth
+                    || fullScissors.hitTargetId().filter(fullTarget.getUUID()::equals).isEmpty()) {
+                throw new IllegalStateException("返航剪刀满包分支没有先经真实实体命中结算");
+            }
             if (fallbackItem.getItem().getCount() != 1 || fallbackItem.getItem().getDamageValue() != 1
                     || !expectedToken(fallbackItem.getItem(), FULL_TOKEN)
                     || fallbackItem.distanceToSqr(alice) > 9.0D) {
@@ -417,6 +418,7 @@ public final class ReturningScissorsCiScenario {
             cleaned = true;
             discard(normalScissors);
             discard(fullScissors);
+            discard(normalTarget);
             discard(fullTarget);
             discard(fallbackItem);
             for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, fixtureBounds.inflate(8.0D),
