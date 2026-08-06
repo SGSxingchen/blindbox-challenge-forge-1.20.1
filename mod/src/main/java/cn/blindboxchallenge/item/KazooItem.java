@@ -22,7 +22,7 @@ public final class KazooItem extends Item {
         ItemStack stack = player.getItemInHand(hand);
         if (player.getCooldowns().isOnCooldown(this)) return InteractionResultHolder.fail(stack);
         if (!level.isClientSide) {
-            level.playSound(null, player.blockPosition(), SoundEvents.NOTE_BLOCK_FLUTE, SoundSource.PLAYERS, 1.0F, 0.72F);
+            level.playSound(null, player.blockPosition(), SoundEvents.NOTE_BLOCK_FLUTE.value(), SoundSource.PLAYERS, 1.0F, 0.72F);
             player.getCooldowns().addCooldown(this, COOLDOWN_TICKS);
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
