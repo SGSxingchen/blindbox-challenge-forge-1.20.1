@@ -256,7 +256,10 @@ public final class ClockworkChickenCiScenario {
         }
 
         private void cleanup() {
-            if (chickenId != null && level.getEntity(chickenId) instanceof ClockworkChickenEntity chicken) chicken.discard();
+            if (chickenId != null && level.getEntity(chickenId) instanceof ClockworkChickenEntity chicken) {
+                // 独立 ciTest Jar 必须以原版基类 owner 调用继承方法，避免重混淆后解析成子类虚拟符号。
+                ((net.minecraft.world.entity.Entity) chicken).discard();
+            }
             originalBlocks.forEach((pos, state) -> level.setBlock(pos, state, 3));
             alice.setItemInHand(InteractionHand.MAIN_HAND, aliceOriginalHand.copy());
             alice.teleportTo(level, aliceOriginalPosition.x, aliceOriginalPosition.y, aliceOriginalPosition.z, aliceYaw, alicePitch);
