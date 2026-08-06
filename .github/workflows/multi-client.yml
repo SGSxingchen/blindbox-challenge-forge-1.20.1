@@ -39,7 +39,10 @@ jobs:
           name: multi-client-evidence
           path: |
             mod/build/ci-multi-evidence/
+            mod/build/ci-multi-server/server.log
             mod/build/ci-multi-server/crash-reports/
+            mod/build/ci-client-1/logs/
             mod/build/ci-client-1/crash-reports/
+            mod/build/ci-client-2/logs/
             mod/build/ci-client-2/crash-reports/
           if-no-files-found: warn

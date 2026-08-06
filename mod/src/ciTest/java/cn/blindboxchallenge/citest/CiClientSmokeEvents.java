@@ -3,7 +3,6 @@ package cn.blindboxchallenge.citest;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraftforge.api.distmarker.Dist;
@@ -25,6 +24,7 @@ public final class CiClientSmokeEvents {
     private static boolean everJoined;
     private static boolean reconnectStarted;
     private static int reconnectJoinedTicks;
+    private static int disconnectedTicks;
 
     private CiClientSmokeEvents() {
     }
@@ -64,15 +64,20 @@ public final class CiClientSmokeEvents {
         }
         if (minecraft.level == null || minecraft.player == null || minecraft.getConnection() == null) {
             joinedTicks = 0;
-            if (everJoined && Boolean.getBoolean("blindbox.ci.reconnect") && !reconnectStarted
-                    && minecraft.screen instanceof DisconnectedScreen) {
-                String address = System.getProperty("blindbox.ci.serverAddress", "127.0.0.1:25565");
-                ServerData data = new ServerData("BlindBox CI reconnect", address, false);
-                reconnectStarted = true;
-                ConnectScreen.startConnecting(minecraft.screen, minecraft, ServerAddress.parseString(address), data, false);
+            if (everJoined && Boolean.getBoolean("blindbox.ci.reconnect") && !reconnectStarted) {
+                disconnectedTicks++;
+                // 断线界面在不同机器/时序下可能短暂被其他 Screen 替代；以连接状态为权威，
+                // 等待若干客户端 Tick 让旧连接完全清理后再发起一次重连。
+                if (disconnectedTicks >= 10) {
+                    String address = System.getProperty("blindbox.ci.serverAddress", "127.0.0.1:25565");
+                    ServerData data = new ServerData("BlindBox CI reconnect", address, false);
+                    reconnectStarted = true;
+                    ConnectScreen.startConnecting(minecraft.screen, minecraft, ServerAddress.parseString(address), data, false);
+                }
             }
             return;
         }
+        disconnectedTicks = 0;
         joinedTicks++;
         if (!everJoined && joinedTicks == 40) {
             everJoined = true;
