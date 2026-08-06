@@ -45,3 +45,8 @@
 - 真实专服启动、命令、`save-all flush`、正常停止：已通过，run `31052228529`。
 - 已新增 `lifecycle-recovery.yml`：加载正式 Jar 与隔离 `ciTest` 探针，真实启动服务端、导出 canonical JSON、执行 `save-all flush` 后 SIGKILL(-9)，再以同一世界重启并比较玩家/奖池/事务/保留状态。当前里程碑仅覆盖空世界恢复基础设施；PACK/OPEN 阶段注入与唯一 NBT 资产守恒仍未覆盖，不得外推为完整事务恢复通过。
 - 单客户端、双客户端、业务交互探针和网络负例：尚未实现工作流，均不得标为已覆盖。
+
+
+## 2026-08-06 强杀恢复增量
+
+`lifecycle-recovery.yml` 已从空世界基础链扩展为唯一 NBT 的 PACK/OPEN SavedData 证据夹具：两个 bundle、PACK/OPEN 各一条未完成 schema v2 事务及一条 OPEN reservation 在 `save-all flush → SIGKILL(-9) → 同世界重启` 前后必须 canonical 完全一致。该里程碑验证持久奖品 payload、收据与竞争保留不复制不丢失；在线玩家逐槽变化与登录恢复仍由后续真实客户端矩阵覆盖。

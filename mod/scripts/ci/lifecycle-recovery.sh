@@ -74,9 +74,12 @@ scan_log() {
   ! grep -Eq 'FATAL|NoClassDefFoundError|Exception in server tick|Crash report|crash-report|Cannot export canonical CI state' "${SERVER_DIR}/${log}"
 }
 
-# 第一次启动：导出真实状态，flush 后强杀整个进程组。
+# 第一次启动：写入唯一 NBT 的 PACK/OPEN 未完成事务夹具，导出后 flush 并强杀整个进程组。
+# 夹具包含两个 bundle、两个事务和一个 OPEN reservation；重启前没有玩家登录，
+# 因而可精确验证 SavedData 证据持久化，不把登录恢复行为混入本里程碑。
 start_server first.log
-printf 'blindboxcitest export\nsave-all flush\n' >&"${SERVER_FD}"
+printf 'blindboxcitest seed_recovery_fixture\nblindboxcitest export\nsave-all flush\n' >&"${SERVER_FD}"
+wait_for_log first.log 'BLINDBOX_CITEST_FIXTURE=seeded'
 wait_for_log first.log 'BLINDBOX_CITEST_EXPORT='
 wait_for_log first.log 'Saved the game'
 test -s "${SERVER_DIR}/citest-results/canonical-state.json"
@@ -112,17 +115,24 @@ after = json.loads(after_path.read_text(encoding='utf-8'))
 assert before.get('schema') == 1 == after.get('schema')
 assert before.get('product_sha256') == expected_sha == after.get('product_sha256')
 assert before.get('world') == after.get('world') == 'minecraft:overworld'
+assert len(before.get('bundles', [])) == 2, 'fixture must contain exactly two bundles'
+assert len(before.get('transactions', [])) == 2, 'fixture must contain PACK and OPEN transactions'
+assert {entry.get('kind') for entry in before['transactions']} == {'PACK', 'OPEN'}
+assert len(before.get('open_reservations', [])) == 1, 'fixture must contain one OPEN reservation'
+serialized = json.dumps(before, ensure_ascii=False, sort_keys=True)
+assert 'citest-pack-asset' in serialized and 'citest-open-asset' in serialized
 for key in ('players', 'bundles', 'transactions', 'open_reservations'):
     assert before.get(key) == after.get(key), f'{key} changed across flushed SIGKILL recovery'
 assert int(after.get('game_time', -1)) >= int(before.get('game_time', -1))
 result = {
     'schema': 1,
     'status': 'success',
-    'scope': 'flushed_empty_world_recovery_infrastructure',
+    'scope': 'flushed_pack_open_saveddata_asset_evidence',
     'product_sha256': expected_sha,
     'before': str(before_path),
     'after': str(after_path),
-    'limitations': ['player PACK/OPEN phase injection and asset conservation are not covered by this milestone'],
+    'assertions': ['two unique-NBT bundles persisted', 'PACK and OPEN receipts persisted', 'OPEN reservation persisted', 'no duplicate or lost SavedData asset evidence'],
+    'limitations': ['online-player inventory mutation and login recovery are covered by later client milestones'],
 }
 (pathlib.Path(after_path).parent / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 PY
