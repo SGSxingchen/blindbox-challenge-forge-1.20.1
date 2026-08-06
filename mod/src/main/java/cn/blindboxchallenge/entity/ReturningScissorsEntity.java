@@ -78,6 +78,9 @@ public final class ReturningScissorsEntity extends AbstractArrow implements Item
     public ReturningScissorsEntity(Level level, LivingEntity owner, ItemStack stack) {
         this(ModEntities.RETURNING_SCISSORS.get(), level);
         setReturnOwner(owner);
+        // 不能只设置 Projectile owner：AbstractArrow 的无 owner 构造器初始位置是世界原点。
+        // 投掷实体必须从真实使用者眼部附近起飞，随后才由 shootFromRotation 写入速度。
+        setPos(owner.getX(), owner.getEyeY() - 0.1D, owner.getZ());
         setScissorsStack(stack);
     }
 
