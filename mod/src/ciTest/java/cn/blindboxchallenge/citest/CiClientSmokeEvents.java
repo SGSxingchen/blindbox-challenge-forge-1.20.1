@@ -1,7 +1,10 @@
 package cn.blindboxchallenge.citest;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -11,10 +14,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/** 仅在 CI 客户端启用：要求标题界面连续稳定 20 tick，再写出机器标志并正常退出。 */
+/** 仅存在于 CI 探针 Jar：验证标题界面或真实多人连接。 */
 @Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class CiClientSmokeEvents {
     private static int stableTitleTicks;
+    private static int joinedTicks;
+    private static boolean connectStarted;
     private static boolean completed;
 
     private CiClientSmokeEvents() {
@@ -22,18 +27,59 @@ public final class CiClientSmokeEvents {
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || completed || !Boolean.getBoolean("blindbox.ci.clientSmoke")) {
+        if (event.phase != TickEvent.Phase.END || completed) {
+            return;
+        }
+        boolean titleSmoke = Boolean.getBoolean("blindbox.ci.clientSmoke");
+        boolean multiplayerSmoke = Boolean.getBoolean("blindbox.ci.multiplayerSmoke");
+        if (!titleSmoke && !multiplayerSmoke) {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
+        if (multiplayerSmoke) {
+            runMultiplayerSmoke(minecraft);
+            return;
+        }
         if (minecraft.screen instanceof TitleScreen && minecraft.getOverlay() == null) {
             stableTitleTicks++;
         } else {
             stableTitleTicks = 0;
         }
-        if (stableTitleTicks < 20) {
+        if (stableTitleTicks >= 20) {
+            complete(minecraft, "title-screen-stable-20-ticks\n");
+        }
+    }
+
+    private static void runMultiplayerSmoke(Minecraft minecraft) {
+        if (!connectStarted && minecraft.screen instanceof TitleScreen && minecraft.getOverlay() == null) {
+            String address = System.getProperty("blindbox.ci.serverAddress", "127.0.0.1:25565");
+            ServerData data = new ServerData("BlindBox CI", address, ServerData.Type.OTHER);
+            connectStarted = true;
+            ConnectScreen.startConnecting(minecraft.screen, minecraft, ServerAddress.parseString(address), data, false);
             return;
         }
+        if (minecraft.level == null || minecraft.player == null || minecraft.getConnection() == null) {
+            joinedTicks = 0;
+            return;
+        }
+        joinedTicks++;
+        if (joinedTicks == 40) {
+            writeMarker("multiplayer-connected-40-ticks\n");
+        }
+        String releaseValue = System.getProperty("blindbox.ci.clientRelease");
+        if (joinedTicks >= 40 && releaseValue != null && Files.isRegularFile(Path.of(releaseValue).toAbsolutePath())) {
+            completed = true;
+            minecraft.stop();
+        }
+    }
+
+    private static void complete(Minecraft minecraft, String value) {
+        writeMarker(value);
+        completed = true;
+        minecraft.stop();
+    }
+
+    private static void writeMarker(String value) {
         String markerValue = System.getProperty("blindbox.ci.clientMarker");
         if (markerValue == null || markerValue.isBlank()) {
             throw new IllegalStateException("缺少 blindbox.ci.clientMarker");
@@ -41,11 +87,9 @@ public final class CiClientSmokeEvents {
         Path marker = Path.of(markerValue).toAbsolutePath();
         try {
             Files.createDirectories(marker.getParent());
-            Files.writeString(marker, "title-screen-stable-20-ticks\n");
+            Files.writeString(marker, value);
         } catch (IOException exception) {
             throw new IllegalStateException("无法写入客户端 CI 标志：" + marker, exception);
         }
-        completed = true;
-        minecraft.stop();
     }
 }

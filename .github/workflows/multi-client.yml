@@ -1,0 +1,45 @@
+name: 真实双客户端联机
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  multi-client-connection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: mod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 安装 Xvfb、Mesa 与固定启动库
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri libglx-mesa0 libflite1
+          python -m pip install 'minecraft-launcher-lib==8.0'
+      - name: 构建正式模组与隔离测试探针
+        run: |
+          chmod +x gradlew scripts/ci/*.sh scripts/ci/*.py
+          ./gradlew --no-daemon build ciTestJar
+      - name: 启动同一专服与两个真实 Forge 客户端
+        run: scripts/ci/multi-client.sh
+      - name: 上传双客户端证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-client-evidence
+          path: |
+            mod/build/ci-multi-evidence/
+            mod/build/ci-multi-server/crash-reports/
+            mod/build/ci-client-1/crash-reports/
+            mod/build/ci-client-2/crash-reports/
+          if-no-files-found: warn
