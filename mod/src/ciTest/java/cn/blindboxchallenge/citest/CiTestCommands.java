@@ -75,7 +75,8 @@ public final class CiTestCommands {
             // 换手、松开、死亡和掉线最终都走 cancel/clear 路径；这里在真实 ServerPlayer 上断言状态与减速同时清理。
             ItemStack cancelledBox = BlindBoxService.createBlindBox(UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
             alice.setItemInHand(InteractionHand.MAIN_HAND, cancelledBox);
-            ((BlindBoxItem) cancelledBox.getItem()).use(alice.serverLevel(), alice, InteractionHand.MAIN_HAND);
+            // 经原版 Item 声明调用，确保 ForgeGradle 能把覆写方法引用正确重混淆到生产命名。
+            cancelledBox.getItem().use(alice.serverLevel(), alice, InteractionHand.MAIN_HAND);
             if (!BlindBoxItem.hasActiveUseState(alice, cancelledBox)) throw new IllegalStateException("opening lifecycle state missing");
             BlindBoxItem.cancelUse(alice);
             if (BlindBoxItem.hasActiveUseState(alice, cancelledBox)) throw new IllegalStateException("opening lifecycle state leaked after cancel");
