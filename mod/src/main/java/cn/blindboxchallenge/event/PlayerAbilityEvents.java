@@ -12,6 +12,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent.PlayerChangedDimensionEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent.PlayerRespawnEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent.StartTracking;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -46,6 +47,19 @@ public final class PlayerAbilityEvents {
         replacement.getCapability(ModCapabilities.PLAYER_ABILITY).ifPresent(data -> {
             PlayerAbilityService.reconcileAttributes(replacement, data);
             PlayerAbilityService.syncTrackingAndSelf(replacement, data);
+        });
+    }
+
+    /**
+     * 原版死亡重生会先替换客户端世界中的本地玩家；Clone 期间过早发送的自同步可能被该切换丢弃。
+     * 玩家重新加入服务端玩家表后再按同一 Capability 事实源对账并同步，客户端不会因此自行授予能力。
+     */
+    @SubscribeEvent
+    public static void respawn(PlayerRespawnEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        player.getCapability(ModCapabilities.PLAYER_ABILITY).ifPresent(data -> {
+            PlayerAbilityService.reconcileAttributes(player, data);
+            PlayerAbilityService.syncTrackingAndSelf(player, data);
         });
     }
 
