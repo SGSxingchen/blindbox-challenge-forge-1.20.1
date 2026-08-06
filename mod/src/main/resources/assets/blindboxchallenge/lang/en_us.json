@@ -69,6 +69,8 @@
   "block.blindboxchallenge.stone_pillow": "Stone Stool Pillow",
   "item.blindboxchallenge.diamond_pillow": "Diamond Pillow",
   "block.blindboxchallenge.diamond_pillow": "Diamond Pillow",
+  "item.blindboxchallenge.returning_scissors": "Returning Scissors",
+  "entity.blindboxchallenge.returning_scissors": "Returning Scissors",
   "entity.blindboxchallenge.thrown_pillow": "Thrown Pillow",
   "entity.blindboxchallenge.pillow_seat": "Pillow Seat"
 }

@@ -27,7 +27,7 @@ curl --fail --location --retry 3 --connect-timeout 20 -o "${SERVER_DIR}/${INSTAL
  mkdir -p mods
  cp "../../${FORMAL}" "../../${CITEST}" mods/
  mkfifo server.stdin
- BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" \
+ BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_SCISSORS_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_PIG_MARKER_DIR="${EVIDENCE_ABS}" \
    setsid ./run.sh nogui < server.stdin > server.log 2>&1 & echo $! > server.pid
 )
 SERVER_PID="$(cat "${SERVER_DIR}/server.pid")"
@@ -69,6 +69,40 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P3_BUSINESS=success' "${SERVER_DIR}/server.log"
+printf 'blindboxcitest start_p3_pig_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P3_PIG_STARTED=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_PIG_STARTED=success' "${SERVER_DIR}/server.log"
+# 两份 marker 均由真实客户端跟踪同一对父猪和由正式书本入口产生的幼猪后写入；
+# 服务端会逐 UUID 与自身实体账本反查，随后显式清理临时夹具。
+for _ in $(seq 1 120); do
+  if grep -q 'BLINDBOX_CITEST_P3_PIG=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P3_PIG_SERVER=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_PIG_SERVER=success' "${SERVER_DIR}/server.log"
+for _ in $(seq 1 120); do
+  [ -f "${EVIDENCE}/client-1-p3-pig-observed.marker" ] && [ -f "${EVIDENCE}/client-2-p3-pig-observed.marker" ] && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+test -f "${EVIDENCE}/client-1-p3-pig-observed.marker"
+test -f "${EVIDENCE}/client-2-p3-pig-observed.marker"
+printf 'blindboxcitest verify_p3_pig_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P3_PIG_CLIENTS=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_PIG_CLIENTS=success' "${SERVER_DIR}/server.log"
+printf 'blindboxcitest cleanup_p3_pig_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P3_PIG_CLEANUP=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_PIG_CLEANUP=success' "${SERVER_DIR}/server.log"
 printf 'blindboxcitest run_p3_pillow\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_P3_PILLOW_STARTED=success' "${SERVER_DIR}/server.log" && break
@@ -100,6 +134,37 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P3_PILLOW_CLIENTS=success' "${SERVER_DIR}/server.log"
+printf 'blindboxcitest run_p3_scissors\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P3_SCISSORS_STARTED=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_SCISSORS_STARTED=success' "${SERVER_DIR}/server.log"
+# marker 只能在两个真实客户端同步到同一投掷、目标、主人 UUID 和返航态后生成；
+# 服务端还会在随后核验实际命中、完整 NBT 回收和满包掉落实体。
+for _ in $(seq 1 240); do
+  if grep -q 'BLINDBOX_CITEST_P3_SCISSORS_SERVER=failed' "${SERVER_DIR}/server.log"; then
+    cat "${SERVER_DIR}/server.log"
+    exit 1
+  fi
+  grep -q 'BLINDBOX_CITEST_P3_SCISSORS_SERVER=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_SCISSORS_SERVER=success' "${SERVER_DIR}/server.log"
+for _ in $(seq 1 120); do
+  [ -f "${EVIDENCE}/client-1-scissors-observed.marker" ] && [ -f "${EVIDENCE}/client-2-scissors-observed.marker" ] && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+test -f "${EVIDENCE}/client-1-scissors-observed.marker"
+test -f "${EVIDENCE}/client-2-scissors-observed.marker"
+printf 'blindboxcitest verify_p3_scissors_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P3_SCISSORS_CLIENTS=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_SCISSORS_CLIENTS=success' "${SERVER_DIR}/server.log"
 printf 'blindboxcitest start_p3_ability_clients\n' >&3
 for _ in $(seq 1 90); do
   grep -q 'BLINDBOX_CITEST_P3_ABILITY_SYNC_DISPATCHED=success' "${SERVER_DIR}/server.log" && break
@@ -166,7 +231,7 @@ wait "${SERVER_PID}" 2>/dev/null || true
  cd "${SERVER_DIR}"
  rm -f server.stdin
  mkfifo server.stdin
- BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" \
+ BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_SCISSORS_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_PIG_MARKER_DIR="${EVIDENCE_ABS}" \
    setsid ./run.sh nogui < server.stdin > server.log 2>&1 & echo $! > server.pid
 )
 SERVER_PID="$(cat "${SERVER_DIR}/server.pid")"

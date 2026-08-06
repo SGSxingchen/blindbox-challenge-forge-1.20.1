@@ -69,6 +69,8 @@
   "block.blindboxchallenge.stone_pillow": "石墩子抱枕",
   "item.blindboxchallenge.diamond_pillow": "钻石抱枕",
   "block.blindboxchallenge.diamond_pillow": "钻石抱枕",
+  "item.blindboxchallenge.returning_scissors": "返航剪刀",
+  "entity.blindboxchallenge.returning_scissors": "返航剪刀",
   "entity.blindboxchallenge.thrown_pillow": "投掷抱枕",
   "entity.blindboxchallenge.pillow_seat": "抱枕座位"
 }

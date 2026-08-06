@@ -28,6 +28,7 @@ public final class ClientModEvents {
     public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.THROWN_PILLOW.get(), ThrownItemRenderer::new);
         event.registerEntityRenderer(ModEntities.PILLOW_SEAT.get(), PillowSeatRenderer::new);
+        event.registerEntityRenderer(ModEntities.RETURNING_SCISSORS.get(), ThrownItemRenderer::new);
     }
 
     @SubscribeEvent

@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-P1 的盲盒、打包、全局奖池、事务隔离与调试命令，以及 P2 的 50 项基础物品族均已验收归档；本仓库现进入 P3 持久能力、抱枕投掷与返航剪刀开发。P3 第三批的 008/016 抱枕生产代码、原创资源和独立双客户端探针已由 GitHub Hosted Runner 验证；范围、批次与实现记录见 [P3_IMPLEMENTATION.md](docs/P3_IMPLEMENTATION.md)，逐项门禁见 [P3_ACCEPTANCE.md](docs/P3_ACCEPTANCE.md)。原始资料在 `source-package/`，不得修改或删除；原压缩包备份在 `archive/`。
+P1 的盲盒、打包、全局奖池、事务隔离与调试命令，以及 P2 的 50 项基础物品族均已验收归档；本仓库现进入 P3 持久能力、抱枕投掷与返航剪刀开发。P3 第三批的 008/016 抱枕生产代码、原创资源和独立双客户端探针已由 GitHub Hosted Runner 验证；第四批 045 返航剪刀及 011 客户端实体观察的生产/探针代码目前仅完成静态接入，不能提前视为验收通过。范围、批次与实现记录见 [P3_IMPLEMENTATION.md](docs/P3_IMPLEMENTATION.md)，逐项门禁见 [P3_ACCEPTANCE.md](docs/P3_ACCEPTANCE.md)。原始资料在 `source-package/`，不得修改或删除；原压缩包备份在 `archive/`。
 
 ## 规划文档
 

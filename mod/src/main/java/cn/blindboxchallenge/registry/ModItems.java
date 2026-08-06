@@ -26,6 +26,7 @@ import cn.blindboxchallenge.item.RoadBarrierHelmetItem;
 import cn.blindboxchallenge.item.YiJinJingItem;
 import cn.blindboxchallenge.item.EfficientPigBreedingItem;
 import cn.blindboxchallenge.item.PillowBlockItem;
+import cn.blindboxchallenge.item.ReturningScissorsItem;
 import cn.blindboxchallenge.entity.PillowVariant;
 import net.minecraft.core.Direction;
 import net.minecraft.world.food.FoodProperties;
@@ -64,6 +65,8 @@ public final class ModItems {
             () -> new PillowBlockItem(ModBlocks.STONE_PILLOW.get(), PillowVariant.STONE));
     public static final RegistryObject<Item> DIAMOND_PILLOW = ITEMS.register("diamond_pillow",
             () -> new PillowBlockItem(ModBlocks.DIAMOND_PILLOW.get(), PillowVariant.DIAMOND));
+    public static final RegistryObject<Item> RETURNING_SCISSORS = ITEMS.register("returning_scissors",
+            ReturningScissorsItem::new);
     public static final RegistryObject<Item> RAT_JERKY_TOTEM = ITEMS.register("rat_jerky_totem", () -> new Item(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> LONG_SCREWDRIVER = ITEMS.register("long_screwdriver", LongScrewdriverItem::new);
     public static final RegistryObject<Item> PICKAXE_HOE = ITEMS.register("pickaxe_hoe", PickaxeHoeItem::new);

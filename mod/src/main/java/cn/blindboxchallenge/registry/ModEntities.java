@@ -3,6 +3,7 @@ package cn.blindboxchallenge.registry;
 import cn.blindboxchallenge.BlindBoxChallenge;
 import cn.blindboxchallenge.entity.PillowProjectileEntity;
 import cn.blindboxchallenge.entity.PillowSeatEntity;
+import cn.blindboxchallenge.entity.ReturningScissorsEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraftforge.registries.DeferredRegister;
@@ -26,6 +27,12 @@ public final class ModEntities {
                     .clientTrackingRange(64)
                     .updateInterval(1)
                     .build(BlindBoxChallenge.MOD_ID + ":thrown_pillow"));
+    public static final RegistryObject<EntityType<ReturningScissorsEntity>> RETURNING_SCISSORS = ENTITIES.register("returning_scissors",
+            () -> EntityType.Builder.<ReturningScissorsEntity>of(ReturningScissorsEntity::new, MobCategory.MISC)
+                    .sized(0.5F, 0.5F)
+                    .clientTrackingRange(64)
+                    .updateInterval(1)
+                    .build(BlindBoxChallenge.MOD_ID + ":returning_scissors"));
 
     private ModEntities() {}
 }
