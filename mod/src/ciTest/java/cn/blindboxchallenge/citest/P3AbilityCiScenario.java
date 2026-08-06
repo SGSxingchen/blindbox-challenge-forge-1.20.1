@@ -38,8 +38,8 @@ public final class P3AbilityCiScenario {
     /** 等待客户端由真实 true S2C 写出观察标记的上限；不以固定 tick 猜测网络已到达。 */
     private static final int SELF_SYNC_MARKER_TIMEOUT_TICKS = 180;
     private static final int TRACKING_REQUEST_TICKS = 40;
-    /** 40 格真实下落窗口；干草块保证失败时不以摔死掩盖 C2S 物理校验。 */
-    private static final int AIR_JUMP_DROP_BLOCKS = 40;
+    /** 20 格真实下落窗口；干草块保证失败时不以摔死掩盖 C2S 物理校验。 */
+    private static final int AIR_JUMP_DROP_BLOCKS = 20;
     /** C2S/速度同步超时只生成真实服务端物理快照，不得以超时当成功。 */
     private static final int CLIENT_KEY_RESULT_TIMEOUT_TICKS = 140;
     private static ActiveScenario active;
