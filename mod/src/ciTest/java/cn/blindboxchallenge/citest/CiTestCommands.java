@@ -106,8 +106,16 @@ public final class CiTestCommands {
             clearInventory(bob);
             ItemStack prize = uniqueStack("citest-last-bundle-prize", 1, 13);
             alice.getInventory().setItem(0, prize.copy());
-            if (!BlindBoxService.pack(alice, List.of(new BlindBoxService.Selection(0, 1, StackFingerprint.of(alice.getInventory().getItem(0)))))) {
+            BlindBoxService.Selection packSelection = new BlindBoxService.Selection(0, 1, StackFingerprint.of(alice.getInventory().getItem(0)));
+            if (!BlindBoxService.pack(alice, List.of(packSelection))) {
                 throw new IllegalStateException("production pack failed");
+            }
+            // 同一 C2S 请求即使因重发再次进入服务端业务层，也必须被旧指纹拒绝，不能重复生成 bundle/token。
+            if (BlindBoxService.pack(alice, List.of(packSelection))) {
+                throw new IllegalStateException("duplicate packing request was accepted");
+            }
+            if (data.bundleCount() != 1 || data.transactions().size() != 1 || countBlindBoxes(alice) != 1) {
+                throw new IllegalStateException("duplicate packing request changed conserved assets");
             }
             ItemStack aliceBox = findBlindBox(alice);
             if (aliceBox.isEmpty()) throw new IllegalStateException("Alice did not receive blind box");
@@ -151,6 +159,15 @@ public final class CiTestCommands {
             if (stack.is(ModItems.BLIND_BOX.get())) return stack;
         }
         return ItemStack.EMPTY;
+    }
+
+    private static int countBlindBoxes(ServerPlayer player) {
+        int count = 0;
+        for (int slot = 0; slot < 36; slot++) {
+            ItemStack stack = player.getInventory().getItem(slot);
+            if (stack.is(ModItems.BLIND_BOX.get())) count += stack.getCount();
+        }
+        return count;
     }
 
     private static int countMarker(ServerPlayer player, String marker) {
