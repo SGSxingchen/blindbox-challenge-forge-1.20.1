@@ -81,7 +81,7 @@ public final class DoorService {
 
     /** 玩家进入无碰撞门格后重验所有事实；任一失败都保持原地且不加载区块。 */
     public static void tryTeleport(ServerPlayer player, Level level, BlockPos sourcePos) {
-        if (!(level instanceof ServerLevel sourceLevel) || player.isPassenger()) return;
+        if (!(level instanceof ServerLevel sourceLevel) || player.isPassenger() || !player.mayBuild(sourcePos)) return;
         GlobalPos sourceGlobal = GlobalPos.of(sourceLevel.dimension(), sourcePos);
         if (sourceGlobal.equals(ARRIVAL_DOOR_IMMUNITIES.get(player.getUUID()))) return;
         long now = sourceLevel.getGameTime();

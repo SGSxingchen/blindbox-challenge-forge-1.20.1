@@ -221,14 +221,23 @@ for _ in $(seq 1 60); do
 done
 grep -q 'BLINDBOX_CITEST_P3_ABILITY_LIFECYCLE_CLIENT=success' "${SERVER_DIR}/server.log"
 
-# 所有上阶段 marker 和服务端 Capability 已完成交叉核验后，才 flush 并 SIGKILL。
-# 绝不预写恢复 marker；两个真实客户端必须在同世界新进程启动后自行重连。
-printf 'save-all flush\n' >&3
+# 所有上阶段 marker 和服务端 Capability 已完成交叉核验后，才写入 P4 跨维门夹具并 flush。
+# 夹具只调用生产方块实体持久化关联；它不是成功 marker，杀后仍须由 Alice 真正按键走进门、
+# Bob 在目标维观察同步结果。两个真实客户端必须在同世界新进程启动后自行重连。
+printf 'blindboxcitest prepare_p4_door_recovery\n' >&3
 for _ in $(seq 1 60); do
-  grep -q 'Saved the game' "${SERVER_DIR}/server.log" && break
+  grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_PREPARED=success' "${SERVER_DIR}/server.log" && break
   sleep 1
 done
-grep -q 'Saved the game' "${SERVER_DIR}/server.log"
+grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_PREPARED=success' "${SERVER_DIR}/server.log"
+# 只能接受本次命令之后新增的保存日志；长会话此前的自动保存不得伪造 flush 已完成。
+FLUSH_LOG_OFFSET="$(wc -c < "${SERVER_DIR}/server.log")"
+printf 'save-all flush\n' >&3
+for _ in $(seq 1 60); do
+  tail -c "+$((FLUSH_LOG_OFFSET + 1))" "${SERVER_DIR}/server.log" | grep -q 'Saved the game' && break
+  sleep 1
+done
+tail -c "+$((FLUSH_LOG_OFFSET + 1))" "${SERVER_DIR}/server.log" | grep -q 'Saved the game'
 cp "${SERVER_DIR}/server.log" "${EVIDENCE}/server-before-p3-ability-sigkill.log"
 exec 3>&-
 kill -KILL -- "-${SERVER_PID}" 2>/dev/null || kill -KILL "${SERVER_PID}" 2>/dev/null || true
@@ -269,6 +278,34 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P3_ABILITY_CLEANUP=success' "${SERVER_DIR}/server.log"
+# P4 任意门恢复专项复用同一次 flush → SIGKILL → 两客户端自动重连：服务端先反查杀前
+# manifest 与双向 BE 关联，再由 Alice 的生产前进键进入门体；任何客户端/服务端事实不符都
+# 只能超时或显式失败，脚本绝不创建这两份 marker。
+printf 'blindboxcitest start_p4_door_recovery_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_STARTED=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_STARTED=success' "${SERVER_DIR}/server.log"
+# 这只是允许杀后客户端开始观察的阶段旗标，不是成功 marker；真正结果只能由两客户端事实写入
+# 并由服务端读取后输出 CLIENTS=success。
+touch "${EVIDENCE}/p4-door-recovery-enabled.flag"
+for _ in $(seq 1 180); do
+  if grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_CLIENTS=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_CLIENTS=success' "${SERVER_DIR}/server.log"
+test -f "${EVIDENCE}/client-1-p4-door-arrived.marker"
+test -f "${EVIDENCE}/client-2-p4-door-observed.marker"
+printf 'blindboxcitest cleanup_p4_door_recovery_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_CLEANUP=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_CLEANUP=success' "${SERVER_DIR}/server.log"
+rm -f "${EVIDENCE}/p4-door-recovery-enabled.flag"
 printf 'blindboxcitest prepare_reconnect\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_RECONNECT_PREPARED=success' "${SERVER_DIR}/server.log" && break
