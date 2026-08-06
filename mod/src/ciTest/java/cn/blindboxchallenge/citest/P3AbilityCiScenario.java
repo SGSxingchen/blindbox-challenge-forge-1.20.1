@@ -335,13 +335,14 @@ public final class P3AbilityCiScenario {
                 throw new IllegalStateException("平台撤去前未核验客户端真实 true S2C 标记");
             }
             Path directory = markerDirectory();
-            Map<String, String> aliceMarker = readMarker(directory.resolve("client-1-p3-ability-key.marker"), 7);
+            Map<String, String> aliceMarker = readMarker(directory.resolve("client-1-p3-ability-key.marker"), 8);
             if (!"1".equals(aliceMarker.get("schema")) || !"alice".equals(aliceMarker.get("role"))
                     || !aliceUuid.toString().equals(aliceMarker.get("self_uuid"))
                     || !Integer.toString(initialAliceEntityId).equals(aliceMarker.get("self_entity_id"))
                     || !"true".equals(aliceMarker.get("received_self_sync"))
                     || !"true".equals(aliceMarker.get("key_injected"))
-                    || !"true".equals(aliceMarker.get("server_velocity_observed"))) {
+                    || !"true".equals(aliceMarker.get("server_velocity_observed"))
+                    || !"true".equals(aliceMarker.get("server_vertical_movement_observed"))) {
                 throw new IllegalStateException("Alice 真实 S2C/按键结果 marker 与服务端实体不一致");
             }
             Map<String, String> bobMarker = readMarker(directory.resolve("client-2-p3-ability-tracking.marker"), 6);

@@ -35,6 +35,7 @@ public final class CiClientAbilityObservation {
     private static boolean selfSyncMarkerWritten;
     private static boolean keyInjected;
     private static boolean serverVelocityObserved;
+    private static double lastObservedY = Double.NaN;
     private static boolean keyMarkerWritten;
     private static boolean clientCloneEvent;
     private static boolean learnedAfterClone;
@@ -107,6 +108,7 @@ public final class CiClientAbilityObservation {
         selfSyncMarkerWritten = false;
         keyInjected = false;
         serverVelocityObserved = false;
+        lastObservedY = Double.NaN;
         keyMarkerWritten = false;
         clientCloneEvent = false;
         learnedAfterClone = false;
@@ -157,13 +159,20 @@ public final class CiClientAbilityObservation {
                 && ClientPlayerAbilityState.hasLearnedYiJin(player.getId())) {
             KeyMapping.click(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_SPACE));
             keyInjected = true;
+            lastObservedY = player.getY();
             CiTestProbe.LOGGER.info("P3 易筋经客户端已通过真实 KeyMapping 注入空格按键，实体={}", player.getId());
         }
-        if (keyInjected && !serverVelocityObserved
-                && player.getDeltaMovement().y >= PlayerAbilityService.DOUBLE_JUMP_VELOCITY - 0.02D) {
+        // 原版实体运动包在部分追帧帧中先校正位置、后更新客户端 delta；因此除了完整的
+        // 0.42 速度值，也接受同一真实客户端在按键后看到的明确上升位置变化。该玩家没有
+        // 本地预测的上升入口，故上升只能来自服务端的二段跳运动同步。
+        boolean upwardVelocity = player.getDeltaMovement().y >= PlayerAbilityService.DOUBLE_JUMP_VELOCITY - 0.02D;
+        boolean upwardServerPosition = keyInjected && !Double.isNaN(lastObservedY) && player.getY() > lastObservedY + 0.03D;
+        if (keyInjected && !serverVelocityObserved && (upwardVelocity || upwardServerPosition)) {
             serverVelocityObserved = true;
-            CiTestProbe.LOGGER.info("P3 易筋经客户端已观察到服务端二段跳速度，实体={}", player.getId());
+            CiTestProbe.LOGGER.info("P3 易筋经客户端已观察到服务端二段跳上升同步，实体={}，velocity={}，position_up={}",
+                    player.getId(), upwardVelocity, upwardServerPosition);
         }
+        if (keyInjected) lastObservedY = player.getY();
         if (initialSelfSync && keyInjected && serverVelocityObserved && !keyMarkerWritten) {
             writeKeyMarker(player);
             keyMarkerWritten = true;
@@ -212,7 +221,8 @@ public final class CiClientAbilityObservation {
                 + "self_entity_id=" + initialEntityId + "\n"
                 + "received_self_sync=true\n"
                 + "key_injected=true\n"
-                + "server_velocity_observed=true\n");
+                + "server_velocity_observed=true\n"
+                + "server_vertical_movement_observed=true\n");
     }
 
     private static void writeSelfSyncMarker(LocalPlayer player) {
