@@ -44,6 +44,8 @@ public final class CiClientAbilityObservation {
     private static boolean recoveryMarkerWritten;
     private static boolean trackingMarkerWritten;
     private static int pendingTrackedEntityId = -1;
+    private static boolean aliceScenarioArmed;
+    private static boolean bobScenarioArmed;
 
     private CiClientAbilityObservation() {
     }
@@ -51,12 +53,19 @@ public final class CiClientAbilityObservation {
     @SubscribeEvent
     public static void onAbilitySync(PlayerAbilitySyncEvent event) {
         String role = role();
-        if (role == null || !event.learnedYiJin()) return;
+        if (role == null) return;
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
         if (player == null) return;
         if (event.entityId() == player.getId()) {
             if (ALICE.equals(role)) {
+                if (!event.learnedYiJin()) {
+                    resetAliceScenario();
+                    aliceScenarioArmed = true;
+                    CiTestProbe.LOGGER.info("P3 易筋经客户端收到场景 false 同步，已清空旧观察状态，实体={}", player.getId());
+                    return;
+                }
+                if (!aliceScenarioArmed) return;
                 initialSelfSync = true;
                 learnedSelfSyncCount++;
                 CiTestProbe.LOGGER.info("P3 易筋经客户端收到自身能力同步，次数={}，实体={}", learnedSelfSyncCount, player.getId());
@@ -69,10 +78,35 @@ public final class CiClientAbilityObservation {
             }
             return;
         }
-        if (BOB.equals(role) && !trackingMarkerWritten) {
+        if (BOB.equals(role)) {
+            if (!event.learnedYiJin()) {
+                pendingTrackedEntityId = -1;
+                trackingMarkerWritten = false;
+                bobScenarioArmed = true;
+                CiTestProbe.LOGGER.info("P3 易筋经 Bob 客户端收到场景 false 同步，已清空旧跟踪状态，目标={}", event.entityId());
+                return;
+            }
+            if (!bobScenarioArmed || trackingMarkerWritten) return;
             // 同步包与实体生成包的先后不由测试决定；先记住真实收到的 entityId，下一 tick 再解析。
             pendingTrackedEntityId = event.entityId();
         }
+    }
+
+    private static void resetAliceScenario() {
+        initialSelfSync = false;
+        initialEntityId = -1;
+        learnedSelfSyncCount = 0;
+        keyInjected = false;
+        serverVelocityObserved = false;
+        keyMarkerWritten = false;
+        clientCloneEvent = false;
+        learnedAfterClone = false;
+        dimensionSyncObserved = false;
+        lifecycleMarkerWritten = false;
+        observedDisconnectAfterLifecycle = false;
+        recoveryLogin = false;
+        recoverySyncObserved = false;
+        recoveryMarkerWritten = false;
     }
 
     @SubscribeEvent

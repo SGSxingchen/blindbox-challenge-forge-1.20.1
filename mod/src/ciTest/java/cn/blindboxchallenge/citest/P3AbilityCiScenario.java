@@ -219,6 +219,10 @@ public final class P3AbilityCiScenario {
 
         private void setupClientPath(ServerPlayer alice, ServerPlayer bob) {
             resetAbility(alice);
+            // 先把服务端当前的 false Capability 直接同步给两名真实客户端：客户端只据此清空此前
+            // P3 回归留下的临时观察状态；marker 文件也必须在本次场景开始时删除，不能沿用旧结果。
+            PlayerAbilityService.syncTo(bob, alice);
+            clearClientMarkers();
             // 先让 Bob 离开追踪范围并等待服务器实际撤销追踪，再学习；因此 Bob 的 true 快照只能来自随后真实 StartTracking。
             double x = Math.floor(alice.getX()) + 0.5D;
             double z = Math.floor(alice.getZ()) + 0.5D;
@@ -428,6 +432,18 @@ public final class P3AbilityCiScenario {
             if (bobSupport != null && originalBobSupport != null) origin.setBlock(bobSupport, originalBobSupport, 3);
             originalLandingBlocks.forEach((position, state) -> origin.setBlock(position, state, 3));
             server.getGameRules().getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(originalImmediateRespawn, server);
+        }
+
+        private static void clearClientMarkers() {
+            Path directory = markerDirectory();
+            try {
+                Files.deleteIfExists(directory.resolve("client-1-p3-ability-key.marker"));
+                Files.deleteIfExists(directory.resolve("client-2-p3-ability-tracking.marker"));
+                Files.deleteIfExists(directory.resolve("client-1-p3-ability-lifecycle.marker"));
+                Files.deleteIfExists(directory.resolve("client-1-p3-ability-recovered.marker"));
+            } catch (IOException exception) {
+                throw new IllegalStateException("无法清理上轮 P3 易筋经观察 marker", exception);
+            }
         }
 
         private void fail(Exception exception) {
