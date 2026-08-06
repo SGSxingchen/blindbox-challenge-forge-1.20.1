@@ -1,0 +1,14 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "blindboxchallenge:item/purple_toy_pickaxe_sword_pickaxe"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "blindboxchallenge:sword_form": 1.0
+      },
+      "model": "blindboxchallenge:item/purple_toy_pickaxe_sword_sword"
+    }
+  ]
+}

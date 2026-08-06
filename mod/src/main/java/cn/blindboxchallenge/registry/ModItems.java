@@ -3,6 +3,7 @@ package cn.blindboxchallenge.registry;
 import cn.blindboxchallenge.BlindBoxChallenge;
 import cn.blindboxchallenge.item.AdrenalineItem;
 import cn.blindboxchallenge.item.BathBucketItem;
+import cn.blindboxchallenge.item.BlackKnightTelescopicKnifeItem;
 import cn.blindboxchallenge.item.BlindBoxItem;
 import cn.blindboxchallenge.item.ChainsawSwordItem;
 import cn.blindboxchallenge.item.EggyEyeMaskItem;
@@ -14,6 +15,7 @@ import cn.blindboxchallenge.item.NailItem;
 import cn.blindboxchallenge.item.PackingToolItem;
 import cn.blindboxchallenge.item.PaperCupItem;
 import cn.blindboxchallenge.item.PickaxeHoeItem;
+import cn.blindboxchallenge.item.PurpleToyPickaxeSwordItem;
 import net.minecraft.core.Direction;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ArmorItem;
@@ -32,6 +34,10 @@ public final class ModItems {
     public static final RegistryObject<Item> BLIND_BOX = ITEMS.register("blind_box", BlindBoxItem::new);
     public static final RegistryObject<Item> PACKING_TOOL = ITEMS.register("packing_tool", PackingToolItem::new);
 
+    public static final RegistryObject<Item> BLACK_KNIGHT_TELESCOPIC_KNIFE = ITEMS.register("black_knight_telescopic_knife",
+            BlackKnightTelescopicKnifeItem::new);
+    public static final RegistryObject<Item> PURPLE_TOY_PICKAXE_SWORD = ITEMS.register("purple_toy_pickaxe_sword",
+            PurpleToyPickaxeSwordItem::new);
     public static final RegistryObject<Item> ADRENALINE = ITEMS.register("adrenaline", AdrenalineItem::new);
     public static final RegistryObject<Item> RAT_JERKY_TOTEM = ITEMS.register("rat_jerky_totem", () -> new Item(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> LONG_SCREWDRIVER = ITEMS.register("long_screwdriver", LongScrewdriverItem::new);

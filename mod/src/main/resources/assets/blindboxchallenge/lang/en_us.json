@@ -6,6 +6,8 @@
   "screen.blindboxchallenge.pack": "Pack and Create Blind Box",
   "screen.blindboxchallenge.help": "Enter inventory slot:count, e.g. 0:5, 12:1",
   "screen.blindboxchallenge.invalid_selection": "Enter valid, non-duplicate slot:count pairs.",
+  "item.blindboxchallenge.black_knight_telescopic_knife": "Black Knight Telescopic Knife",
+  "item.blindboxchallenge.purple_toy_pickaxe_sword": "Purple Toy Diamond Pickaxe / Sword",
   "item.blindboxchallenge.adrenaline": "Adrenaline",
   "item.blindboxchallenge.rat_jerky_totem": "Rat Jerky Totem",
   "item.blindboxchallenge.long_screwdriver": "One-Metre Screwdriver",

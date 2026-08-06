@@ -1,0 +1,14 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "blindboxchallenge:item/black_knight_telescopic_knife"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "blindboxchallenge:extended": 1.0
+      },
+      "model": "blindboxchallenge:item/black_knight_telescopic_knife_extended"
+    }
+  ]
+}

@@ -6,6 +6,8 @@
   "screen.blindboxchallenge.pack": "打包并生成盲盒",
   "screen.blindboxchallenge.help": "输入背包槽位:数量，例如 0:5, 12:1",
   "screen.blindboxchallenge.invalid_selection": "请输入有效且不重复的槽位:数量。",
+  "item.blindboxchallenge.black_knight_telescopic_knife": "黑武士伸缩刀",
+  "item.blindboxchallenge.purple_toy_pickaxe_sword": "紫色玩具钻石镐 / 剑",
   "item.blindboxchallenge.adrenaline": "盐酸肾上腺素",
   "item.blindboxchallenge.rat_jerky_totem": "奶龙老鼠干",
   "item.blindboxchallenge.long_screwdriver": "一米长螺丝刀",

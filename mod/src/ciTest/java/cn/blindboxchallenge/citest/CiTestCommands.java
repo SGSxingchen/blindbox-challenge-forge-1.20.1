@@ -6,6 +6,8 @@ import cn.blindboxchallenge.data.TransactionRecord;
 import cn.blindboxchallenge.event.ServerLifecycleEvents;
 import cn.blindboxchallenge.item.BlindBoxItem;
 import cn.blindboxchallenge.item.EggyEyeMaskItem;
+import cn.blindboxchallenge.item.BlackKnightTelescopicKnifeItem;
+import cn.blindboxchallenge.item.PurpleToyPickaxeSwordItem;
 import cn.blindboxchallenge.menu.PackingMenu;
 import cn.blindboxchallenge.network.CommitPackingPacket;
 import cn.blindboxchallenge.registry.ModItems;
@@ -272,6 +274,7 @@ public final class CiTestCommands {
             player.setHealth(player.getMaxHealth());
             player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
 
+            assertTransformingWeapons(player);
             assertContainersAndLighting(player);
 
             source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P2_BUSINESS=success"), false);
@@ -303,6 +306,92 @@ public final class CiTestCommands {
                 .get(attribute).stream().mapToDouble(net.minecraft.world.entity.ai.attributes.AttributeModifier::getAmount).sum();
     }
 
+    /** 第八批：两个形态都必须在两个真实客户端在线的逻辑服务端上走生产入口。 */
+    private static void assertTransformingWeapons(ServerPlayer player) {
+        net.minecraft.server.level.ServerLevel level = player.serverLevel();
+
+        ItemStack knife = new ItemStack(ModItems.BLACK_KNIGHT_TELESCOPIC_KNIFE.get());
+        double knifeDamage = attributeTotal(ModItems.BLACK_KNIGHT_TELESCOPIC_KNIFE.get(),
+                net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+        double knifeSpeed = attributeTotal(ModItems.BLACK_KNIGHT_TELESCOPIC_KNIFE.get(),
+                net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED);
+        if (knife.getMaxDamage() != net.minecraft.world.item.Tiers.WOOD.getUses()
+                || !approximately(knifeDamage, 3.0D) || !approximately(knifeSpeed, -2.4D)
+                || BlackKnightTelescopicKnifeItem.isExtended(knife)) {
+            throw new IllegalStateException("黑武士伸缩刀不符合收缩状态的原版木剑基线");
+        }
+        player.setItemInHand(InteractionHand.MAIN_HAND, knife);
+        if (!knife.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
+                || !knife.hasTag() || !knife.getTag().contains(BlackKnightTelescopicKnifeItem.EXTENDED_KEY, net.minecraft.nbt.Tag.TAG_BYTE)
+                || !BlackKnightTelescopicKnifeItem.isExtended(knife)) {
+            throw new IllegalStateException("黑武士伸缩刀的服务端右键未伸出刀刃");
+        }
+        if (!knife.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
+                || !knife.hasTag() || !knife.getTag().contains(BlackKnightTelescopicKnifeItem.EXTENDED_KEY, net.minecraft.nbt.Tag.TAG_BYTE)
+                || BlackKnightTelescopicKnifeItem.isExtended(knife)) {
+            throw new IllegalStateException("黑武士伸缩刀的服务端右键未收缩刀刃");
+        }
+        if (Float.compare(BlackKnightTelescopicKnifeItem.AUTO_RETRACT_CHANCE, 0.20F) != 0) {
+            throw new IllegalStateException("黑武士伸缩刀未使用约定的保守固定收缩概率");
+        }
+        ItemStack trialKnife = new ItemStack(ModItems.BLACK_KNIGHT_TELESCOPIC_KNIFE.get());
+        BlackKnightTelescopicKnifeItem.setExtended(trialKnife, true);
+        // 一次真实服务端命中钩子保留木剑耐久；固定随机规则另以确定性边界值验证，不能引入随机门禁。
+        trialKnife.getItem().hurtEnemy(trialKnife, player, player);
+        if (trialKnife.getDamageValue() != 1) {
+            throw new IllegalStateException("黑武士伸缩刀未保留原版木剑命中耐久");
+        }
+        BlackKnightTelescopicKnifeItem.setExtended(trialKnife, true);
+        if (!BlackKnightTelescopicKnifeItem.applyAutoRetractAfterHit(trialKnife, 0.0F)
+                || BlackKnightTelescopicKnifeItem.isExtended(trialKnife)) {
+            throw new IllegalStateException("黑武士伸缩刀未按服务端固定概率收缩");
+        }
+        BlackKnightTelescopicKnifeItem.setExtended(trialKnife, true);
+        if (BlackKnightTelescopicKnifeItem.applyAutoRetractAfterHit(trialKnife,
+                BlackKnightTelescopicKnifeItem.AUTO_RETRACT_CHANCE)
+                || !BlackKnightTelescopicKnifeItem.isExtended(trialKnife)) {
+            throw new IllegalStateException("黑武士伸缩刀错误处理了概率阈值边界");
+        }
+
+        ItemStack purpleToy = new ItemStack(ModItems.PURPLE_TOY_PICKAXE_SWORD.get());
+        if (purpleToy.getMaxDamage() != net.minecraft.world.item.Tiers.WOOD.getUses()
+                || !PurpleToyPickaxeSwordItem.isPickaxeForm(purpleToy)
+                || !purpleToy.canPerformAction(net.minecraftforge.common.ToolActions.PICKAXE_DIG)
+                || purpleToy.canPerformAction(net.minecraftforge.common.ToolActions.SWORD_DIG)
+                || purpleToy.getDestroySpeed(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState())
+                    != net.minecraft.world.item.Tiers.WOOD.getSpeed()
+                || !purpleToy.isCorrectToolForDrops(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState())
+                || purpleToy.isCorrectToolForDrops(net.minecraft.world.level.block.Blocks.DIAMOND_ORE.defaultBlockState())
+                || !approximately(stackAttributeTotal(purpleToy, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE), 1.0D)
+                || !approximately(stackAttributeTotal(purpleToy, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED), -2.8D)) {
+            throw new IllegalStateException("紫色玩具钻石镐缺少原版木镐的栈敏感采掘或属性语义");
+        }
+
+        player.setItemInHand(InteractionHand.MAIN_HAND, purpleToy);
+        if (!purpleToy.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
+                || !purpleToy.hasTag() || !purpleToy.getTag().contains(PurpleToyPickaxeSwordItem.PICKAXE_FORM_KEY, net.minecraft.nbt.Tag.TAG_BYTE)
+                || PurpleToyPickaxeSwordItem.isPickaxeForm(purpleToy)
+                || purpleToy.canPerformAction(net.minecraftforge.common.ToolActions.PICKAXE_DIG)
+                || !purpleToy.canPerformAction(net.minecraftforge.common.ToolActions.SWORD_DIG)
+                || !purpleToy.canPerformAction(net.minecraftforge.common.ToolActions.SWORD_SWEEP)
+                || purpleToy.getDestroySpeed(net.minecraft.world.level.block.Blocks.COBWEB.defaultBlockState()) != 15.0F
+                || !approximately(stackAttributeTotal(purpleToy, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE), 3.0D)
+                || !approximately(stackAttributeTotal(purpleToy, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED), -2.4D)) {
+            throw new IllegalStateException("紫色玩具钻石剑缺少原版木剑的栈敏感近战语义");
+        }
+        if (!purpleToy.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
+                || !purpleToy.hasTag() || !purpleToy.getTag().contains(PurpleToyPickaxeSwordItem.PICKAXE_FORM_KEY, net.minecraft.nbt.Tag.TAG_BYTE)
+                || !PurpleToyPickaxeSwordItem.isPickaxeForm(purpleToy)) {
+            throw new IllegalStateException("紫色玩具工具未由服务端写回镐形态 NBT");
+        }
+    }
+
+    /** 必须经由 ItemStack 查询，以真实触发 Forge 的 ItemAttributeModifierEvent。 */
+    private static double stackAttributeTotal(ItemStack stack, net.minecraft.world.entity.ai.attributes.Attribute attribute) {
+        return stack.getAttributeModifiers(net.minecraft.world.entity.EquipmentSlot.MAINHAND)
+                .get(attribute).stream().mapToDouble(net.minecraft.world.entity.ai.attributes.AttributeModifier::getAmount).sum();
+    }
+
     /** 在两个真实客户端在线的专服中，直接走生产右键入口验证容器和方块状态。 */
     private static void assertContainersAndLighting(ServerPlayer player) {
         if (!(ModItems.GLOW_STICK.get() instanceof net.minecraft.world.item.StandingAndWallBlockItem)
@@ -314,10 +403,13 @@ public final class CiTestCommands {
         net.minecraft.server.level.ServerLevel level = player.serverLevel();
         net.minecraft.core.BlockPos fluidPos = player.blockPosition().offset(0, 3, -4);
         net.minecraft.core.BlockPos pourPos = fluidPos.north();
+        // 岩浆夹具与真实倒水区域分离，避免原版相邻水/岩浆反应篡改待测源方块。
+        net.minecraft.core.BlockPos lavaPos = fluidPos.east(4);
         net.minecraft.core.BlockPos cheerPos = fluidPos.east(2);
         net.minecraft.core.BlockPos cheerSupport = cheerPos.below();
         net.minecraft.world.level.block.state.BlockState oldFluid = level.getBlockState(fluidPos);
         net.minecraft.world.level.block.state.BlockState oldPour = level.getBlockState(pourPos);
+        net.minecraft.world.level.block.state.BlockState oldLava = level.getBlockState(lavaPos);
         net.minecraft.world.level.block.state.BlockState oldCheer = level.getBlockState(cheerPos);
         net.minecraft.world.level.block.state.BlockState oldCheerSupport = level.getBlockState(cheerSupport);
         double oldX = player.getX(), oldY = player.getY(), oldZ = player.getZ();
@@ -343,10 +435,8 @@ public final class CiTestCommands {
                 throw new IllegalStateException("bath bucket did not use vanilla-safe emptying semantics");
             }
 
-            // 前一步真实倒水会在相邻格留下水源；移除它，避免与下一个岩浆源发生原版水岩浆反应，
-            // 否则测试夹具会把待拾取的岩浆变成圆石而非验证容器的岩浆分支。
-            level.setBlock(pourPos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
-            level.setBlock(fluidPos, net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState(), 3);
+            player.setPos(lavaPos.getX() + 0.5D, lavaPos.getY() - 1.0D, lavaPos.getZ() + 3.5D);
+            level.setBlock(lavaPos, net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState(), 3);
             if (!bath.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
                     || bath.getDamageValue() != 1
                     || RestrictedFluidContainerItem.getContainedFluid(bath) != net.minecraft.world.level.material.Fluids.LAVA) {
@@ -355,12 +445,12 @@ public final class CiTestCommands {
 
             ItemStack cup = new ItemStack(ModItems.PAPER_CUP.get());
             player.setItemInHand(InteractionHand.MAIN_HAND, cup);
-            level.setBlock(fluidPos, net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState(), 3);
+            level.setBlock(lavaPos, net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState(), 3);
             if (cup.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
                     || RestrictedFluidContainerItem.getContainedFluid(cup) != net.minecraft.world.level.material.Fluids.EMPTY) {
                 throw new IllegalStateException("paper cup accepted lava");
             }
-            level.setBlock(fluidPos, net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 3);
+            level.setBlock(lavaPos, net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 3);
             if (!cup.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
                     || RestrictedFluidContainerItem.getContainedFluid(cup) != net.minecraft.world.level.material.Fluids.WATER) {
                 throw new IllegalStateException("paper cup did not pick up water");
@@ -377,6 +467,7 @@ public final class CiTestCommands {
         } finally {
             level.setBlock(fluidPos, oldFluid, 3);
             level.setBlock(pourPos, oldPour, 3);
+            level.setBlock(lavaPos, oldLava, 3);
             level.setBlock(cheerPos, oldCheer, 3);
             level.setBlock(cheerSupport, oldCheerSupport, 3);
             player.setPos(oldX, oldY, oldZ);
