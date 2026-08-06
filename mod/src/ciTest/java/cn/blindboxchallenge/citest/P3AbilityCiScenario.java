@@ -144,6 +144,11 @@ public final class P3AbilityCiScenario {
         }
     }
 
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onCloneSourceSnapshot(PlayerEvent.Clone event) {
+        if (active != null) active.captureCloneSource(event);
+    }
+
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onClone(PlayerEvent.Clone event) {
         if (active != null) active.onClone(event);
@@ -204,6 +209,7 @@ public final class P3AbilityCiScenario {
         private boolean startTrackingEventSeen;
         private boolean cloneEventSeen;
         private ServerPlayer cloneReplacement;
+        private boolean cloneOriginalLearnedBeforeProduction;
         private boolean cloneOriginalLearned;
         private boolean cloneReplacementLearnedAtEvent;
         private boolean dimensionEventSeen;
@@ -383,6 +389,16 @@ public final class P3AbilityCiScenario {
             if (result <= 0) throw new IllegalStateException("原版跨维 tp 命令没有执行成功");
         }
 
+        private void captureCloneSource(PlayerEvent.Clone event) {
+            if (phase != Phase.WAITING_FOR_CLONE || !(event.getEntity() instanceof ServerPlayer replacement)
+                    || !aliceUuid.equals(replacement.getUUID()) || !event.isWasDeath()) return;
+            // 在生产监听器复制前读取原实体的真实 Capability；只 revive 供读取，后续由生产监听器
+            // 统一 invalidate，绝不写入数据或代替生产复制。
+            event.getOriginal().reviveCaps();
+            cloneOriginalLearnedBeforeProduction = event.getOriginal().getCapability(ModCapabilities.PLAYER_ABILITY)
+                    .map(data -> data.hasLearnedYiJin()).orElse(false);
+        }
+
         private void onClone(PlayerEvent.Clone event) {
             if (phase != Phase.WAITING_FOR_CLONE || !(event.getEntity() instanceof ServerPlayer replacement)
                     || !aliceUuid.equals(replacement.getUUID()) || !event.isWasDeath()) return;
@@ -390,15 +406,10 @@ public final class P3AbilityCiScenario {
             cloneReplacement = replacement;
             // 此监听器位于 LOWEST，生产 Clone 复制已执行；仅记录两个真实 Capability 的状态，
             // 以便失败时区分原状态丢失和 replacement 复制失败，绝不写入数据。
-            event.getOriginal().reviveCaps();
-            try {
-                cloneOriginalLearned = event.getOriginal().getCapability(ModCapabilities.PLAYER_ABILITY)
-                        .map(data -> data.hasLearnedYiJin()).orElse(false);
-                cloneReplacementLearnedAtEvent = replacement.getCapability(ModCapabilities.PLAYER_ABILITY)
-                        .map(data -> data.hasLearnedYiJin()).orElse(false);
-            } finally {
-                event.getOriginal().invalidateCaps();
-            }
+            cloneOriginalLearned = event.getOriginal().getCapability(ModCapabilities.PLAYER_ABILITY)
+                    .map(data -> data.hasLearnedYiJin()).orElse(false);
+            cloneReplacementLearnedAtEvent = replacement.getCapability(ModCapabilities.PLAYER_ABILITY)
+                    .map(data -> data.hasLearnedYiJin()).orElse(false);
         }
 
         private void onDimensionChange(PlayerEvent.PlayerChangedDimensionEvent event) {
@@ -454,7 +465,8 @@ public final class P3AbilityCiScenario {
                 try {
                     requireLearned(cloneReplacement);
                 } catch (IllegalStateException exception) {
-                    throw new IllegalStateException("Clone Capability 对账失败：originalLearned=" + cloneOriginalLearned
+                    throw new IllegalStateException("Clone Capability 对账失败：originalBeforeProduction="
+                            + cloneOriginalLearnedBeforeProduction + ", originalAtLow=" + cloneOriginalLearned
                             + ", replacementLearnedAtEvent=" + cloneReplacementLearnedAtEvent, exception);
                 }
                 phase = Phase.CLONE_READY;
