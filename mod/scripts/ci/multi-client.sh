@@ -49,6 +49,12 @@ for _ in $(seq 1 600); do
   sleep 1
 done
 test -f "${EVIDENCE}/both-connected.marker"
+printf 'blindboxcitest run_multi_business\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_MULTI_BUSINESS=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_MULTI_BUSINESS=success' "${SERVER_DIR}/server.log"
 printf 'blindboxcitest export\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_EXPORT=' "${SERVER_DIR}/server.log" && break
@@ -66,6 +72,18 @@ assert names=={'BlindBoxAlice','BlindBoxBob'}, names
 uuids={p['uuid'] for p in players}
 assert len(uuids)==2 and all(uuids), uuids
 assert all(len(p.get('main', []))==36 for p in players)
+assert state.get('bundles') == [], state.get('bundles')
+assert state.get('open_reservations') == [], state.get('open_reservations')
+txs=state.get('transactions', [])
+assert len(txs)==2, txs
+assert {tx['kind'] for tx in txs}=={'PACK','OPEN'}, txs
+assert all(tx['stage']=='COMMITTED' for tx in txs), txs
+alice=next(p for p in players if p['name']=='BlindBoxAlice')
+bob=next(p for p in players if p['name']=='BlindBoxBob')
+marker='citest-last-bundle-prize'
+assert sum(slot['stack']['count'] for slot in alice['main'] if marker in slot['stack']['canonical_nbt'])==1
+assert sum(slot['stack']['count'] for slot in bob['main'] if marker in slot['stack']['canonical_nbt'])==0
+assert sum(slot['stack']['count'] for slot in bob['main'] if 'blindboxchallenge:blind_box' in slot['stack']['canonical_nbt'])==1
 PY
 touch "${EVIDENCE}/release-clients.marker"
 wait "${CLIENT_PID}"

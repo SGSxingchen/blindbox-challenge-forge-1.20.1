@@ -3,6 +3,9 @@ package cn.blindboxchallenge.citest;
 import cn.blindboxchallenge.data.BlindBoxPoolSavedData;
 import cn.blindboxchallenge.data.PrizeBundle;
 import cn.blindboxchallenge.data.TransactionRecord;
+import cn.blindboxchallenge.registry.ModItems;
+import cn.blindboxchallenge.service.BlindBoxService;
+import cn.blindboxchallenge.util.StackFingerprint;
 import com.mojang.brigadier.CommandDispatcher;
 import java.nio.file.Path;
 import java.util.List;
@@ -11,6 +14,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantments;
@@ -29,7 +33,104 @@ public final class CiTestCommands {
         dispatcher.register(Commands.literal("blindboxcitest")
                 .requires(source -> source.hasPermission(4))
                 .then(Commands.literal("export").executes(context -> export(context.getSource())))
-                .then(Commands.literal("seed_recovery_fixture").executes(context -> seedRecoveryFixture(context.getSource()))));
+                .then(Commands.literal("seed_recovery_fixture").executes(context -> seedRecoveryFixture(context.getSource())))
+                .then(Commands.literal("run_multi_business").executes(context -> runMultiBusiness(context.getSource()))));
+    }
+
+    /** 两个真实客户端在线时，从服务端直接调用生产事务入口并断言多人安全语义。 */
+    private static int runMultiBusiness(CommandSourceStack source) {
+        try {
+            List<ServerPlayer> players = source.getServer().getPlayerList().getPlayers();
+            if (players.size() != 2) {
+                source.sendFailure(Component.literal("CI 多人业务要求恰好两个在线玩家"));
+                return 0;
+            }
+            ServerPlayer alice = players.stream().filter(player -> player.getGameProfile().getName().equals("BlindBoxAlice")).findFirst().orElseThrow();
+            ServerPlayer bob = players.stream().filter(player -> player.getGameProfile().getName().equals("BlindBoxBob")).findFirst().orElseThrow();
+            BlindBoxPoolSavedData data = BlindBoxPoolSavedData.get(source.getServer().overworld());
+            if (!data.transactions().isEmpty() || !data.bundles().isEmpty() || !data.openReservations().isEmpty()) {
+                source.sendFailure(Component.literal("CI 多人业务要求空奖池和空事务日志"));
+                return 0;
+            }
+
+            ItemStack staleSource = uniqueStack("citest-stale-source", 2, 3);
+            alice.getInventory().setItem(0, staleSource.copy());
+            String staleFingerprint = StackFingerprint.of(alice.getInventory().getItem(0));
+            alice.getInventory().getItem(0).setDamageValue(4);
+            if (BlindBoxService.pack(alice, List.of(new BlindBoxService.Selection(0, 1, staleFingerprint)))) {
+                throw new IllegalStateException("stale fingerprint was accepted");
+            }
+            if (alice.getInventory().getItem(0).getCount() != 2 || data.bundleCount() != 0 || !data.transactions().isEmpty()) {
+                throw new IllegalStateException("stale pack changed assets");
+            }
+
+            fillInventory(alice, Items.COBBLESTONE);
+            alice.getInventory().setItem(0, uniqueStack("citest-full-source", 2, 5));
+            if (BlindBoxService.pack(alice, List.of(new BlindBoxService.Selection(0, 1, StackFingerprint.of(alice.getInventory().getItem(0)))))) {
+                throw new IllegalStateException("full inventory pack was accepted");
+            }
+            if (alice.getInventory().getItem(0).getCount() != 2 || data.bundleCount() != 0 || !data.transactions().isEmpty()) {
+                throw new IllegalStateException("full inventory pack changed assets");
+            }
+
+            clearInventory(alice);
+            clearInventory(bob);
+            ItemStack prize = uniqueStack("citest-last-bundle-prize", 1, 13);
+            alice.getInventory().setItem(0, prize.copy());
+            if (!BlindBoxService.pack(alice, List.of(new BlindBoxService.Selection(0, 1, StackFingerprint.of(alice.getInventory().getItem(0)))))) {
+                throw new IllegalStateException("production pack failed");
+            }
+            ItemStack aliceBox = findBlindBox(alice);
+            if (aliceBox.isEmpty()) throw new IllegalStateException("Alice did not receive blind box");
+            ItemStack bobBox = BlindBoxService.createBlindBox(UUID.fromString("88888888-8888-8888-8888-888888888888"));
+            bob.getInventory().setItem(0, bobBox);
+            if (!BlindBoxService.open(alice, aliceBox)) throw new IllegalStateException("first open failed");
+            if (BlindBoxService.open(bob, bobBox)) throw new IllegalStateException("second player opened exhausted pool");
+            if (data.bundleCount() != 0 || countMarker(alice, "citest-last-bundle-prize") != 1 || countMarker(bob, "citest-last-bundle-prize") != 0) {
+                throw new IllegalStateException("last bundle competition violated asset conservation");
+            }
+            if (!bob.getInventory().getItem(0).is(ModItems.BLIND_BOX.get()) || bob.getInventory().getItem(0).getCount() != 1) {
+                throw new IllegalStateException("failed open consumed Bob token");
+            }
+            if (data.transactions().size() != 2 || data.transactions().stream().anyMatch(record -> record.stage() != TransactionRecord.Stage.COMMITTED)) {
+                throw new IllegalStateException("unexpected transaction terminal state");
+            }
+            alice.containerMenu.broadcastChanges();
+            bob.containerMenu.broadcastChanges();
+            source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_MULTI_BUSINESS=success"), false);
+            return 1;
+        } catch (Exception exception) {
+            source.sendFailure(Component.literal("CI 多人业务失败：" + exception.getClass().getSimpleName()));
+            CiTestProbe.LOGGER.error("Cannot run multi-client business suite", exception);
+            return 0;
+        }
+    }
+
+    private static void fillInventory(ServerPlayer player, net.minecraft.world.item.Item item) {
+        for (int slot = 0; slot < 36; slot++) player.getInventory().setItem(slot, new ItemStack(item, 64));
+    }
+
+    private static void clearInventory(ServerPlayer player) {
+        for (int slot = 0; slot < 36; slot++) player.getInventory().setItem(slot, ItemStack.EMPTY);
+        player.getInventory().offhand.set(0, ItemStack.EMPTY);
+        player.containerMenu.setCarried(ItemStack.EMPTY);
+    }
+
+    private static ItemStack findBlindBox(ServerPlayer player) {
+        for (int slot = 0; slot < 36; slot++) {
+            ItemStack stack = player.getInventory().getItem(slot);
+            if (stack.is(ModItems.BLIND_BOX.get())) return stack;
+        }
+        return ItemStack.EMPTY;
+    }
+
+    private static int countMarker(ServerPlayer player, String marker) {
+        int count = 0;
+        for (int slot = 0; slot < 36; slot++) {
+            ItemStack stack = player.getInventory().getItem(slot);
+            if (stack.hasTag() && marker.equals(stack.getTag().getString("blindbox_citest_marker"))) count += stack.getCount();
+        }
+        return count;
     }
 
     /**
