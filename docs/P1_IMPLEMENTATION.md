@@ -67,8 +67,4 @@ OPEN:  验证/容量预演 -> PREPARED(日志) -> 扣盲盒+给完整 bundle -> 
 
 ## CI 与测试事实
 
-* `.github/workflows/quality-build.yml` 在 GitHub Hosted Runner 上执行 `check build`、生成 Jar SHA-256、上传产物。
-* `.github/workflows/dedicated-server.yml` 在 GitHub Hosted Runner 上安装 Forge 专用服务器、放入构建 Jar，并仅在日志出现 `Done (` 后通过。
-* 专服探针随后会发送 `list`、`save-all flush`、`stop`，并拒绝包含 `FATAL`、`NoClassDefFoundError`、服务端 tick 异常或崩溃报告痕迹的日志。
-* 根据项目约束，本机**没有**运行 Gradle、Java、Forge 或 Minecraft。GitHub Actions 已实际触发：质量构建 run `31052228486` 与专服启动 run `31052228529` 均通过；产物 `blindboxchallenge-0.1.0-p1.jar` 的 SHA-256 为 `1e35037c4b00a9a4fad7eaea738d679da86b6ef6a0410ca0e5ff279e585380fd`。
-* 单客户端、两客户端并发、业务交互探针与 SIGKILL 恢复仍未测试，不得计入当前覆盖；具体必测场景见 `P1_FULL_TEST_MATRIX.md`。
+P1 已在提交 `f0daf4e` 完成质量构建、真实 Forge 专服、Xvfb 单客户端、真实双客户端业务回归、`save-all flush` 后 SIGKILL 恢复与强制汇总六条 Hosted Runner 门禁。完整运行编号、已验证场景和未覆盖边界见 `P1_ACCEPTANCE.md`；测试探针保持为隔离 ciTest Jar，不进入正式产品 Jar。本机未运行 Gradle、Java、Forge 或 Minecraft。
