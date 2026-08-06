@@ -3,6 +3,8 @@
   "item.blindboxchallenge.packing_tool": "Prize Pool Packer",
   "item.blindboxchallenge.letter": "Letter",
   "item.blindboxchallenge.death_note": "Death Note",
+  "item.blindboxchallenge.clockwork_chicken": "Clockwork Chick",
+  "entity.blindboxchallenge.clockwork_chicken": "Clockwork Chick",
   "item.blindboxchallenge.anywhere_door": "Anywhere Door",
   "block.blindboxchallenge.anywhere_door": "Anywhere Door",
   "item.blindboxchallenge.safety_landing": "Safety Landing",

@@ -4,6 +4,7 @@ import cn.blindboxchallenge.BlindBoxChallenge;
 import cn.blindboxchallenge.entity.PillowProjectileEntity;
 import cn.blindboxchallenge.entity.PillowSeatEntity;
 import cn.blindboxchallenge.entity.ReturningScissorsEntity;
+import cn.blindboxchallenge.entity.ClockworkChickenEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraftforge.registries.DeferredRegister;
@@ -33,6 +34,12 @@ public final class ModEntities {
                     .clientTrackingRange(64)
                     .updateInterval(1)
                     .build(BlindBoxChallenge.MOD_ID + ":returning_scissors"));
+    public static final RegistryObject<EntityType<ClockworkChickenEntity>> CLOCKWORK_CHICKEN = ENTITIES.register("clockwork_chicken",
+            () -> EntityType.Builder.<ClockworkChickenEntity>of(ClockworkChickenEntity::new, MobCategory.MISC)
+                    .sized(0.55F, 0.55F)
+                    .clientTrackingRange(64)
+                    .updateInterval(1)
+                    .build(BlindBoxChallenge.MOD_ID + ":clockwork_chicken"));
 
     private ModEntities() {}
 }

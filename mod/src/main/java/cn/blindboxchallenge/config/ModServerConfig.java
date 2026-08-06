@@ -11,6 +11,8 @@ public final class ModServerConfig {
     public static final ForgeConfigSpec.IntValue LETTER_MAX_LINES;
     public static final ForgeConfigSpec.IntValue DEATH_NOTE_DELAY_TICKS;
     public static final ForgeConfigSpec.DoubleValue DEATH_NOTE_DAMAGE;
+    public static final ForgeConfigSpec.IntValue CLOCKWORK_CHICKEN_FUSE_TICKS;
+    public static final ForgeConfigSpec.IntValue CLOCKWORK_CHICKEN_EXPLOSION_POWER;
     public static final ForgeConfigSpec SERVER_SPEC;
 
     static {
@@ -31,6 +33,12 @@ public final class ModServerConfig {
                 .defineInRange("delay_ticks", 60, 0, 12000);
         DEATH_NOTE_DAMAGE = SERVER_BUILDER.comment("死亡笔记到期后由服务端施加的绕过无敌原版伤害")
                 .defineInRange("damage", 1000.0D, 0.0D, 1000000.0D);
+        SERVER_BUILDER.pop();
+        SERVER_BUILDER.push("clockwork_chicken");
+        CLOCKWORK_CHICKEN_FUSE_TICKS = SERVER_BUILDER.comment("发条小黄鸡由服务端启动时写入实体的倒计时 tick 数")
+                .defineInRange("fuse_ticks", 1200, 1, 32767);
+        CLOCKWORK_CHICKEN_EXPLOSION_POWER = SERVER_BUILDER.comment("发条小黄鸡到期后的原版 TNT 爆炸强度")
+                .defineInRange("explosion_power", 8, 1, 64);
         SERVER_BUILDER.pop();
         SERVER_SPEC = SERVER_BUILDER.build();
     }

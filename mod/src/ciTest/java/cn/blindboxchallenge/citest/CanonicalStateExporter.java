@@ -4,6 +4,8 @@ import cn.blindboxchallenge.data.BlindBoxPoolSavedData;
 import cn.blindboxchallenge.data.PrizeBundle;
 import cn.blindboxchallenge.data.TransactionRecord;
 import cn.blindboxchallenge.data.DeathNoteSavedData;
+import cn.blindboxchallenge.blockentity.AnywhereDoorBlockEntity;
+import cn.blindboxchallenge.entity.ClockworkChickenEntity;
 import cn.blindboxchallenge.util.InventoryEvidence;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -21,9 +23,12 @@ import java.util.Map;
 import java.util.UUID;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.AABB;
 
 /** 从真实服务端状态生成稳定 JSON；只存在于 CI 探针 Jar。 */
 public final class CanonicalStateExporter {
@@ -66,6 +71,8 @@ public final class CanonicalStateExporter {
                         "id", entry.id().toString(), "owner", entry.owner().toString(), "target", entry.target().toString(),
                         "due_tick", entry.dueTick())));
         root.put("death_note_entries", deathNotes);
+        root.put("clockwork_chickens", chickens(server.overworld()));
+        root.put("p4_recovery_doors", recoveryDoors(server.overworld()));
 
         Files.createDirectories(target.toAbsolutePath().getParent());
         Path temporary = target.resolveSibling(target.getFileName() + ".tmp");
@@ -132,6 +139,50 @@ public final class CanonicalStateExporter {
         out.put("after_inventory_digest", record.afterInventoryDigest());
         out.put("canonical_receipts", InventoryEvidence.canonical(record.receipts()));
         return out;
+    }
+
+    /** 生命周期夹具只用固定的出生点偏移，导出仍从真实已加载方块实体和实体 NBT 读取。 */
+    private static List<Map<String, Object>> chickens(ServerLevel level) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        AABB area = new AABB(level.getSharedSpawnPos()).inflate(96.0D);
+        level.getEntitiesOfClass(ClockworkChickenEntity.class, area).stream()
+                .sorted(Comparator.comparing(entity -> entity.getUUID().toString()))
+                .forEach(chicken -> {
+                    Map<String, Object> entry = new LinkedHashMap<>();
+                    entry.put("id", chicken.getUUID().toString());
+                    entry.put("owner", chicken.ownerUuid() == null ? "" : chicken.ownerUuid().toString());
+                    entry.put("armed_game_time", chicken.armedGameTime());
+                    entry.put("fuse", chicken.getFuse());
+                    entry.put("explosion_power", chicken.explosionPower());
+                    entry.put("position", chicken.blockPosition().asLong());
+                    out.add(entry);
+                });
+        return out;
+    }
+
+    private static List<Map<String, Object>> recoveryDoors(ServerLevel level) {
+        BlockPos first = level.getSharedSpawnPos().offset(0, 80, 40);
+        BlockPos second = first.east(8);
+        List<Map<String, Object>> out = new ArrayList<>();
+        door("first", first, level).ifPresent(out::add);
+        door("second", second, level).ifPresent(out::add);
+        return out;
+    }
+
+    private static java.util.Optional<Map<String, Object>> door(String name, BlockPos position, ServerLevel level) {
+        if (!(level.getBlockEntity(position) instanceof AnywhereDoorBlockEntity door)) return java.util.Optional.empty();
+        Map<String, Object> entry = new LinkedHashMap<>();
+        entry.put("name", name);
+        entry.put("position", position.asLong());
+        entry.put("door_id", door.doorId().toString());
+        entry.put("partner_id", door.partnerDoorId().map(UUID::toString).orElse(""));
+        entry.put("partner_door", door.partnerDoor().map(CanonicalStateExporter::global).orElse(""));
+        entry.put("destination_safety", door.destinationSafety().map(CanonicalStateExporter::global).orElse(""));
+        return java.util.Optional.of(entry);
+    }
+
+    private static String global(net.minecraft.core.GlobalPos global) {
+        return global.dimension().location() + "@" + global.pos().asLong();
     }
 
     private CanonicalStateExporter() {}

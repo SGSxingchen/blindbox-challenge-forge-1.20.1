@@ -4,6 +4,8 @@ import cn.blindboxchallenge.data.BlindBoxPoolSavedData;
 import cn.blindboxchallenge.data.DeathNoteSavedData;
 import cn.blindboxchallenge.data.PrizeBundle;
 import cn.blindboxchallenge.data.TransactionRecord;
+import cn.blindboxchallenge.blockentity.AnywhereDoorBlockEntity;
+import cn.blindboxchallenge.entity.ClockworkChickenEntity;
 import cn.blindboxchallenge.capability.ModCapabilities;
 import cn.blindboxchallenge.event.ServerLifecycleEvents;
 import cn.blindboxchallenge.item.BlindBoxItem;
@@ -34,6 +36,8 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.commands.Commands;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -60,6 +64,8 @@ public final class CiTestCommands {
                 .then(Commands.literal("export").executes(context -> export(context.getSource())))
                 .then(Commands.literal("seed_recovery_fixture").executes(context -> seedRecoveryFixture(context.getSource())))
                 .then(Commands.literal("seed_p4_pending_death_fixture").executes(context -> seedP4PendingDeathFixture(context.getSource())))
+                .then(Commands.literal("seed_p4_chicken_fixture").executes(context -> seedP4ChickenFixture(context.getSource())))
+                .then(Commands.literal("seed_p4_door_fixture").executes(context -> seedP4DoorFixture(context.getSource())))
                 .then(Commands.literal("run_multi_business").executes(context -> runMultiBusiness(context.getSource())))
                 .then(Commands.literal("run_p2_business").executes(context -> runP2Business(context.getSource())))
                 .then(Commands.literal("run_p3_business").executes(context -> runP3Business(context.getSource())))
@@ -67,6 +73,12 @@ public final class CiTestCommands {
                         .executes(context -> P4TextNegativeCiAssertions.run(context.getSource())))
                 .then(Commands.literal("run_p4_door")
                         .executes(context -> DoorCiScenario.run(context.getSource())))
+                .then(Commands.literal("start_p4_chicken")
+                        .executes(context -> ClockworkChickenCiScenario.start(context.getSource())))
+                .then(Commands.literal("verify_p4_chicken")
+                        .executes(context -> ClockworkChickenCiScenario.verify(context.getSource())))
+                .then(Commands.literal("cleanup_p4_chicken")
+                        .executes(context -> ClockworkChickenCiScenario.cleanup(context.getSource())))
                 .then(Commands.literal("start_p4_text_clients")
                         .executes(context -> P4TextCiScenario.start(context.getSource())))
                 .then(Commands.literal("verify_p4_text_clients")
@@ -107,6 +119,59 @@ public final class CiTestCommands {
     }
 
     private static final UUID RECONNECT_TOKEN = UUID.fromString("77777777-7777-7777-7777-777777777777");
+    private static final UUID P4_CHICKEN_FIXTURE_OWNER = UUID.fromString("44444444-4444-4444-4444-444444444444");
+
+    /** 强杀恢复夹具：只用生产实体的可持久构造器写入固定主人、启动刻、Fuse 和武装威力。 */
+    private static int seedP4ChickenFixture(CommandSourceStack source) {
+        try {
+            var level = source.getServer().overworld();
+            BlockPos position = level.getSharedSpawnPos().offset(0, 18, 40);
+            if (!level.getEntitiesOfClass(ClockworkChickenEntity.class,
+                    new net.minecraft.world.phys.AABB(position).inflate(2.0D)).isEmpty()) {
+                throw new IllegalStateException("P4 小黄鸡恢复夹具已存在");
+            }
+            ClockworkChickenEntity chicken = new ClockworkChickenEntity(level, P4_CHICKEN_FIXTURE_OWNER, level.getGameTime(),
+                    ModServerConfig.CLOCKWORK_CHICKEN_FUSE_TICKS.get(), ModServerConfig.CLOCKWORK_CHICKEN_EXPLOSION_POWER.get());
+            chicken.setPos(position.getX() + 0.5D, position.getY(), position.getZ() + 0.5D);
+            if (!level.addFreshEntity(chicken)) throw new IllegalStateException("P4 小黄鸡恢复夹具未加入世界");
+            source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P4_CHICKEN_PENDING=seeded"), false);
+            return 1;
+        } catch (Exception exception) {
+            CiTestProbe.LOGGER.error("Cannot seed P4 chicken recovery fixture", exception);
+            source.sendFailure(Component.literal("CI 小黄鸡恢复夹具失败：" + exception.getClass().getSimpleName()));
+            return 0;
+        }
+    }
+
+    /** 强杀恢复夹具：两门与两个横向安全落点均通过正式 BE NBT 保存，不强加载任何其它区块。 */
+    private static int seedP4DoorFixture(CommandSourceStack source) {
+        try {
+            var level = source.getServer().overworld();
+            BlockPos firstDoorPos = level.getSharedSpawnPos().offset(0, 80, 40);
+            BlockPos secondDoorPos = firstDoorPos.east(8);
+            BlockPos firstSafety = firstDoorPos.west();
+            BlockPos secondSafety = secondDoorPos.east();
+            for (BlockPos pos : List.of(firstDoorPos, secondDoorPos, firstSafety, secondSafety)) {
+                if (!level.getBlockState(pos).isAir()) throw new IllegalStateException("P4 门恢复夹具位置不是空气");
+            }
+            level.setBlock(firstSafety, ModBlocks.SAFETY_LANDING.get().defaultBlockState(), 3);
+            level.setBlock(firstDoorPos, ModBlocks.ANYWHERE_DOOR.get().defaultBlockState(), 3);
+            level.setBlock(secondSafety, ModBlocks.SAFETY_LANDING.get().defaultBlockState(), 3);
+            level.setBlock(secondDoorPos, ModBlocks.ANYWHERE_DOOR.get().defaultBlockState(), 3);
+            if (!(level.getBlockEntity(firstDoorPos) instanceof AnywhereDoorBlockEntity first)
+                    || !(level.getBlockEntity(secondDoorPos) instanceof AnywhereDoorBlockEntity second)) {
+                throw new IllegalStateException("P4 门恢复夹具方块实体未创建");
+            }
+            first.link(second.doorId(), GlobalPos.of(level.dimension(), secondDoorPos), GlobalPos.of(level.dimension(), secondSafety));
+            second.link(first.doorId(), GlobalPos.of(level.dimension(), firstDoorPos), GlobalPos.of(level.dimension(), firstSafety));
+            source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P4_DOOR_PENDING=seeded"), false);
+            return 1;
+        } catch (Exception exception) {
+            CiTestProbe.LOGGER.error("Cannot seed P4 door recovery fixture", exception);
+            source.sendFailure(Component.literal("CI 任意门恢复夹具失败：" + exception.getClass().getSimpleName()));
+            return 0;
+        }
+    }
 
     private static int prepareReconnect(CommandSourceStack source) {
         try {

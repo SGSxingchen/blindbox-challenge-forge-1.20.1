@@ -3,6 +3,8 @@
   "item.blindboxchallenge.packing_tool": "奖池打包道具",
   "item.blindboxchallenge.letter": "信件",
   "item.blindboxchallenge.death_note": "死亡笔记",
+  "item.blindboxchallenge.clockwork_chicken": "发条小黄鸡",
+  "entity.blindboxchallenge.clockwork_chicken": "发条小黄鸡",
   "item.blindboxchallenge.anywhere_door": "任意门",
   "block.blindboxchallenge.anywhere_door": "任意门",
   "item.blindboxchallenge.safety_landing": "安全落点",

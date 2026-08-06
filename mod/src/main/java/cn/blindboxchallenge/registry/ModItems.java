@@ -29,6 +29,7 @@ import cn.blindboxchallenge.item.PillowBlockItem;
 import cn.blindboxchallenge.item.ReturningScissorsItem;
 import cn.blindboxchallenge.item.LetterItem;
 import cn.blindboxchallenge.item.DeathNoteItem;
+import cn.blindboxchallenge.item.ClockworkChickenItem;
 import cn.blindboxchallenge.entity.PillowVariant;
 import net.minecraft.core.Direction;
 import net.minecraft.world.food.FoodProperties;
@@ -49,6 +50,7 @@ public final class ModItems {
     public static final RegistryObject<Item> PACKING_TOOL = ITEMS.register("packing_tool", PackingToolItem::new);
     public static final RegistryObject<Item> LETTER = ITEMS.register("letter", LetterItem::new);
     public static final RegistryObject<Item> DEATH_NOTE = ITEMS.register("death_note", DeathNoteItem::new);
+    public static final RegistryObject<Item> CLOCKWORK_CHICKEN = ITEMS.register("clockwork_chicken", ClockworkChickenItem::new);
 
     public static final RegistryObject<Item> BLACK_KNIGHT_TELESCOPIC_KNIFE = ITEMS.register("black_knight_telescopic_knife",
             BlackKnightTelescopicKnifeItem::new);

@@ -78,9 +78,11 @@ scan_log() {
 # 夹具包含两个 bundle、两个事务和一个 OPEN reservation；重启前没有玩家登录，
 # 因而可精确验证 SavedData 证据持久化，不把登录恢复行为混入本里程碑。
 start_server first.log
-printf 'blindboxcitest seed_recovery_fixture\nblindboxcitest seed_p4_pending_death_fixture\nblindboxcitest export\nsave-all flush\n' >&"${SERVER_FD}"
+printf 'blindboxcitest seed_recovery_fixture\nblindboxcitest seed_p4_pending_death_fixture\nblindboxcitest seed_p4_chicken_fixture\nblindboxcitest seed_p4_door_fixture\nblindboxcitest export\nsave-all flush\n' >&"${SERVER_FD}"
 wait_for_log first.log 'BLINDBOX_CITEST_FIXTURE=seeded'
 wait_for_log first.log 'BLINDBOX_CITEST_P4_PENDING_DEATH=seeded'
+wait_for_log first.log 'BLINDBOX_CITEST_P4_CHICKEN_PENDING=seeded'
+wait_for_log first.log 'BLINDBOX_CITEST_P4_DOOR_PENDING=seeded'
 wait_for_log first.log 'BLINDBOX_CITEST_EXPORT='
 wait_for_log first.log 'Saved the game'
 test -s "${SERVER_DIR}/citest-results/canonical-state.json"
@@ -124,6 +126,18 @@ serialized = json.dumps(before, ensure_ascii=False, sort_keys=True)
 assert 'citest-pack-asset' in serialized and 'citest-open-asset' in serialized
 assert len(before.get('death_note_entries', [])) == 1, 'fixture must contain one pending P4 death-note entry'
 assert before['death_note_entries'][0]['due_tick'] > before['game_time'], 'P4 death-note fixture must stay pending before SIGKILL'
+chickens_before = before.get('clockwork_chickens', [])
+chickens_after = after.get('clockwork_chickens', [])
+assert len(chickens_before) == len(chickens_after) == 1, 'fixture must contain exactly one pending P4 chicken'
+chicken_before, chicken_after = chickens_before[0], chickens_after[0]
+assert chicken_before['owner'] == '44444444-4444-4444-4444-444444444444'
+assert chicken_before['id'] == chicken_after['id'], 'chicken UUID changed across recovery'
+for key in ('owner', 'armed_game_time', 'explosion_power', 'position'):
+    assert chicken_before[key] == chicken_after[key], f'chicken {key} changed across recovery'
+assert 0 < chicken_after['fuse'] < chicken_before['fuse'] <= 1200, 'chicken Fuse was reset, lost, or expired across recovery'
+assert chicken_after['explosion_power'] == 8, 'default chicken power must persist as 8'
+assert len(before.get('p4_recovery_doors', [])) == len(after.get('p4_recovery_doors', [])) == 2, 'fixture must contain two P4 door block entities'
+assert before['p4_recovery_doors'] == after['p4_recovery_doors'], 'door UUID, partner link, or safety GlobalPos changed across recovery'
 for key in ('players', 'bundles', 'transactions', 'open_reservations', 'death_note_entries'):
     assert before.get(key) == after.get(key), f'{key} changed across flushed SIGKILL recovery'
 assert int(after.get('game_time', -1)) >= int(before.get('game_time', -1))
@@ -134,7 +148,7 @@ result = {
     'product_sha256': expected_sha,
     'before': str(before_path),
     'after': str(after_path),
-    'assertions': ['two unique-NBT bundles persisted', 'PACK and OPEN receipts persisted', 'OPEN reservation persisted', 'one pending death-note UUID/due-tick entry persisted', 'no duplicate or lost SavedData asset evidence'],
+    'assertions': ['two unique-NBT bundles persisted', 'PACK and OPEN receipts persisted', 'OPEN reservation persisted', 'one pending death-note UUID/due-tick entry persisted', 'one pending clockwork chicken UUID/owner/armed tick/Fuse/power persisted', 'two door UUID/partner/safety GlobalPos records persisted', 'no duplicate or lost SavedData asset evidence'],
     'limitations': ['online-player inventory mutation and login recovery are covered by later client milestones'],
 }
 (pathlib.Path(after_path).parent / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')

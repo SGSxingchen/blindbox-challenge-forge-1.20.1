@@ -29,6 +29,7 @@ public final class ClientModEvents {
         event.registerEntityRenderer(ModEntities.THROWN_PILLOW.get(), ThrownItemRenderer::new);
         event.registerEntityRenderer(ModEntities.PILLOW_SEAT.get(), PillowSeatRenderer::new);
         event.registerEntityRenderer(ModEntities.RETURNING_SCISSORS.get(), ThrownItemRenderer::new);
+        event.registerEntityRenderer(ModEntities.CLOCKWORK_CHICKEN.get(), ThrownItemRenderer::new);
     }
 
     @SubscribeEvent

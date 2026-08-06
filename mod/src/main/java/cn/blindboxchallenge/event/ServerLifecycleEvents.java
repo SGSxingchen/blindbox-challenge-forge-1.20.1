@@ -10,6 +10,7 @@ import cn.blindboxchallenge.service.BlindBoxService;
 import cn.blindboxchallenge.service.DoorService;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.minecraftforge.event.entity.living.ShieldBlockEvent;
@@ -50,6 +51,14 @@ public final class ServerLifecycleEvents {
         if (event.getEntity() instanceof ServerPlayer player) {
             BlindBoxItem.cancelUse(player);
             PillowSeatEntity.releasePassenger(player);
+        }
+    }
+
+    /** 门抵达免疫只保护玩家仍在目标门格内的短暂出门过程；真正离开后立即恢复正常反向传送。 */
+    @SubscribeEvent
+    public static void playerTick(TickEvent.PlayerTickEvent event) {
+        if (event.phase == TickEvent.Phase.END && event.player instanceof ServerPlayer player) {
+            DoorService.clearArrivalImmunityAfterExit(player);
         }
     }
 
