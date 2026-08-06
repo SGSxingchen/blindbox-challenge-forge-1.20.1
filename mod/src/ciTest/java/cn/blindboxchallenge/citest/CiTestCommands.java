@@ -101,6 +101,13 @@ public final class CiTestCommands {
             assertFood(ModItems.QUAIL_EGG.get(), 2, 0.2F);
             assertFood(ModItems.GREEN_SOY_MILK.get(), 4, 0.3F);
             assertFood(ModItems.BEEF_BITES.get(), 6, 0.6F);
+            assertFood(ModItems.OIL_CHESTNUT.get(), 4, 0.3F);
+            assertFood(ModItems.WIND_BLOWN_CAKE.get(), 4, 0.3F);
+            assertFood(ModItems.SWEET_SOUR_TURKEY_NOODLES.get(), 8, 0.7F);
+            assertFood(ModItems.SESAME_RICE_NOODLES.get(), 8, 0.6F);
+            assertFood(ModItems.POTATO_CHIPS.get(), 6, 0.5F);
+            assertFood(ModItems.BLACK_TRUFFLE_HAM_CRACKER.get(), 2, 0.1F);
+            assertFood(ModItems.MAGIC_CRISPY_NOODLES.get(), 6, 0.5F);
 
             ItemStack adrenaline = new ItemStack(ModItems.ADRENALINE.get(), 2);
             ModItems.ADRENALINE.get().finishUsingItem(adrenaline, player.serverLevel(), player);

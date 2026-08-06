@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "blindboxchallenge:item/sweet_sour_turkey_noodles"
+  }
+}
