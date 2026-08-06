@@ -189,6 +189,7 @@ public final class P3AbilityCiScenario {
         private final UUID bobUuid;
         private final ServerLevel origin;
         private final boolean originalImmediateRespawn;
+        private final boolean originalKeepInventory;
         private final int initialAliceEntityId;
         private final int originalAliceSelectedSlot;
         private BlockPos aliceSupport;
@@ -221,6 +222,7 @@ public final class P3AbilityCiScenario {
             this.initialAliceEntityId = alice.getId();
             this.originalAliceSelectedSlot = alice.getInventory().selected;
             this.originalImmediateRespawn = server.getGameRules().getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).get();
+            this.originalKeepInventory = server.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).get();
         }
 
         private static ActiveScenario create(MinecraftServer server) {
@@ -373,6 +375,9 @@ public final class P3AbilityCiScenario {
                     .map(data -> data.hasLearnedYiJin()).orElse(false);
             if (!cloneSourceLearnedBeforeKill) throw new IllegalStateException("原版 kill 前易筋经状态丢失");
             restoreSlowFalling(alice);
+            // 必须保留 P1 的 canonical 奖品参与同一场后续回归；这里仍由原版 kill 触发真实死亡
+            // Clone，只暂时避免死亡掉落把无关库存从同一条回归链中移除。Clone 结束立即还原。
+            server.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, server);
             server.getGameRules().getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(true, server);
             phase = Phase.WAITING_FOR_CLONE;
             phaseTicks = 0;
@@ -452,6 +457,7 @@ public final class P3AbilityCiScenario {
                 // Clone 事件直接提供新 replacement；PlayerList 在死亡切换阶段仍可能保留旧实例，
                 // 因而不能用名称查找代替该真实 replacement 的 Capability/属性核验。
                 if (cloneReplacement == null) throw new IllegalStateException("Clone 事件缺少 replacement 实体");
+                server.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(originalKeepInventory, server);
                 try {
                     requireLearned(cloneReplacement);
                 } catch (IllegalStateException exception) {
@@ -511,6 +517,7 @@ public final class P3AbilityCiScenario {
             if (bobSupport != null && originalBobSupport != null) origin.setBlock(bobSupport, originalBobSupport, 3);
             originalLandingBlocks.forEach((position, state) -> origin.setBlock(position, state, 3));
             server.getGameRules().getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(originalImmediateRespawn, server);
+            server.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(originalKeepInventory, server);
         }
 
         private void restoreSlowFalling(ServerPlayer player) {
