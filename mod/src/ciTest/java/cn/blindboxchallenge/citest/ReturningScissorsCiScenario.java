@@ -55,9 +55,8 @@ import net.minecraftforge.fml.common.Mod;
  */
 @Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class ReturningScissorsCiScenario {
-    // 必须小于生产实体的 100 tick 自动返航阈值；观察窗口只用于等真实客户端收到出生同步，
-    // 不能把“未命中自动返航”错误地当成命中返航。
-    private static final int OBSERVATION_TICKS = 60;
+    /** 真实扫掠距离：给双端出生/返航同步留出窗口，仍远小于生产 100 tick 未命中返航阈值。 */
+    private static final double TARGET_DISTANCE = 24.0D;
     private static final int RESULT_TIMEOUT_TICKS = 220;
     private static final String NORMAL_TOKEN = "normal-hit-return";
     private static final String FULL_TOKEN = "full-inventory-fallback";
@@ -127,7 +126,6 @@ public final class ReturningScissorsCiScenario {
     }
 
     private enum Phase {
-        OBSERVING_NORMAL_THROW,
         AWAITING_NORMAL_RETURN,
         AWAITING_FULL_FALLBACK,
         RESULT_READY,
@@ -161,6 +159,9 @@ public final class ReturningScissorsCiScenario {
         private boolean normalPreNoPhysics;
         private boolean normalPreInGround;
         private boolean normalPreLeftOwner;
+        private int normalPreFlightTicks = -1;
+        private int normalFlightTicksAtActivation = -1;
+        private boolean normalReturningAtActivation;
         private boolean normalTargetCanBeHit;
         private boolean normalTargetAlive;
         private boolean normalTargetSpectator;
@@ -176,7 +177,7 @@ public final class ReturningScissorsCiScenario {
         private boolean normalLastReturning;
         private boolean normalLastNoPhysics;
         private int phaseTicks;
-        private Phase phase = Phase.OBSERVING_NORMAL_THROW;
+        private Phase phase = Phase.AWAITING_NORMAL_RETURN;
         private String failure;
         private boolean cleaned;
 
@@ -220,7 +221,7 @@ public final class ReturningScissorsCiScenario {
             normalScissors = throwOne(NORMAL_TOKEN);
             expectedNormalScissorsId = minecraftEntity(normalScissors).getUUID();
             expectedOwnerId = alice.getUUID();
-            freezeForObservation(normalScissors);
+            armNormalHit();
             alice.containerMenu.broadcastChanges();
             bob.containerMenu.broadcastChanges();
         }
@@ -266,22 +267,9 @@ public final class ReturningScissorsCiScenario {
             return scissors;
         }
 
-        private void freezeForObservation(ReturningScissorsEntity scissors) {
-            Entity entity = minecraftEntity(scissors);
-            entity.setNoGravity(true);
-            entity.setPos(base.getX() + 0.5D, base.getY() + 2.1D, base.getZ());
-            entity.setDeltaMovement(Vec3.ZERO);
-        }
-
         private void tick() {
             if (phase == Phase.FAILED || phase == Phase.RESULT_READY) return;
             phaseTicks++;
-            if (phase == Phase.OBSERVING_NORMAL_THROW && phaseTicks >= OBSERVATION_TICKS) {
-                activateNormalHit();
-                phase = Phase.AWAITING_NORMAL_RETURN;
-                phaseTicks = 0;
-                return;
-            }
             if (phase == Phase.AWAITING_NORMAL_RETURN) {
                 snapshotNormalFlight();
                 if (minecraftEntity(normalScissors).isRemoved()) {
@@ -306,15 +294,21 @@ public final class ReturningScissorsCiScenario {
             }
         }
 
-        private void activateNormalHit() {
-            // 目标不能与箭矢起点重叠：AbstractArrow 的射线检测以完整扫掠段决定命中。
-            // 沿已通过的抱枕夹具使用真实猪与稳定的前方扫掠，仍只依赖生产 tick 的正常碰撞。
-            normalTarget = createTarget(minecraftEntity(normalScissors).position().add(0.0D, -0.45D, -3.0D));
+        /**
+         * 真实 releaseUsing 后立即安排远距离猪目标。不能先冻结投掷实体等待客户端，
+         * 因为生产飞行预算按真实服务端 tick 计数；碰撞、伤害和返航始终交给 AbstractArrow 正常 tick。
+         */
+        private void armNormalHit() {
+            Entity projectile = minecraftEntity(normalScissors);
+            CompoundTag runtimeState = new CompoundTag();
+            minecraftArrow(normalScissors).addAdditionalSaveData(runtimeState);
+            normalFlightTicksAtActivation = runtimeState.getInt("FlightTicks");
+            normalReturningAtActivation = normalScissors.isReturning();
+            normalTarget = createTarget(projectile.position().add(0.0D, -0.45D, -TARGET_DISTANCE));
             expectedTargetId = normalTarget.getUUID();
             normalTargetHealth = normalTarget.getHealth();
-            // 保持真实投掷入口产生的实体，只在双端观察窗结束后恢复稳定扫掠速度。
-            minecraftEntity(normalScissors).setNoGravity(true);
-            minecraftEntity(normalScissors).setDeltaMovement(new Vec3(0.0D, 0.0D, -1.25D));
+            projectile.setNoGravity(true);
+            projectile.setDeltaMovement(new Vec3(0.0D, 0.0D, -1.25D));
         }
 
         private void snapshotNormalPreFlight() {
@@ -328,6 +322,7 @@ public final class ReturningScissorsCiScenario {
             arrow.addAdditionalSaveData(runtimeState);
             normalPreInGround = runtimeState.getBoolean("inGround");
             normalPreLeftOwner = runtimeState.getBoolean("LeftOwner");
+            normalPreFlightTicks = runtimeState.getInt("FlightTicks");
             normalPreNoPhysics = arrow.isNoPhysics();
             normalPreTickCount = projectile.tickCount;
             normalPrePosition = start;
@@ -403,7 +398,10 @@ public final class ReturningScissorsCiScenario {
                         + ", preTick=" + normalPreTickCount + ", prePosition=" + normalPrePosition
                         + ", preMovement=" + normalPreMovement + ", preBlock=" + normalPreBlockHit
                         + ", preNoPhysics=" + normalPreNoPhysics + ", preInGround=" + normalPreInGround
-                        + ", preLeftOwner=" + normalPreLeftOwner + ", targetCanBeHit=" + normalTargetCanBeHit
+                        + ", preLeftOwner=" + normalPreLeftOwner + ", preFlightTicks=" + normalPreFlightTicks
+                        + ", flightAtActivation=" + normalFlightTicksAtActivation
+                        + ", returningAtActivation=" + normalReturningAtActivation
+                        + ", targetCanBeHit=" + normalTargetCanBeHit
                         + ", targetAlive=" + normalTargetAlive + ", targetSpectator=" + normalTargetSpectator
                         + ", targetSameOwnerVehicle=" + normalTargetSameOwnerVehicle
                         + ", trace=" + normalFlightTrace
@@ -421,8 +419,7 @@ public final class ReturningScissorsCiScenario {
             fullScissors = throwOne(FULL_TOKEN);
             // releaseUsing 后的第 0 格会空出；立刻填满它，确保回收只能走主人位置掉落兜底而不能进背包。
             alice.getInventory().setItem(0, new ItemStack(Items.COBBLESTONE, 64));
-            freezeForObservation(fullScissors);
-            fullTarget = createTarget(minecraftEntity(fullScissors).position().add(0.0D, -0.45D, -3.0D));
+            fullTarget = createTarget(minecraftEntity(fullScissors).position().add(0.0D, -0.45D, -TARGET_DISTANCE));
             fullTargetHealth = fullTarget.getHealth();
             minecraftEntity(fullScissors).setNoGravity(true);
             minecraftEntity(fullScissors).setDeltaMovement(new Vec3(0.0D, 0.0D, -1.25D));
