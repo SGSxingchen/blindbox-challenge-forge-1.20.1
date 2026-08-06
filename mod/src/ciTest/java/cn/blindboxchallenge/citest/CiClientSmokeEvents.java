@@ -25,6 +25,10 @@ public final class CiClientSmokeEvents {
     private static boolean reconnectStarted;
     private static int reconnectJoinedTicks;
     private static int disconnectedTicks;
+    private static int recoveryRetryTicks;
+    private static int recoveryJoinedTicks;
+    private static boolean recoveryConnectAttempted;
+    private static boolean recoveryCompleted;
 
     private CiClientSmokeEvents() {
     }
@@ -64,7 +68,19 @@ public final class CiClientSmokeEvents {
         }
         if (minecraft.level == null || minecraft.player == null || minecraft.getConnection() == null) {
             joinedTicks = 0;
-            if (everJoined && Boolean.getBoolean("blindbox.ci.reconnect") && !reconnectStarted) {
+            if (everJoined && Boolean.getBoolean("blindbox.ci.serverRecovery") && !recoveryCompleted) {
+                disconnectedTicks++;
+                recoveryRetryTicks++;
+                // SIGKILL 后 Forge 重启通常比一次连接失败更慢。客户端只在真的断线后按固定间隔
+                // 重试，绝不由脚本伪造“已恢复”标志；首次尝试和后续重试都经过真实 ConnectScreen。
+                if (disconnectedTicks >= 10 && recoveryRetryTicks >= 100) {
+                    String address = System.getProperty("blindbox.ci.serverAddress", "127.0.0.1:25565");
+                    ServerData data = new ServerData("BlindBox CI SIGKILL recovery", address, false);
+                    recoveryRetryTicks = 0;
+                    recoveryConnectAttempted = true;
+                    ConnectScreen.startConnecting(minecraft.screen, minecraft, ServerAddress.parseString(address), data, false);
+                }
+            } else if (everJoined && Boolean.getBoolean("blindbox.ci.reconnect") && !reconnectStarted) {
                 disconnectedTicks++;
                 // 断线界面在不同机器/时序下可能短暂被其他 Screen 替代；以连接状态为权威，
                 // 等待若干客户端 Tick 让旧连接完全清理后再发起一次重连。
@@ -86,6 +102,13 @@ public final class CiClientSmokeEvents {
             reconnectJoinedTicks++;
             if (reconnectJoinedTicks == 40) writeReconnectMarker();
         }
+        if (recoveryConnectAttempted && !recoveryCompleted) {
+            recoveryJoinedTicks++;
+            if (recoveryJoinedTicks == 40) {
+                writeRecoveryMarker();
+                recoveryCompleted = true;
+            }
+        }
         String releaseValue = System.getProperty("blindbox.ci.clientRelease");
         if (joinedTicks >= 40 && releaseValue != null && Files.isRegularFile(Path.of(releaseValue).toAbsolutePath())) {
             completed = true;
@@ -102,6 +125,20 @@ public final class CiClientSmokeEvents {
             Files.writeString(marker, "multiplayer-reconnected-40-ticks\n");
         } catch (IOException exception) {
             throw new IllegalStateException("无法写入客户端重连 CI 标志：" + marker, exception);
+        }
+    }
+
+    private static void writeRecoveryMarker() {
+        String markerValue = System.getProperty("blindbox.ci.serverRecoveryMarker");
+        if (markerValue == null || markerValue.isBlank()) {
+            throw new IllegalStateException("缺少 blindbox.ci.serverRecoveryMarker");
+        }
+        Path marker = Path.of(markerValue).toAbsolutePath();
+        try {
+            Files.createDirectories(marker.getParent());
+            Files.writeString(marker, "multiplayer-sigkill-recovered-40-ticks\n");
+        } catch (IOException exception) {
+            throw new IllegalStateException("无法写入客户端强杀恢复 CI 标志：" + marker, exception);
         }
     }
 

@@ -33,18 +33,31 @@ def stop(process):
         process.wait()
 
 
-def launch(directory: Path, username: str, uuid: str, marker: Path, pillow_marker: Path, release: Path, reconnect_marker: Path):
+def launch(directory: Path, username: str, uuid: str, marker: Path, pillow_marker: Path, release: Path, reconnect_marker: Path,
+           ability_role: str, ability_key_marker: Path, ability_tracking_marker: Path, ability_lifecycle_marker: Path,
+           ability_recovery_marker: Path, server_recovery_marker: Path):
     options = minecraft_launcher_lib.utils.generate_test_options()
+    jvm_arguments = ["-Xms768M", "-Xmx2G", "-Dblindbox.ci.multiplayerSmoke=true",
+                     "-Dblindbox.ci.serverAddress=127.0.0.1:25565",
+                     f"-Dblindbox.ci.clientMarker={marker}", f"-Dblindbox.ci.clientRelease={release}",
+                     f"-Dblindbox.ci.pillowMarker={pillow_marker}",
+                     f"-Dblindbox.ci.reconnectMarker={reconnect_marker}",
+                     "-Dblindbox.ci.serverRecovery=true",
+                     f"-Dblindbox.ci.serverRecoveryMarker={server_recovery_marker}",
+                     f"-Dblindbox.ci.abilityRole={ability_role}"]
+    if ability_key_marker is not None:
+        jvm_arguments.append(f"-Dblindbox.ci.abilityKeyMarker={ability_key_marker}")
+    if ability_tracking_marker is not None:
+        jvm_arguments.append(f"-Dblindbox.ci.abilityTrackingMarker={ability_tracking_marker}")
+    if ability_lifecycle_marker is not None:
+        jvm_arguments.append(f"-Dblindbox.ci.abilityLifecycleMarker={ability_lifecycle_marker}")
+    if ability_recovery_marker is not None:
+        jvm_arguments.append(f"-Dblindbox.ci.abilityRecoveryMarker={ability_recovery_marker}")
     options.update({
         "username": username, "uuid": uuid, "token": "blindbox-ci-offline-token",
         "executablePath": shutil.which("java") or "java", "gameDirectory": str(directory),
         "disableMultiplayer": False,
-        "jvmArguments": ["-Xms768M", "-Xmx2G", "-Dblindbox.ci.multiplayerSmoke=true",
-                         "-Dblindbox.ci.serverAddress=127.0.0.1:25565",
-                         f"-Dblindbox.ci.clientMarker={marker}", f"-Dblindbox.ci.clientRelease={release}",
-                         f"-Dblindbox.ci.pillowMarker={pillow_marker}",
-                         f"-Dblindbox.ci.reconnectMarker={reconnect_marker}"]
-                        + (["-Dblindbox.ci.reconnect=true"] if username == "BlindBoxAlice" else []),
+        "jvmArguments": jvm_arguments + (["-Dblindbox.ci.reconnect=true"] if username == "BlindBoxAlice" else []),
     })
     command = ["xvfb-run", "-a", "-s", "-screen 0 1024x576x24 +extension GLX",
                *minecraft_launcher_lib.command.get_minecraft_command(VERSION_ID, str(directory), options)]
@@ -75,16 +88,28 @@ def main():
             marker = evidence / f"client-{index}-connected.marker"
             pillow_marker = evidence / f"client-{index}-pillow-observed.marker"
             reconnect_marker = evidence / f"client-{index}-reconnected.marker"
+            recovery_connection_marker = evidence / f"client-{index}-sigkill-recovered.marker"
+            ability_key_marker = evidence / "client-1-p3-ability-key.marker" if username == "BlindBoxAlice" else None
+            ability_tracking_marker = evidence / "client-2-p3-ability-tracking.marker" if username == "BlindBoxBob" else None
+            ability_lifecycle_marker = evidence / "client-1-p3-ability-lifecycle.marker" if username == "BlindBoxAlice" else None
+            ability_recovery_marker = evidence / "client-1-p3-ability-recovered.marker" if username == "BlindBoxAlice" else None
             marker.unlink(missing_ok=True)
             pillow_marker.unlink(missing_ok=True)
             reconnect_marker.unlink(missing_ok=True)
-            clients.append((*launch(directory, username, uuid, marker, pillow_marker, release, reconnect_marker),
-                            marker, pillow_marker, username, uuid, directory))
+            recovery_connection_marker.unlink(missing_ok=True)
+            for ability_marker in (ability_key_marker, ability_tracking_marker, ability_lifecycle_marker, ability_recovery_marker):
+                if ability_marker is not None:
+                    ability_marker.unlink(missing_ok=True)
+            clients.append((*launch(directory, username, uuid, marker, pillow_marker, release, reconnect_marker,
+                                    "alice" if username == "BlindBoxAlice" else "bob", ability_key_marker,
+                                    ability_tracking_marker, ability_lifecycle_marker, ability_recovery_marker,
+                                    recovery_connection_marker), marker, pillow_marker, username, uuid, directory,
+                            recovery_connection_marker))
 
         deadline = time.monotonic() + 600
         while time.monotonic() < deadline:
             failures = []
-            for process, _, console, marker, _, username, _, directory in clients:
+            for process, _, console, marker, _, username, _, directory, _ in clients:
                 text = console.read_text(encoding="utf-8", errors="replace") if console.is_file() else ""
                 latest = directory / "logs" / "latest.log"
                 if latest.is_file():
@@ -103,12 +128,14 @@ def main():
 
         (evidence / "both-connected.marker").write_text("both-real-clients-connected\n", encoding="utf-8")
         # 由 workflow 在导出 canonical 后写 release；此脚本等待该文件再让客户端正常退出。
-        wait_release = time.monotonic() + 180
+        # P3 会在同一真实双客户端会话中完成 Clone、跨维与 save-all flush 后的 SIGKILL 重启；
+        # 这只是给完整断言流程留出时间，不改变任何失败判定或客户端正常退出要求。
+        wait_release = time.monotonic() + 600
         while time.monotonic() < wait_release and not release.is_file():
             time.sleep(1)
         if not release.is_file():
             raise RuntimeError("未收到服务端 canonical 完成释放标志")
-        for process, _, _, _, _, username, _, _ in clients:
+        for process, _, _, _, _, username, _, _, _ in clients:
             try:
                 code = process.wait(timeout=90)
             except subprocess.TimeoutExpired:

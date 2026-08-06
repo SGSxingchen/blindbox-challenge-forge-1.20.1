@@ -27,7 +27,8 @@ curl --fail --location --retry 3 --connect-timeout 20 -o "${SERVER_DIR}/${INSTAL
  mkdir -p mods
  cp "../../${FORMAL}" "../../${CITEST}" mods/
  mkfifo server.stdin
- BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" setsid ./run.sh nogui < server.stdin > server.log 2>&1 & echo $! > server.pid
+ BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" \
+   setsid ./run.sh nogui < server.stdin > server.log 2>&1 & echo $! > server.pid
 )
 SERVER_PID="$(cat "${SERVER_DIR}/server.pid")"
 exec 3>"${SERVER_DIR}/server.stdin"
@@ -99,6 +100,104 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P3_PILLOW_CLIENTS=success' "${SERVER_DIR}/server.log"
+printf 'blindboxcitest start_p3_ability_clients\n' >&3
+for _ in $(seq 1 90); do
+  grep -q 'BLINDBOX_CITEST_P3_ABILITY_SYNC_DISPATCHED=success' "${SERVER_DIR}/server.log" && break
+  if grep -q 'BLINDBOX_CITEST_P3_ABILITY=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_ABILITY_SYNC_DISPATCHED=success' "${SERVER_DIR}/server.log"
+# 两份 marker 均由真实客户端事件写入：Alice 先收 S2C 后点击实际 Space 映射并观察服务器速度，
+# Bob 只在远离后重新开始追踪 Alice 时收到 true 快照。服务端随后逐字段反查。
+for _ in $(seq 1 150); do
+  [ -f "${EVIDENCE}/client-1-p3-ability-key.marker" ] && [ -f "${EVIDENCE}/client-2-p3-ability-tracking.marker" ] && break
+  if grep -q 'BLINDBOX_CITEST_P3_ABILITY=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+test -f "${EVIDENCE}/client-1-p3-ability-key.marker"
+test -f "${EVIDENCE}/client-2-p3-ability-tracking.marker"
+printf 'blindboxcitest verify_p3_ability_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P3_ABILITY_CLIENTS=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_ABILITY_CLIENTS=success' "${SERVER_DIR}/server.log"
+printf 'blindboxcitest start_p3_ability_clone\n' >&3
+for _ in $(seq 1 90); do
+  grep -q 'BLINDBOX_CITEST_P3_ABILITY_CLONE=success' "${SERVER_DIR}/server.log" && break
+  if grep -q 'BLINDBOX_CITEST_P3_ABILITY=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_ABILITY_CLONE=success' "${SERVER_DIR}/server.log"
+printf 'blindboxcitest start_p3_ability_dimension\n' >&3
+for _ in $(seq 1 90); do
+  grep -q 'BLINDBOX_CITEST_P3_ABILITY_DIMENSION=success' "${SERVER_DIR}/server.log" && break
+  if grep -q 'BLINDBOX_CITEST_P3_ABILITY=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_ABILITY_DIMENSION=success' "${SERVER_DIR}/server.log"
+for _ in $(seq 1 120); do
+  [ -f "${EVIDENCE}/client-1-p3-ability-lifecycle.marker" ] && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+test -f "${EVIDENCE}/client-1-p3-ability-lifecycle.marker"
+printf 'blindboxcitest verify_p3_ability_lifecycle_client\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P3_ABILITY_LIFECYCLE_CLIENT=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_ABILITY_LIFECYCLE_CLIENT=success' "${SERVER_DIR}/server.log"
+
+# 所有上阶段 marker 和服务端 Capability 已完成交叉核验后，才 flush 并 SIGKILL。
+# 绝不预写恢复 marker；两个真实客户端必须在同世界新进程启动后自行重连。
+printf 'save-all flush\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'Saved the game' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'Saved the game' "${SERVER_DIR}/server.log"
+cp "${SERVER_DIR}/server.log" "${EVIDENCE}/server-before-p3-ability-sigkill.log"
+exec 3>&-
+kill -KILL -- "-${SERVER_PID}" 2>/dev/null || kill -KILL "${SERVER_PID}" 2>/dev/null || true
+wait "${SERVER_PID}" 2>/dev/null || true
+(
+ cd "${SERVER_DIR}"
+ rm -f server.stdin
+ mkfifo server.stdin
+ BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" \
+   setsid ./run.sh nogui < server.stdin > server.log 2>&1 & echo $! > server.pid
+)
+SERVER_PID="$(cat "${SERVER_DIR}/server.pid")"
+exec 3>"${SERVER_DIR}/server.stdin"
+for _ in $(seq 1 120); do
+  grep -q 'Done (' "${SERVER_DIR}/server.log" && break
+  kill -0 "${SERVER_PID}" 2>/dev/null || { cat "${SERVER_DIR}/server.log"; exit 1; }
+  sleep 1
+done
+grep -q 'Done (' "${SERVER_DIR}/server.log"
+for _ in $(seq 1 210); do
+  [ -f "${EVIDENCE}/client-1-sigkill-recovered.marker" ] && [ -f "${EVIDENCE}/client-2-sigkill-recovered.marker" ] \
+    && [ -f "${EVIDENCE}/client-1-p3-ability-recovered.marker" ] && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+test -f "${EVIDENCE}/client-1-sigkill-recovered.marker"
+test -f "${EVIDENCE}/client-2-sigkill-recovered.marker"
+test -f "${EVIDENCE}/client-1-p3-ability-recovered.marker"
+printf 'blindboxcitest verify_p3_ability_recovery\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P3_ABILITY_RECOVERY=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_ABILITY_RECOVERY=success' "${SERVER_DIR}/server.log"
+printf 'blindboxcitest cleanup_p3_ability\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P3_ABILITY_CLEANUP=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P3_ABILITY_CLEANUP=success' "${SERVER_DIR}/server.log"
 printf 'blindboxcitest prepare_reconnect\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_RECONNECT_PREPARED=success' "${SERVER_DIR}/server.log" && break
