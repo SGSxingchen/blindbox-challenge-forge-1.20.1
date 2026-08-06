@@ -298,7 +298,9 @@ public final class ReturningScissorsEntity extends AbstractArrow implements Item
 
     @Override
     public void checkBelowWorld() {
-        if (!level().isClientSide) {
+        // Entity 每个基础 tick 都会调用本钩子；只有真正低于原版虚空阈值才可改为返航，
+        // 不能把普通空中飞行误判为虚空并在第一 tick 直接回收。
+        if (!level().isClientSide && getY() < level().getMinBuildHeight() - 64) {
             // 即使投掷物落入虚空，也先切换到无碰撞返航；主人不可用时实体仍随区块 NBT 保留。
             beginReturn();
         }
