@@ -15,6 +15,7 @@ import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -30,15 +31,17 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.ProjectileImpactEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -101,7 +104,11 @@ public final class ReturningScissorsCiScenario {
 
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || active == null) return;
+        if (active == null) return;
+        if (event.phase == TickEvent.Phase.START) {
+            active.snapshotNormalPreFlight();
+            return;
+        }
         try {
             active.tick();
         } catch (Exception exception) {
@@ -113,7 +120,7 @@ public final class ReturningScissorsCiScenario {
      * 只记录原版 {@code AbstractArrow} 已实际计算出的碰撞结果；不取消、不改写结果，也不触发命中。
      * 若夹具再次失败，日志可区分“未发生扫掠”“方块先命中”和“实体筛选未命中”。
      */
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
     public static void onProjectileImpact(ProjectileImpactEvent event) {
         if (active != null) active.recordProjectileImpact(event);
     }
@@ -147,9 +154,19 @@ public final class ReturningScissorsCiScenario {
         private UUID expectedFallbackId;
         private float normalTargetHealth;
         private float fullTargetHealth;
-        private boolean normalNativeSweepFindsTarget;
-        private String normalActivationBlockHit = "未计算";
-        private boolean normalNoPhysicsAtActivation;
+        private boolean normalRawTargetInSegment;
+        private String normalFirstTargetSegment = "无";
+        private String normalPreBlockHit = "未采样";
+        private boolean normalPreNoPhysics;
+        private boolean normalPreInGround;
+        private boolean normalPreLeftOwner;
+        private boolean normalTargetCanBeHit;
+        private boolean normalTargetAlive;
+        private boolean normalTargetSpectator;
+        private boolean normalTargetSameOwnerVehicle;
+        private int normalPreTickCount = -1;
+        private Vec3 normalPrePosition = Vec3.ZERO;
+        private Vec3 normalPreMovement = Vec3.ZERO;
         private int normalImpactCount;
         private String normalImpact = "无";
         private Vec3 normalLastPosition = Vec3.ZERO;
@@ -295,24 +312,44 @@ public final class ReturningScissorsCiScenario {
             normalTargetHealth = normalTarget.getHealth();
             // 保持真实投掷入口产生的实体，只在双端观察窗结束后恢复稳定扫掠速度。
             minecraftEntity(normalScissors).setNoGravity(true);
-            Vec3 sweep = new Vec3(0.0D, 0.0D, -1.25D);
-            minecraftEntity(normalScissors).setDeltaMovement(sweep);
-            recordNormalActivationSweep(sweep);
+            minecraftEntity(normalScissors).setDeltaMovement(new Vec3(0.0D, 0.0D, -1.25D));
         }
 
-        private void recordNormalActivationSweep(Vec3 sweep) {
+        private void snapshotNormalPreFlight() {
+            if (phase != Phase.AWAITING_NORMAL_RETURN || normalScissors == null) return;
             Entity projectile = minecraftEntity(normalScissors);
             Vec3 start = projectile.position();
-            Vec3 end = start.add(sweep);
-            EntityHitResult targetHit = ProjectileUtil.getEntityHitResult(level, projectile, start, end,
-                    projectile.getBoundingBox().expandTowards(sweep).inflate(1.0D), candidate -> candidate == normalTarget);
-            normalNativeSweepFindsTarget = targetHit != null && targetHit.getEntity() == normalTarget;
+            Vec3 movement = projectile.getDeltaMovement();
+            Vec3 end = start.add(movement);
+            CompoundTag runtimeState = new CompoundTag();
+            normalScissors.addAdditionalSaveData(runtimeState);
+            normalPreInGround = runtimeState.getBoolean("inGround");
+            normalPreLeftOwner = runtimeState.getBoolean("LeftOwner");
+            normalPreNoPhysics = normalScissors.isNoPhysics();
+            normalPreTickCount = projectile.tickCount;
+            normalPrePosition = start;
+            normalPreMovement = movement;
+            normalTargetCanBeHit = normalTarget.canBeHitByProjectile();
+            normalTargetAlive = normalTarget.isAlive();
+            normalTargetSpectator = normalTarget.isSpectator();
+            Entity owner = normalScissors.getOwner();
+            normalTargetSameOwnerVehicle = owner != null && normalTarget.isPassengerOfSameVehicle(owner);
             HitResult blockHit = level.clip(new ClipContext(start, end, ClipContext.Block.COLLIDER,
                     ClipContext.Fluid.NONE, projectile));
-            normalActivationBlockHit = blockHit.getType().name();
-            normalNoPhysicsAtActivation = normalScissors.isNoPhysics();
-            normalLastPosition = start;
-            normalLastMovement = sweep;
+            if (blockHit.getType() != HitResult.Type.MISS) end = blockHit.getLocation();
+            EntityHitResult targetHit = ProjectileUtil.getEntityHitResult(level, projectile, start, end,
+                    projectile.getBoundingBox().expandTowards(movement).inflate(1.0D), candidate -> candidate == normalTarget);
+            normalRawTargetInSegment = targetHit != null && targetHit.getEntity() == normalTarget;
+            normalPreBlockHit = describeBlockHit(blockHit);
+            if (normalRawTargetInSegment && "无".equals(normalFirstTargetSegment)) {
+                normalFirstTargetSegment = "tick=" + normalPreTickCount + ", start=" + start + ", movement=" + movement
+                        + ", block=" + normalPreBlockHit;
+            }
+        }
+
+        private static String describeBlockHit(HitResult hit) {
+            if (hit instanceof BlockHitResult blockHit) return hit.getType().name() + ":" + blockHit.getBlockPos();
+            return hit.getType().name();
         }
 
         private void snapshotNormalFlight() {
@@ -327,8 +364,10 @@ public final class ReturningScissorsCiScenario {
             if (phase != Phase.AWAITING_NORMAL_RETURN || event.getProjectile() != normalScissors) return;
             normalImpactCount++;
             HitResult hit = event.getRayTraceResult();
-            normalImpact = hit.getType().name();
+            normalImpact = hit.getType().name() + ":canceled=" + event.isCanceled()
+                    + ":result=" + event.getImpactResult();
             if (hit instanceof EntityHitResult entityHit) normalImpact += ":" + entityHit.getEntity().getUUID();
+            if (hit instanceof BlockHitResult blockHit) normalImpact += ":" + blockHit.getBlockPos();
         }
 
         private Pig createTarget(Vec3 position) {
@@ -349,9 +388,14 @@ public final class ReturningScissorsCiScenario {
                         + targetHurt + ", targetSynced=" + targetSynced + ", returnedCount=" + returnedCount
                         + ", targetHealth=" + normalTarget.getHealth() + ", targetHealthBefore=" + normalTargetHealth
                         + ", stored=" + normalScissors.storedStack()
-                        + ", nativeSweepTarget=" + normalNativeSweepFindsTarget
-                        + ", activationBlock=" + normalActivationBlockHit
-                        + ", activationNoPhysics=" + normalNoPhysicsAtActivation
+                        + ", rawTargetInSegment=" + normalRawTargetInSegment
+                        + ", firstTargetSegment=" + normalFirstTargetSegment
+                        + ", preTick=" + normalPreTickCount + ", prePosition=" + normalPrePosition
+                        + ", preMovement=" + normalPreMovement + ", preBlock=" + normalPreBlockHit
+                        + ", preNoPhysics=" + normalPreNoPhysics + ", preInGround=" + normalPreInGround
+                        + ", preLeftOwner=" + normalPreLeftOwner + ", targetCanBeHit=" + normalTargetCanBeHit
+                        + ", targetAlive=" + normalTargetAlive + ", targetSpectator=" + normalTargetSpectator
+                        + ", targetSameOwnerVehicle=" + normalTargetSameOwnerVehicle
                         + ", impactCount=" + normalImpactCount + ", impact=" + normalImpact
                         + ", lastPosition=" + normalLastPosition + ", lastMovement=" + normalLastMovement
                         + ", lastReturning=" + normalLastReturning + ", lastNoPhysics=" + normalLastNoPhysics);
