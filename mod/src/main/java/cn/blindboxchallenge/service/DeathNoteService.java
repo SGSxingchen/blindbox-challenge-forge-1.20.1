@@ -38,7 +38,7 @@ public final class DeathNoteService {
                 continue;
             }
             // 需求是“使在线目标死亡”；使用绕过无敌的原版伤害源，避免自定义图腾把已确认的笔记目标改为存活。
-            target.hurt(target.damageSources().outOfWorld(), ModServerConfig.DEATH_NOTE_DAMAGE.get().floatValue());
+            target.hurt(target.damageSources().fellOutOfWorld(), ModServerConfig.DEATH_NOTE_DAMAGE.get().floatValue());
             if (owner != null) owner.sendSystemMessage(Component.translatable("message.blindboxchallenge.death_note_executed", target.getName()));
         }
     }
