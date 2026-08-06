@@ -53,7 +53,9 @@ import net.minecraftforge.fml.common.Mod;
  */
 @Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class PillowCiScenario {
-    private static final int OBSERVATION_TICKS = 100;
+    // 必须严格小于生产实体的 200 tick 自动回收阈值；160 tick 给两台真实客户端足够的区块、
+    // 实体出生和同步数据到达窗口，随后仍由同一真实命中/超时路径完成断言。
+    private static final int OBSERVATION_TICKS = 160;
     private static final int RESULT_TIMEOUT_TICKS = 160;
     private static ActiveScenario active;
 
