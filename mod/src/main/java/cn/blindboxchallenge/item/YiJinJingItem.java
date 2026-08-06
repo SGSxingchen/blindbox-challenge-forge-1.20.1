@@ -23,7 +23,7 @@ public final class YiJinJingItem extends Item {
             return InteractionResultHolder.fail(stack);
         }
         if (!player.getAbilities().instabuild) stack.shrink(1);
-        level.playSound(null, player.blockPosition(), SoundEvents.ENCHANTMENT_TABLE_USE.value(), SoundSource.PLAYERS, 0.7F, 1.1F);
+        level.playSound(null, player.blockPosition(), SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.PLAYERS, 0.7F, 1.1F);
         return InteractionResultHolder.consume(stack);
     }
 }
