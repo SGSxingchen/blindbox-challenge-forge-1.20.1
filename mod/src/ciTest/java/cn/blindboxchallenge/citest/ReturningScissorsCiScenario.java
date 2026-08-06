@@ -281,9 +281,14 @@ public final class ReturningScissorsCiScenario {
         }
 
         private void assertNormalReturn() {
-            if (normalTarget.getHealth() >= normalTargetHealth || !normalScissors.hitTargetId().filter(expectedTargetId::equals).isPresent()
-                    || !hasTaggedInventoryStack(NORMAL_TOKEN) || countTaggedInventoryStacks(NORMAL_TOKEN) != 1) {
-                throw new IllegalStateException("返航剪刀命中、目标同步、完整 NBT 回收或物品守恒断言失败");
+            boolean targetHurt = normalTarget.getHealth() < normalTargetHealth;
+            boolean targetSynced = normalScissors.hitTargetId().filter(expectedTargetId::equals).isPresent();
+            int returnedCount = countTaggedInventoryStacks(NORMAL_TOKEN);
+            if (!targetHurt || !targetSynced || returnedCount != 1) {
+                throw new IllegalStateException("返航剪刀命中、目标同步、完整 NBT 回收或物品守恒断言失败：targetHurt="
+                        + targetHurt + ", targetSynced=" + targetSynced + ", returnedCount=" + returnedCount
+                        + ", targetHealth=" + normalTarget.getHealth() + ", targetHealthBefore=" + normalTargetHealth
+                        + ", stored=" + normalScissors.storedStack());
             }
         }
 
