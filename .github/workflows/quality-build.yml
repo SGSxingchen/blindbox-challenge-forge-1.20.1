@@ -26,17 +26,18 @@ jobs:
       - name: 断言正式 Jar 不含 CI 探针
         run: |
           FORMAL_JAR="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*.jar' ! -name '*-sources.jar' ! -name '*-citest.jar' -print -quit)"
-          test -n "$FORMAL_JAR"
-          ! jar tf "$FORMAL_JAR" | grep -q '^cn/blindboxchallenge/citest/'
-          ! jar tf "$FORMAL_JAR" | grep -q '^ci-audio/'
-          jar tf "$FORMAL_JAR" | grep -q '^META-INF/jarjar/.*jlayer.*\.jar$'
-          jar tf "$FORMAL_JAR" | grep -q '^META-INF/licenses/JLayer-LGPL-2.1.txt$'
-          jar tf "$FORMAL_JAR" | grep -q '^META-INF/licenses/JLayer-NOTICE.txt$'
+          fail() { echo "::error::正式 Jar 质量断言失败：$1"; exit 1; }
+          test -n "$FORMAL_JAR" || fail '找不到正式 Jar'
+          if jar tf "$FORMAL_JAR" | grep -q '^cn/blindboxchallenge/citest/'; then fail '正式 Jar 混入 ciTest 类'; fi
+          if jar tf "$FORMAL_JAR" | grep -q '^ci-audio/'; then fail '正式 Jar 混入 ciTest 音频'; fi
+          jar tf "$FORMAL_JAR" | grep -q '^META-INF/jarjar/.*jlayer.*\.jar$' || fail '正式 Jar 未包含 JLayer Jar-in-Jar'
+          jar tf "$FORMAL_JAR" | grep -q '^META-INF/licenses/JLayer-LGPL-2.1.txt$' || fail '正式 Jar 缺少 JLayer LGPL 文本'
+          jar tf "$FORMAL_JAR" | grep -q '^META-INF/licenses/JLayer-NOTICE.txt$' || fail '正式 Jar 缺少 JLayer NOTICE'
           CITEST_JAR="build/libs/blindboxchallenge-0.1.0-p1-citest.jar"
-          test -f "$CITEST_JAR"
-          jar tf "$CITEST_JAR" | grep -q '^cn/blindboxchallenge/citest/CiTestProbe.class$'
-          jar tf "$CITEST_JAR" | grep -q '^META-INF/mods.toml$'
-          jar tf "$CITEST_JAR" | grep -q '^ci-audio/blindbox-ci-tone.ogg$'
+          test -f "$CITEST_JAR" || fail '找不到独立 ciTest Jar'
+          jar tf "$CITEST_JAR" | grep -q '^cn/blindboxchallenge/citest/CiTestProbe.class$' || fail 'ciTest Jar 缺少探针入口'
+          jar tf "$CITEST_JAR" | grep -q '^META-INF/mods.toml$' || fail 'ciTest Jar 缺少 mods.toml'
+          jar tf "$CITEST_JAR" | grep -q '^ci-audio/blindbox-ci-tone.ogg$' || fail 'ciTest Jar 缺少自制 OGG 夹具'
       - name: 校验网络包方向与一次性提交门闩
         run: |
           grep -A1 'CommitPackingPacket.class' src/main/java/cn/blindboxchallenge/network/ModNetwork.java | grep -q 'PLAY_TO_SERVER'
@@ -63,6 +64,7 @@ jobs:
           find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-sources.jar' -print0 | sort -z | xargs -0 sha256sum > build/libs/SHA256SUMS
           cat build/libs/SHA256SUMS
       - name: 上传构建产物
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: blindboxchallenge-jar
