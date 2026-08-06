@@ -30,6 +30,12 @@ public final class ModItems {
     public static final RegistryObject<Item> POTATO_SNACK = ITEMS.register("potato_snack", () -> food(8, 0.8F));
     public static final RegistryObject<Item> RATION_PACK = ITEMS.register("ration_pack", () -> food(20, 1.0F));
     public static final RegistryObject<Item> SUN_CANDY = ITEMS.register("sun_candy", () -> food(2, 0.1F));
+    public static final RegistryObject<Item> WHITE_RABBIT_CANDY = ITEMS.register("white_rabbit_candy", () -> food(2, 0.1F));
+    public static final RegistryObject<Item> DEEP_SEA_FISH = ITEMS.register("deep_sea_fish", () -> food(2, 0.1F));
+    public static final RegistryObject<Item> HAM_SAUSAGE = ITEMS.register("ham_sausage", () -> food(4, 0.3F));
+    public static final RegistryObject<Item> QUAIL_EGG = ITEMS.register("quail_egg", () -> food(2, 0.2F));
+    public static final RegistryObject<Item> GREEN_SOY_MILK = ITEMS.register("green_soy_milk", () -> food(4, 0.3F));
+    public static final RegistryObject<Item> BEEF_BITES = ITEMS.register("beef_bites", () -> food(6, 0.6F));
 
     public static final RegistryObject<Item> FAIRY_WAND = ITEMS.register("fairy_wand", FairyWandItem::new);
     public static final RegistryObject<Item> TOY_CAR = ITEMS.register("toy_car", ModItems::collectible);
