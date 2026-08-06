@@ -855,6 +855,9 @@ public final class CiTestCommands {
         net.minecraft.core.BlockPos rayPos3 = fluidPos.south(3);
         // 岩浆夹具与真实倒水区域分离，避免原版相邻水/岩浆反应篡改待测源方块。
         net.minecraft.core.BlockPos lavaPos = fluidPos.east(4);
+        net.minecraft.core.BlockPos lavaRay1 = lavaPos.south();
+        net.minecraft.core.BlockPos lavaRay2 = lavaPos.south(2);
+        net.minecraft.core.BlockPos lavaRay3 = lavaPos.south(3);
         net.minecraft.core.BlockPos cheerPos = fluidPos.east(2);
         net.minecraft.core.BlockPos cheerSupport = cheerPos.below();
         net.minecraft.world.level.block.state.BlockState oldFluid = level.getBlockState(fluidPos);
@@ -862,6 +865,9 @@ public final class CiTestCommands {
         net.minecraft.world.level.block.state.BlockState oldRay2 = level.getBlockState(rayPos2);
         net.minecraft.world.level.block.state.BlockState oldRay3 = level.getBlockState(rayPos3);
         net.minecraft.world.level.block.state.BlockState oldLava = level.getBlockState(lavaPos);
+        net.minecraft.world.level.block.state.BlockState oldLavaRay1 = level.getBlockState(lavaRay1);
+        net.minecraft.world.level.block.state.BlockState oldLavaRay2 = level.getBlockState(lavaRay2);
+        net.minecraft.world.level.block.state.BlockState oldLavaRay3 = level.getBlockState(lavaRay3);
         net.minecraft.world.level.block.state.BlockState oldCheer = level.getBlockState(cheerPos);
         net.minecraft.world.level.block.state.BlockState oldCheerSupport = level.getBlockState(cheerSupport);
         double oldX = player.getX(), oldY = player.getY(), oldZ = player.getZ();
@@ -894,6 +900,9 @@ public final class CiTestCommands {
 
             player.teleportTo(level, lavaPos.getX() + 0.5D, lavaPos.getY() - 1.0D, lavaPos.getZ() + 3.5D,
                     180.0F, 0.0F);
+            level.setBlock(lavaRay1, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+            level.setBlock(lavaRay2, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+            level.setBlock(lavaRay3, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
             level.setBlock(lavaPos, net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState(), 3);
             if (!bath.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
                     || bath.getDamageValue() != 1
@@ -928,6 +937,9 @@ public final class CiTestCommands {
             level.setBlock(rayPos2, oldRay2, 3);
             level.setBlock(rayPos3, oldRay3, 3);
             level.setBlock(lavaPos, oldLava, 3);
+            level.setBlock(lavaRay1, oldLavaRay1, 3);
+            level.setBlock(lavaRay2, oldLavaRay2, 3);
+            level.setBlock(lavaRay3, oldLavaRay3, 3);
             level.setBlock(cheerPos, oldCheer, 3);
             level.setBlock(cheerSupport, oldCheerSupport, 3);
             player.teleportTo(level, oldX, oldY, oldZ, oldYaw, oldPitch);
