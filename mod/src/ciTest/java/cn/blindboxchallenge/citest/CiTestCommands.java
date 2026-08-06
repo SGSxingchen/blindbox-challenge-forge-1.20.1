@@ -469,22 +469,29 @@ public final class CiTestCommands {
         if (player.getCooldowns().isOnCooldown(ModItems.EFFICIENT_PIG_BREEDING.get())) {
             throw new IllegalStateException("pig breeding fixture was not clean before server cooldown assertion");
         }
-        // 固定高空孤立夹具区避免扫描或改动真实世界中既有猪，结束后精确回到原位置。
-        player.teleportTo(level, 192.5D, 200.0D, 192.5D, originalYRot, originalXRot);
-        net.minecraft.world.phys.AABB fixtureArea = player.getBoundingBox().inflate(12.0D);
+        // 高空夹具区与玩家保持原有 X/Z 柱，只上移到 y=200。原 X/Z 已由在线玩家
+        // 保持为完整加载，避免横向传送到新区块后同 tick 新实体尚未进入实体分区；
+        // 高度仍足以隔离自然猪，结束后精确回到原位置。
+        net.minecraft.core.BlockPos fixtureCenter = net.minecraft.core.BlockPos.containing(
+                originalX, 200.0D, originalZ);
+        player.teleportTo(level, fixtureCenter.getX() + 0.5D, fixtureCenter.getY(), fixtureCenter.getZ() + 0.5D,
+                originalYRot, originalXRot);
+        net.minecraft.world.phys.AABB fixtureArea = new net.minecraft.world.phys.AABB(fixtureCenter).inflate(12.0D);
         Set<UUID> fixturePigs = new HashSet<>();
         try {
             if (!level.getEntitiesOfClass(net.minecraft.world.entity.animal.Pig.class, fixtureArea).isEmpty()) {
                 throw new IllegalStateException("pig breeding fixture area was occupied before test execution");
             }
             // 先直接调用生产服务，明确证明 AABB 粗筛之后仍执行了 10 格球形过滤。
-            net.minecraft.world.entity.animal.Pig first = spawnFixturePig(level, player.getX() + 2.0D, player.getY(), player.getZ());
-            net.minecraft.world.entity.animal.Pig second = spawnFixturePig(level, player.getX() - 2.0D, player.getY(), player.getZ());
+            net.minecraft.world.entity.animal.Pig first = spawnFixturePig(level, fixtureCenter.getX() + 2.5D,
+                    fixtureCenter.getY(), fixtureCenter.getZ() + 0.5D);
+            net.minecraft.world.entity.animal.Pig second = spawnFixturePig(level, fixtureCenter.getX() - 1.5D,
+                    fixtureCenter.getY(), fixtureCenter.getZ() + 0.5D);
             fixturePigs.add(first.getUUID());
             fixturePigs.add(second.getUUID());
             // +10.1 仍落在玩家 AABB inflate(10) 的粗筛边缘，但必在精确 10 格球形之外。
-            net.minecraft.world.entity.animal.Pig outsideSphere = spawnFixturePig(level, player.getX() + 10.1D,
-                    player.getY(), player.getZ());
+            net.minecraft.world.entity.animal.Pig outsideSphere = spawnFixturePig(level, fixtureCenter.getX() + 10.6D,
+                    fixtureCenter.getY(), fixtureCenter.getZ() + 0.5D);
             fixturePigs.add(outsideSphere.getUUID());
             PigBreedingService.BreedingResult spherical = PigBreedingService.breedNearby(player);
             if (spherical.scannedPigCount() != 2 || spherical.eligiblePigCount() != 2 || spherical.bredPairCount() != 1
@@ -498,8 +505,10 @@ public final class CiTestCommands {
             fixturePigs.clear();
 
             // 再走物品生产入口，验证书不消耗、成功冷却和重复拒绝。
-            net.minecraft.world.entity.animal.Pig bookFirst = spawnFixturePig(level, player.getX() + 2.0D, player.getY(), player.getZ());
-            net.minecraft.world.entity.animal.Pig bookSecond = spawnFixturePig(level, player.getX() - 2.0D, player.getY(), player.getZ());
+            net.minecraft.world.entity.animal.Pig bookFirst = spawnFixturePig(level, fixtureCenter.getX() + 2.5D,
+                    fixtureCenter.getY(), fixtureCenter.getZ() + 0.5D);
+            net.minecraft.world.entity.animal.Pig bookSecond = spawnFixturePig(level, fixtureCenter.getX() - 1.5D,
+                    fixtureCenter.getY(), fixtureCenter.getZ() + 0.5D);
             fixturePigs.add(bookFirst.getUUID());
             fixturePigs.add(bookSecond.getUUID());
             ItemStack book = new ItemStack(ModItems.EFFICIENT_PIG_BREEDING.get());
@@ -522,8 +531,9 @@ public final class CiTestCommands {
             for (int gridX = -9; gridX <= 9 && fixturePigs.size() < maximum + 2; gridX++) {
                 for (int gridZ = -9; gridZ <= 9 && fixturePigs.size() < maximum + 2; gridZ++) {
                     if (gridX * gridX + gridZ * gridZ > 81) continue;
-                    net.minecraft.world.entity.animal.Pig pig = spawnFixturePig(level, player.getX() + gridX + 0.25D,
-                            player.getY(), player.getZ() + gridZ + 0.25D);
+                    net.minecraft.world.entity.animal.Pig pig = spawnFixturePig(level,
+                            fixtureCenter.getX() + gridX + 0.75D, fixtureCenter.getY(),
+                            fixtureCenter.getZ() + gridZ + 0.75D);
                     fixturePigs.add(pig.getUUID());
                 }
             }
@@ -561,7 +571,9 @@ public final class CiTestCommands {
         if (pig == null) throw new IllegalStateException("could not create pig breeding fixture entity");
         pig.setAge(0);
         pig.setPos(x, y, z);
-        level.addFreshEntity(pig);
+        if (!level.addFreshEntity(pig)) {
+            throw new IllegalStateException("pig breeding fixture entity was not added to the loaded server world");
+        }
         return pig;
     }
 
