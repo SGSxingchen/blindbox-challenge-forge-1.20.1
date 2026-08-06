@@ -1,6 +1,7 @@
 package cn.blindboxchallenge.citest;
 
 import cn.blindboxchallenge.data.BlindBoxPoolSavedData;
+import cn.blindboxchallenge.data.DeathNoteSavedData;
 import cn.blindboxchallenge.data.PrizeBundle;
 import cn.blindboxchallenge.data.TransactionRecord;
 import cn.blindboxchallenge.capability.ModCapabilities;
@@ -58,9 +59,20 @@ public final class CiTestCommands {
                 .requires(source -> source.hasPermission(4))
                 .then(Commands.literal("export").executes(context -> export(context.getSource())))
                 .then(Commands.literal("seed_recovery_fixture").executes(context -> seedRecoveryFixture(context.getSource())))
+                .then(Commands.literal("seed_p4_pending_death_fixture").executes(context -> seedP4PendingDeathFixture(context.getSource())))
                 .then(Commands.literal("run_multi_business").executes(context -> runMultiBusiness(context.getSource())))
                 .then(Commands.literal("run_p2_business").executes(context -> runP2Business(context.getSource())))
                 .then(Commands.literal("run_p3_business").executes(context -> runP3Business(context.getSource())))
+                .then(Commands.literal("run_p4_text_negative")
+                        .executes(context -> P4TextNegativeCiAssertions.run(context.getSource())))
+                .then(Commands.literal("start_p4_text_clients")
+                        .executes(context -> P4TextCiScenario.start(context.getSource())))
+                .then(Commands.literal("verify_p4_text_clients")
+                        .executes(context -> P4TextCiScenario.verify(context.getSource())))
+                .then(Commands.literal("verify_p4_text_reconnect")
+                        .executes(context -> P4TextCiScenario.verifyReconnect(context.getSource())))
+                .then(Commands.literal("cleanup_p4_text_clients")
+                        .executes(context -> P4TextCiScenario.cleanup(context.getSource())))
                 .then(Commands.literal("start_p3_pig_clients")
                         .executes(context -> P3PigBreedingCiScenario.start(context.getSource())))
                 .then(Commands.literal("verify_p3_pig_clients")
@@ -1256,6 +1268,23 @@ public final class CiTestCommands {
         } catch (Exception exception) {
             source.sendFailure(Component.literal("CI 恢复夹具写入失败：" + exception.getClass().getSimpleName()));
             CiTestProbe.LOGGER.error("Cannot seed recovery fixture", exception);
+            return 0;
+        }
+    }
+
+    /** 只为生命周期门禁创建尚未到期的 P4 持久排程；不会写成功 marker 或执行任何伤害。 */
+    private static int seedP4PendingDeathFixture(CommandSourceStack source) {
+        try {
+            DeathNoteSavedData data = DeathNoteSavedData.get(source.getServer().overworld());
+            if (!data.entries().isEmpty()) throw new IllegalStateException("P4 死亡笔记恢复夹具要求空排程");
+            long dueTick = source.getServer().overworld().getGameTime() + 200000L;
+            data.schedule(UUID.fromString("88888888-8888-8888-8888-888888888888"),
+                    UUID.fromString("99999999-9999-9999-9999-999999999999"), dueTick);
+            source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P4_PENDING_DEATH=seeded"), false);
+            return 1;
+        } catch (Exception exception) {
+            source.sendFailure(Component.literal("CI P4 死亡笔记恢复夹具写入失败：" + exception.getClass().getSimpleName()));
+            CiTestProbe.LOGGER.error("Cannot seed P4 pending death-note fixture", exception);
             return 0;
         }
     }

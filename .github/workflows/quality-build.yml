@@ -35,8 +35,13 @@ jobs:
           grep -A1 'CommitPackingPacket.class' src/main/java/cn/blindboxchallenge/network/ModNetwork.java | grep -q 'PLAY_TO_SERVER'
           grep -A1 'RequestDoubleJumpPacket.class' src/main/java/cn/blindboxchallenge/network/ModNetwork.java | grep -q 'PLAY_TO_SERVER'
           grep -A1 'SyncPlayerAbilityPacket.class' src/main/java/cn/blindboxchallenge/network/ModNetwork.java | grep -q 'PLAY_TO_CLIENT'
+          grep -A1 'CommitLetterEditPacket.class' src/main/java/cn/blindboxchallenge/network/ModNetwork.java | grep -q 'PLAY_TO_SERVER'
+          grep -A1 'CommitDeathNotePacket.class' src/main/java/cn/blindboxchallenge/network/ModNetwork.java | grep -q 'PLAY_TO_SERVER'
+          grep -A1 'ShowLetterPacket.class' src/main/java/cn/blindboxchallenge/network/ModNetwork.java | grep -q 'PLAY_TO_CLIENT'
           grep -q 'authorizeAndConsume(player, packet)' src/main/java/cn/blindboxchallenge/network/CommitPackingPacket.java
           grep -q 'consumeSubmission()' src/main/java/cn/blindboxchallenge/menu/PackingMenu.java
+          grep -q 'isMatchingTextItem(player, packet.heldSlot(), packet.instanceId(), packet.revision(), true)' src/main/java/cn/blindboxchallenge/network/CommitLetterEditPacket.java
+          grep -q 'isMatchingTextItem(player, packet.heldSlot(), packet.instanceId(), packet.revision(), false)' src/main/java/cn/blindboxchallenge/network/CommitDeathNotePacket.java
       - name: 生成 Jar 校验和
         run: |
           find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-sources.jar' -print0 | sort -z | xargs -0 sha256sum > build/libs/SHA256SUMS

@@ -35,6 +35,8 @@ public final class ClientModEvents {
     public static void registerScreens(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
             MenuScreens.register(ModMenus.PACKING_MENU.get(), PackingScreen::new);
+            MenuScreens.register(ModMenus.LETTER_EDIT_MENU.get(), LetterEditScreen::new);
+            MenuScreens.register(ModMenus.DEATH_NOTE_MENU.get(), DeathNoteScreen::new);
             // 仅客户端渲染谓词：生产物品类完全不引用客户端类型，只读取服务器已同步的 NBT。
             ItemProperties.register(ModItems.BLACK_KNIGHT_TELESCOPIC_KNIFE.get(),
                     new ResourceLocation(BlindBoxChallenge.MOD_ID, "extended"),

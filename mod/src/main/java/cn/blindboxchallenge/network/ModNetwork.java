@@ -8,7 +8,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import java.util.Optional;
 
 public final class ModNetwork {
-    private static final String PROTOCOL = "2";
+    private static final String PROTOCOL = "3";
     public static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder.named(new ResourceLocation(BlindBoxChallenge.MOD_ID, "main"))
             .networkProtocolVersion(() -> PROTOCOL).clientAcceptedVersions(PROTOCOL::equals).serverAcceptedVersions(PROTOCOL::equals).simpleChannel();
     private static int nextId;
@@ -20,6 +20,12 @@ public final class ModNetwork {
                 RequestDoubleJumpPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(nextId++, SyncPlayerAbilityPacket.class, SyncPlayerAbilityPacket::encode, SyncPlayerAbilityPacket::decode,
                 SyncPlayerAbilityPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(nextId++, CommitLetterEditPacket.class, CommitLetterEditPacket::encode, CommitLetterEditPacket::decode,
+                CommitLetterEditPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextId++, CommitDeathNotePacket.class, CommitDeathNotePacket::encode, CommitDeathNotePacket::decode,
+                CommitDeathNotePacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextId++, ShowLetterPacket.class, ShowLetterPacket::encode, ShowLetterPacket::decode,
+                ShowLetterPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     private ModNetwork() {}

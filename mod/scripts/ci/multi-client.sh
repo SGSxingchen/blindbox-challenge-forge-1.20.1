@@ -29,7 +29,7 @@ curl --fail --location --retry 3 --connect-timeout 20 -o "${SERVER_DIR}/${INSTAL
  mkdir -p mods
  cp "../../${FORMAL}" "../../${CITEST}" mods/
  mkfifo server.stdin
- BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_SCISSORS_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_PIG_MARKER_DIR="${EVIDENCE_ABS}" \
+ BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_SCISSORS_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_PIG_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_MARKER_DIR="${EVIDENCE_ABS}" \
    setsid ./run.sh nogui < server.stdin > server.log 2>&1 & echo $! > server.pid
 )
 SERVER_PID="$(cat "${SERVER_DIR}/server.pid")"
@@ -284,6 +284,49 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_RECONNECT=success' "${SERVER_DIR}/server.log"
+# P4 负例只调用生产会话授权/文本过滤入口，验证换手、旧修订、伪造容器、控制字符与越限拒绝；
+# 它不替代下方由真实客户端右键和 Screen 控件完成的成功链路。
+printf 'blindboxcitest run_p4_text_negative\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P4_TEXT_NEGATIVE=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_TEXT_NEGATIVE=success' "${SERVER_DIR}/server.log"
+# P4 首批必须从两次正式 Item#use 打开的真实客户端界面完成：Alice 先阅读信件，随后点击编辑
+# 信件和死亡笔记的生产输入控件。marker 只记录真实 Screen/点击/服务端关闭；服务端再核验
+# NBT 修订、持久排程以及 Bob 的到期死亡，绝不以直发 C2S 或预写文件代替 GUI。
+printf 'blindboxcitest start_p4_text_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P4_TEXT_STARTED=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_TEXT_STARTED=success' "${SERVER_DIR}/server.log"
+for _ in $(seq 1 180); do
+  if grep -q 'BLINDBOX_CITEST_P4_TEXT=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P4_TEXT_SERVER=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_TEXT_SERVER=success' "${SERVER_DIR}/server.log"
+for _ in $(seq 1 90); do
+  [ -f "${EVIDENCE}/client-1-p4-text-observed.marker" ] && [ -f "${EVIDENCE}/client-2-p4-death-observed.marker" ] && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+test -f "${EVIDENCE}/client-1-p4-text-observed.marker"
+test -f "${EVIDENCE}/client-2-p4-death-observed.marker"
+printf 'blindboxcitest verify_p4_text_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P4_TEXT_CLIENTS=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_TEXT_CLIENTS=success' "${SERVER_DIR}/server.log"
+printf 'blindboxcitest cleanup_p4_text_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P4_TEXT_CLEANUP=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_TEXT_CLEANUP=success' "${SERVER_DIR}/server.log"
 printf 'blindboxcitest export\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_EXPORT=' "${SERVER_DIR}/server.log" && break

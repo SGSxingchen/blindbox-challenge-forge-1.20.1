@@ -3,6 +3,7 @@ package cn.blindboxchallenge.citest;
 import cn.blindboxchallenge.data.BlindBoxPoolSavedData;
 import cn.blindboxchallenge.data.PrizeBundle;
 import cn.blindboxchallenge.data.TransactionRecord;
+import cn.blindboxchallenge.data.DeathNoteSavedData;
 import cn.blindboxchallenge.util.InventoryEvidence;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -58,6 +59,13 @@ public final class CanonicalStateExporter {
                         "bundle_id", entry.getKey().toString(),
                         "transaction_id", entry.getValue().toString())));
         root.put("open_reservations", reservations);
+
+        List<Map<String, Object>> deathNotes = new ArrayList<>();
+        DeathNoteSavedData.get(server.overworld()).entries().stream().sorted(Comparator.comparing(entry -> entry.id().toString()))
+                .forEach(entry -> deathNotes.add(Map.of(
+                        "id", entry.id().toString(), "owner", entry.owner().toString(), "target", entry.target().toString(),
+                        "due_tick", entry.dueTick())));
+        root.put("death_note_entries", deathNotes);
 
         Files.createDirectories(target.toAbsolutePath().getParent());
         Path temporary = target.resolveSibling(target.getFileName() + ".tmp");

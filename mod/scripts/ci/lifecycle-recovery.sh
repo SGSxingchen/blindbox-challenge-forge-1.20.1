@@ -78,8 +78,9 @@ scan_log() {
 # 夹具包含两个 bundle、两个事务和一个 OPEN reservation；重启前没有玩家登录，
 # 因而可精确验证 SavedData 证据持久化，不把登录恢复行为混入本里程碑。
 start_server first.log
-printf 'blindboxcitest seed_recovery_fixture\nblindboxcitest export\nsave-all flush\n' >&"${SERVER_FD}"
+printf 'blindboxcitest seed_recovery_fixture\nblindboxcitest seed_p4_pending_death_fixture\nblindboxcitest export\nsave-all flush\n' >&"${SERVER_FD}"
 wait_for_log first.log 'BLINDBOX_CITEST_FIXTURE=seeded'
+wait_for_log first.log 'BLINDBOX_CITEST_P4_PENDING_DEATH=seeded'
 wait_for_log first.log 'BLINDBOX_CITEST_EXPORT='
 wait_for_log first.log 'Saved the game'
 test -s "${SERVER_DIR}/citest-results/canonical-state.json"
@@ -121,7 +122,9 @@ assert {entry.get('kind') for entry in before['transactions']} == {'PACK', 'OPEN
 assert len(before.get('open_reservations', [])) == 1, 'fixture must contain one OPEN reservation'
 serialized = json.dumps(before, ensure_ascii=False, sort_keys=True)
 assert 'citest-pack-asset' in serialized and 'citest-open-asset' in serialized
-for key in ('players', 'bundles', 'transactions', 'open_reservations'):
+assert len(before.get('death_note_entries', [])) == 1, 'fixture must contain one pending P4 death-note entry'
+assert before['death_note_entries'][0]['due_tick'] > before['game_time'], 'P4 death-note fixture must stay pending before SIGKILL'
+for key in ('players', 'bundles', 'transactions', 'open_reservations', 'death_note_entries'):
     assert before.get(key) == after.get(key), f'{key} changed across flushed SIGKILL recovery'
 assert int(after.get('game_time', -1)) >= int(before.get('game_time', -1))
 result = {
@@ -131,7 +134,7 @@ result = {
     'product_sha256': expected_sha,
     'before': str(before_path),
     'after': str(after_path),
-    'assertions': ['two unique-NBT bundles persisted', 'PACK and OPEN receipts persisted', 'OPEN reservation persisted', 'no duplicate or lost SavedData asset evidence'],
+    'assertions': ['two unique-NBT bundles persisted', 'PACK and OPEN receipts persisted', 'OPEN reservation persisted', 'one pending death-note UUID/due-tick entry persisted', 'no duplicate or lost SavedData asset evidence'],
     'limitations': ['online-player inventory mutation and login recovery are covered by later client milestones'],
 }
 (pathlib.Path(after_path).parent / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')

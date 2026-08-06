@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-P1 的盲盒、打包、全局奖池、事务隔离与调试命令，P2 的 50 项基础物品族，以及 P3 的持久能力、抱枕投掷与返航剪刀均已验收归档；P3 最终六门禁证据见 [P3_IMPLEMENTATION.md](docs/P3_IMPLEMENTATION.md)、[P3_ACCEPTANCE.md](docs/P3_ACCEPTANCE.md)。本仓库现进入 P4 交互、传送与在线音频开发，范围与实施进度见 [P4_IMPLEMENTATION.md](docs/P4_IMPLEMENTATION.md)，验收要求见 [P4_ACCEPTANCE.md](docs/P4_ACCEPTANCE.md)，准备裁决见 [P4_PREPARATION.md](docs/P4_PREPARATION.md)。原始资料在 `source-package/`，不得修改或删除；原压缩包备份在 `archive/`。
+P1 的盲盒、打包、全局奖池、事务隔离与调试命令，P2 的 50 项基础物品族，以及 P3 的持久能力、抱枕投掷与返航剪刀均已验收归档；P3 最终六门禁证据见 [P3_IMPLEMENTATION.md](docs/P3_IMPLEMENTATION.md)、[P3_ACCEPTANCE.md](docs/P3_ACCEPTANCE.md)。本仓库现进入 P4 交互、传送与在线音频开发：第一批的 CORE-03 信件与 038 死亡笔记已进入静态实现待验，受控会话、持久排程、原创资源与 ciTest 范围见 [P4_IMPLEMENTATION.md](docs/P4_IMPLEMENTATION.md)，验收要求与真实未覆盖边界见 [P4_ACCEPTANCE.md](docs/P4_ACCEPTANCE.md)，准备裁决见 [P4_PREPARATION.md](docs/P4_PREPARATION.md)。原始资料在 `source-package/`，不得修改或删除；原压缩包备份在 `archive/`。
 
 ## 规划文档
 
