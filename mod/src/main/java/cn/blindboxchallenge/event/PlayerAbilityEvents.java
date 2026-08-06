@@ -13,6 +13,7 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent.PlayerChangedDimensionEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent.StartTracking;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -30,13 +31,15 @@ public final class PlayerAbilityEvents {
         }
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void clone(PlayerEvent.Clone event) {
         if (event.getEntity().level().isClientSide || !(event.getEntity() instanceof ServerPlayer replacement)) return;
         event.getOriginal().reviveCaps();
         try {
             event.getOriginal().getCapability(ModCapabilities.PLAYER_ABILITY).ifPresent(oldData ->
-                    replacement.getCapability(ModCapabilities.PLAYER_ABILITY).ifPresent(newData -> newData.copyPersistentFrom(oldData)));
+                    replacement.getCapability(ModCapabilities.PLAYER_ABILITY).ifPresent(newData ->
+                            // 以 Capability 自身的持久 NBT 完整复制，避免死亡替换期间读取运行期字段。
+                            newData.deserializeNBT(oldData.serializeNBT().copy())));
         } finally {
             event.getOriginal().invalidateCaps();
         }
