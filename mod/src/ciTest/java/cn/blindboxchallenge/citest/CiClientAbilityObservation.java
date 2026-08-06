@@ -16,6 +16,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
@@ -129,7 +130,8 @@ public final class CiClientAbilityObservation {
         if (ALICE.equals(role()) && observedDisconnectAfterLifecycle) recoveryLogin = true;
     }
 
-    @SubscribeEvent
+    // 必须早于正式 ClientAbilityKeyEvents 的同一 END tick 执行，让生产 consumeClick() 消费这次真实映射点击。
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft minecraft = Minecraft.getInstance();
