@@ -38,7 +38,48 @@ public final class CiTestCommands {
                 .requires(source -> source.hasPermission(4))
                 .then(Commands.literal("export").executes(context -> export(context.getSource())))
                 .then(Commands.literal("seed_recovery_fixture").executes(context -> seedRecoveryFixture(context.getSource())))
-                .then(Commands.literal("run_multi_business").executes(context -> runMultiBusiness(context.getSource()))));
+                .then(Commands.literal("run_multi_business").executes(context -> runMultiBusiness(context.getSource())))
+                .then(Commands.literal("prepare_reconnect").executes(context -> prepareReconnect(context.getSource())))
+                .then(Commands.literal("verify_reconnect").executes(context -> verifyReconnect(context.getSource()))));
+    }
+
+    private static final UUID RECONNECT_TOKEN = UUID.fromString("77777777-7777-7777-7777-777777777777");
+
+    private static int prepareReconnect(CommandSourceStack source) {
+        try {
+            ServerPlayer alice = source.getServer().getPlayerList().getPlayerByName("BlindBoxAlice");
+            if (alice == null) throw new IllegalStateException("Alice not online before reconnect test");
+            ItemStack box = BlindBoxService.createBlindBox(RECONNECT_TOKEN);
+            alice.getInventory().selected = 1;
+            alice.setItemInHand(InteractionHand.MAIN_HAND, box);
+            box.getItem().use(alice.serverLevel(), alice, InteractionHand.MAIN_HAND);
+            if (!BlindBoxItem.hasActiveUseState(alice, box)) throw new IllegalStateException("reconnect opening state missing");
+            alice.containerMenu.broadcastChanges();
+            source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_RECONNECT_PREPARED=success"), false);
+            return 1;
+        } catch (Exception exception) {
+            source.sendFailure(Component.literal("CI 重连准备失败：" + exception.getClass().getSimpleName()));
+            CiTestProbe.LOGGER.error("Cannot prepare reconnect suite", exception);
+            return 0;
+        }
+    }
+
+    private static int verifyReconnect(CommandSourceStack source) {
+        try {
+            ServerPlayer alice = source.getServer().getPlayerList().getPlayerByName("BlindBoxAlice");
+            if (alice == null) throw new IllegalStateException("Alice not online after reconnect");
+            ItemStack box = findBlindBoxByToken(alice, RECONNECT_TOKEN);
+            if (box.isEmpty()) throw new IllegalStateException("reconnect token was consumed or lost");
+            if (BlindBoxItem.hasActiveUseState(alice, box) || alice.isUsingItem()) {
+                throw new IllegalStateException("opening state survived disconnect/reconnect");
+            }
+            source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_RECONNECT=success"), false);
+            return 1;
+        } catch (Exception exception) {
+            source.sendFailure(Component.literal("CI 重连验证失败：" + exception.getClass().getSimpleName()));
+            CiTestProbe.LOGGER.error("Cannot verify reconnect suite", exception);
+            return 0;
+        }
     }
 
     /** 两个真实客户端在线时，从服务端直接调用生产事务入口并断言多人安全语义。 */
@@ -151,6 +192,20 @@ public final class CiTestCommands {
         for (int slot = 0; slot < 36; slot++) player.getInventory().setItem(slot, ItemStack.EMPTY);
         player.getInventory().offhand.set(0, ItemStack.EMPTY);
         player.containerMenu.setCarried(ItemStack.EMPTY);
+    }
+
+    private static ItemStack findBlindBoxByToken(ServerPlayer player, UUID token) {
+        for (int slot = 0; slot < 36; slot++) {
+            ItemStack stack = player.getInventory().getItem(slot);
+            if (hasToken(stack, token)) return stack;
+        }
+        ItemStack offhand = player.getOffhandItem();
+        return hasToken(offhand, token) ? offhand : ItemStack.EMPTY;
+    }
+
+    private static boolean hasToken(ItemStack stack, UUID token) {
+        return stack.is(ModItems.BLIND_BOX.get()) && stack.hasTag() && stack.getTag().hasUUID(BlindBoxService.TOKEN_KEY)
+                && token.equals(stack.getTag().getUUID(BlindBoxService.TOKEN_KEY));
     }
 
     private static ItemStack findBlindBox(ServerPlayer player) {

@@ -3,6 +3,7 @@ package cn.blindboxchallenge.citest;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraftforge.api.distmarker.Dist;
@@ -21,6 +22,9 @@ public final class CiClientSmokeEvents {
     private static int joinedTicks;
     private static boolean connectStarted;
     private static boolean completed;
+    private static boolean everJoined;
+    private static boolean reconnectStarted;
+    private static int reconnectJoinedTicks;
 
     private CiClientSmokeEvents() {
     }
@@ -60,16 +64,39 @@ public final class CiClientSmokeEvents {
         }
         if (minecraft.level == null || minecraft.player == null || minecraft.getConnection() == null) {
             joinedTicks = 0;
+            if (everJoined && Boolean.getBoolean("blindbox.ci.reconnect") && !reconnectStarted
+                    && minecraft.screen instanceof DisconnectedScreen) {
+                String address = System.getProperty("blindbox.ci.serverAddress", "127.0.0.1:25565");
+                ServerData data = new ServerData("BlindBox CI reconnect", address, false);
+                reconnectStarted = true;
+                ConnectScreen.startConnecting(minecraft.screen, minecraft, ServerAddress.parseString(address), data, false);
+            }
             return;
         }
         joinedTicks++;
-        if (joinedTicks == 40) {
+        if (!everJoined && joinedTicks == 40) {
+            everJoined = true;
             writeMarker("multiplayer-connected-40-ticks\n");
+        } else if (reconnectStarted && everJoined) {
+            reconnectJoinedTicks++;
+            if (reconnectJoinedTicks == 40) writeReconnectMarker();
         }
         String releaseValue = System.getProperty("blindbox.ci.clientRelease");
         if (joinedTicks >= 40 && releaseValue != null && Files.isRegularFile(Path.of(releaseValue).toAbsolutePath())) {
             completed = true;
             minecraft.stop();
+        }
+    }
+
+    private static void writeReconnectMarker() {
+        String markerValue = System.getProperty("blindbox.ci.reconnectMarker");
+        if (markerValue == null || markerValue.isBlank()) throw new IllegalStateException("缺少 blindbox.ci.reconnectMarker");
+        Path marker = Path.of(markerValue).toAbsolutePath();
+        try {
+            Files.createDirectories(marker.getParent());
+            Files.writeString(marker, "multiplayer-reconnected-40-ticks\n");
+        } catch (IOException exception) {
+            throw new IllegalStateException("无法写入客户端重连 CI 标志：" + marker, exception);
         }
     }
 

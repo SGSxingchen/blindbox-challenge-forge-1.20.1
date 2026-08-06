@@ -33,7 +33,7 @@ def stop(process):
         process.wait()
 
 
-def launch(directory: Path, username: str, uuid: str, marker: Path, release: Path):
+def launch(directory: Path, username: str, uuid: str, marker: Path, release: Path, reconnect_marker: Path):
     options = minecraft_launcher_lib.utils.generate_test_options()
     options.update({
         "username": username, "uuid": uuid, "token": "blindbox-ci-offline-token",
@@ -41,7 +41,9 @@ def launch(directory: Path, username: str, uuid: str, marker: Path, release: Pat
         "disableMultiplayer": False,
         "jvmArguments": ["-Xms768M", "-Xmx2G", "-Dblindbox.ci.multiplayerSmoke=true",
                          "-Dblindbox.ci.serverAddress=127.0.0.1:25565",
-                         f"-Dblindbox.ci.clientMarker={marker}", f"-Dblindbox.ci.clientRelease={release}"],
+                         f"-Dblindbox.ci.clientMarker={marker}", f"-Dblindbox.ci.clientRelease={release}",
+                         f"-Dblindbox.ci.reconnectMarker={reconnect_marker}"]
+                        + (["-Dblindbox.ci.reconnect=true"] if username == "BlindBoxAlice" else []),
     })
     command = ["xvfb-run", "-a", "-s", "-screen 0 1024x576x24 +extension GLX",
                *minecraft_launcher_lib.command.get_minecraft_command(VERSION_ID, str(directory), options)]
@@ -70,8 +72,10 @@ def main():
                 shutil.rmtree(directory)
             shutil.copytree(template, directory)
             marker = evidence / f"client-{index}-connected.marker"
+            reconnect_marker = evidence / f"client-{index}-reconnected.marker"
             marker.unlink(missing_ok=True)
-            clients.append((*launch(directory, username, uuid, marker, release), marker, username, uuid, directory))
+            reconnect_marker.unlink(missing_ok=True)
+            clients.append((*launch(directory, username, uuid, marker, release, reconnect_marker), marker, username, uuid, directory))
 
         deadline = time.monotonic() + 600
         while time.monotonic() < deadline:
@@ -109,7 +113,7 @@ def main():
                 raise RuntimeError(f"{username} 退出码异常：{code}")
         result = {"schema": 1, "status": "success", "suite": "multi-client-connection",
                   "players": [{"name": p[0], "uuid": p[1]} for p in PLAYERS],
-                  "assertions": ["two-real-forge-clients", "same-dedicated-server", "distinct-offline-identities", "stable-40-ticks", "zero-exit"]}
+                  "assertions": ["two-real-forge-clients", "same-dedicated-server", "distinct-offline-identities", "stable-40-ticks", "alice-real-disconnect-reconnect", "zero-exit"]}
         (evidence / "clients-result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     finally:
         for process, output, *_ in clients:
