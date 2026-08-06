@@ -142,19 +142,21 @@ public final class CiTestCommands {
             double fairySpeed = attributeTotal(ModItems.FAIRY_WAND.get(), net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED);
             double fairyKnockback = attributeTotal(ModItems.FAIRY_WAND.get(), net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_KNOCKBACK);
             if (fairyWand.getMaxDamage() != net.minecraft.world.item.Tiers.WOOD.getUses()
-                    || Double.compare(fairyDamage, 3.0D) != 0
-                    || Double.compare(fairySpeed, -2.4D) != 0
-                    || Double.compare(fairyKnockback, 2.0D) != 0) {
-                throw new IllegalStateException("fairy wand lacks wooden-sword and knockback-II semantics");
+                    || !approximately(fairyDamage, 3.0D)
+                    || !approximately(fairySpeed, -2.4D)
+                    || !approximately(fairyKnockback, 2.0D)) {
+                throw new IllegalStateException("fairy wand lacks wooden-sword and knockback-II semantics: damage="
+                        + fairyDamage + ", speed=" + fairySpeed + ", knockback=" + fairyKnockback);
             }
 
             ItemStack sharkDagger = new ItemStack(ModItems.SHARK_DAGGER_PILLOW.get());
             double sharkDamage = attributeTotal(ModItems.SHARK_DAGGER_PILLOW.get(), net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
             double sharkSpeed = attributeTotal(ModItems.SHARK_DAGGER_PILLOW.get(), net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED);
             if (sharkDagger.getMaxDamage() != net.minecraft.world.item.Tiers.STONE.getUses()
-                    || Double.compare(sharkDamage, 4.0D) != 0
-                    || Double.compare(sharkSpeed, -2.4D) != 0) {
-                throw new IllegalStateException("shark dagger pillow differs from vanilla stone-sword semantics");
+                    || !approximately(sharkDamage, 4.0D)
+                    || !approximately(sharkSpeed, -2.4D)) {
+                throw new IllegalStateException("shark dagger pillow differs from vanilla stone-sword semantics: damage="
+                        + sharkDamage + ", speed=" + sharkSpeed);
             }
 
             source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P2_BUSINESS=success"), false);
@@ -169,6 +171,10 @@ public final class CiTestCommands {
     private static double attributeTotal(net.minecraft.world.item.Item item, net.minecraft.world.entity.ai.attributes.Attribute attribute) {
         return item.getDefaultAttributeModifiers(net.minecraft.world.entity.EquipmentSlot.MAINHAND)
                 .get(attribute).stream().mapToDouble(net.minecraft.world.entity.ai.attributes.AttributeModifier::getAmount).sum();
+    }
+
+    private static boolean approximately(double actual, double expected) {
+        return Math.abs(actual - expected) <= 1.0E-6D;
     }
 
     private static void assertFood(net.minecraft.world.item.Item item, int nutrition, float saturation) {
