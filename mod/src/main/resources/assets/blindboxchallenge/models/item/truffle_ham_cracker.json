@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "blindboxchallenge:item/truffle_ham_cracker"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "blindboxchallenge:item/rat_jerky_totem"
+  }
+}

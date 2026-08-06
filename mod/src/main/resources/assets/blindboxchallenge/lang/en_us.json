@@ -5,5 +5,14 @@
   "screen.blindboxchallenge.selection": "slot:count",
   "screen.blindboxchallenge.pack": "Pack and Create Blind Box",
   "screen.blindboxchallenge.help": "Enter inventory slot:count, e.g. 0:5, 12:1",
-  "screen.blindboxchallenge.invalid_selection": "Enter valid, non-duplicate slot:count pairs."
+  "screen.blindboxchallenge.invalid_selection": "Enter valid, non-duplicate slot:count pairs.",
+  "item.blindboxchallenge.adrenaline": "Adrenaline",
+  "item.blindboxchallenge.rat_jerky_totem": "Rat Jerky Totem",
+  "item.blindboxchallenge.long_screwdriver": "One-Metre Screwdriver",
+  "item.blindboxchallenge.pickaxe_hoe": "Pickaxe Hoe",
+  "item.blindboxchallenge.lighter": "Lighter",
+  "item.blindboxchallenge.truffle_ham_cracker": "Truffle Ham Cracker",
+  "item.blindboxchallenge.potato_snack": "Potato Snack",
+  "item.blindboxchallenge.ration_pack": "Ration Pack",
+  "item.blindboxchallenge.sun_candy": "Sun Candy"
 }

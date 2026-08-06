@@ -8,6 +8,12 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import cn.blindboxchallenge.registry.ModItems;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -27,13 +33,28 @@ public final class ServerLifecycleEvents {
     }
 
     @SubscribeEvent
-    public static void death(LivingDeathEvent event) {
+    public static void dimensionChange(PlayerEvent.PlayerChangedDimensionEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) BlindBoxItem.cancelUse(player);
     }
 
     @SubscribeEvent
-    public static void dimensionChange(PlayerEvent.PlayerChangedDimensionEvent event) {
+    public static void death(LivingDeathEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) BlindBoxItem.cancelUse(player);
+        if (event.getEntity().level().isClientSide || event.getSource().is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return;
+
+        for (InteractionHand hand : InteractionHand.values()) {
+            ItemStack stack = event.getEntity().getItemInHand(hand);
+            if (!stack.is(ModItems.RAT_JERKY_TOTEM.get())) continue;
+            event.setCanceled(true);
+            stack.shrink(1);
+            event.getEntity().setHealth(1.0F);
+            event.getEntity().removeAllEffects();
+            event.getEntity().addEffect(new MobEffectInstance(MobEffects.REGENERATION, 900, 1));
+            event.getEntity().addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 100, 1));
+            event.getEntity().addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 800, 0));
+            event.getEntity().level().broadcastEntityEvent(event.getEntity(), (byte) 35);
+            return;
+        }
     }
 
     private ServerLifecycleEvents() {}
