@@ -424,10 +424,13 @@ public final class CiTestCommands {
                 player.fallDistance = originalFallDistance;
                 player.hurtMarked = originalHurtMarked;
                 ServerPlayer restoredPlayer = player;
+                boolean restoredLearned = originalLearned;
+                boolean restoredUsedDoubleJump = originalUsedDoubleJump;
+                long restoredNextDoubleJumpTick = originalNextDoubleJumpTick;
                 restoredPlayer.getCapability(ModCapabilities.PLAYER_ABILITY).ifPresent(data -> {
-                    data.setLearnedYiJin(originalLearned);
-                    data.setUsedDoubleJump(originalUsedDoubleJump);
-                    data.setNextDoubleJumpTick(originalNextDoubleJumpTick);
+                    data.setLearnedYiJin(restoredLearned);
+                    data.setUsedDoubleJump(restoredUsedDoubleJump);
+                    data.setNextDoubleJumpTick(restoredNextDoubleJumpTick);
                     PlayerAbilityService.reconcileAttributes(restoredPlayer, data);
                     PlayerAbilityService.syncTrackingAndSelf(restoredPlayer, data);
                 });
