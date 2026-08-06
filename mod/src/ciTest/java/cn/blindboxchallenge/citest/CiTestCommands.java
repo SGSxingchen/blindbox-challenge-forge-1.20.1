@@ -138,14 +138,25 @@ public final class CiTestCommands {
         try {
             var level = source.getServer().overworld();
             BlockPos position = level.getSharedSpawnPos().offset(0, 18, 40);
+            BlockPos support = position.below();
             if (!level.getEntitiesOfClass(ClockworkChickenEntity.class,
                     new net.minecraft.world.phys.AABB(position).inflate(2.0D)).isEmpty()) {
                 throw new IllegalStateException("P4 小黄鸡恢复夹具已存在");
             }
+            // 夹具只验证实体 NBT/Fuse 跨强杀恢复，必须使用真实固定支撑面，不能让 TNT 物理下落
+            // 把“保存位置变化”伪造成恢复错误；正式右键生成的小黄鸡仍完全沿用原版重力。
+            if (!level.getBlockState(position).isAir() || !level.getBlockState(position.above()).isAir()
+                    || !level.getBlockState(support).isAir()) {
+                throw new IllegalStateException("P4 小黄鸡恢复夹具位置不是空气");
+            }
+            level.setBlock(support, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
             ClockworkChickenEntity chicken = new ClockworkChickenEntity(level, P4_CHICKEN_FIXTURE_OWNER, level.getGameTime(),
                     ModServerConfig.CLOCKWORK_CHICKEN_FUSE_TICKS.get(), ModServerConfig.CLOCKWORK_CHICKEN_EXPLOSION_POWER.get());
             ((net.minecraft.world.entity.Entity) chicken).setPos(position.getX() + 0.5D, position.getY(), position.getZ() + 0.5D);
-            if (!level.addFreshEntity(chicken)) throw new IllegalStateException("P4 小黄鸡恢复夹具未加入世界");
+            if (!level.addFreshEntity(chicken)) {
+                level.setBlock(support, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                throw new IllegalStateException("P4 小黄鸡恢复夹具未加入世界");
+            }
             source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P4_CHICKEN_PENDING=seeded"), false);
             return 1;
         } catch (Exception exception) {
