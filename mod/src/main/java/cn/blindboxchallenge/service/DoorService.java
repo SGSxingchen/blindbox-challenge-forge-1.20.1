@@ -94,6 +94,11 @@ public final class DoorService {
         if (targetDoorGlobal == null || targetSafetyGlobal == null || targetDoorId == null
                 || targetDoorGlobal.equals(sourceGlobal)
                 || !targetDoorGlobal.dimension().equals(targetSafetyGlobal.dimension())) return;
+        List<BlockPos> sourceSafety = adjacentSafety(sourceLevel, sourcePos);
+        if (sourceSafety.size() != 1) {
+            invalidateDoor(sourceLevel, sourcePos);
+            return;
+        }
 
         MinecraftServer server = player.serverLevel().getServer();
         ServerLevel targetLevel = server.getLevel(targetDoorGlobal.dimension());
@@ -102,14 +107,21 @@ public final class DoorService {
         if (!(targetLevel.getBlockEntity(targetDoorGlobal.pos()) instanceof AnywhereDoorBlockEntity target)) return;
         reconcileInvalidatedDoor(targetLevel, target);
         if (!target.linked()) return;
+        List<BlockPos> targetSafety = adjacentSafety(targetLevel, targetDoorGlobal.pos());
+        if (targetSafety.size() != 1) {
+            invalidateDoor(targetLevel, targetDoorGlobal.pos());
+            return;
+        }
         if (target.doorId().equals(source.doorId()) || !target.doorId().equals(targetDoorId)
                 || !target.partnerDoorId().filter(source.doorId()::equals).isPresent()
                 || !target.partnerDoor().filter(sourceGlobal::equals).isPresent()) return;
         if (!isAdjacentSafety(targetDoorGlobal.pos(), targetSafetyGlobal.pos())
+                || !targetSafety.get(0).equals(targetSafetyGlobal.pos())
                 || !targetLevel.getBlockState(targetSafetyGlobal.pos()).is(ModBlocks.SAFETY_LANDING.get())) return;
         GlobalPos reverseSafety = target.destinationSafety().orElse(null);
         if (reverseSafety == null || !reverseSafety.dimension().equals(sourceLevel.dimension())
                 || !isAdjacentSafety(sourcePos, reverseSafety.pos())
+                || !sourceSafety.get(0).equals(reverseSafety.pos())
                 || !sourceLevel.getBlockState(reverseSafety.pos()).is(ModBlocks.SAFETY_LANDING.get())) return;
         BlockPos standingBlock = targetSafetyGlobal.pos().above();
         if (!targetLevel.isInWorldBounds(standingBlock) || !targetLevel.getWorldBorder().isWithinBounds(standingBlock)) return;

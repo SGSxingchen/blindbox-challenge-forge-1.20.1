@@ -33,9 +33,10 @@ public final class DoorCiScenario {
         BlockPos secondSafety = secondDoor.below();
         BlockPos firstSideSafety = firstDoor.west();
         BlockPos secondSideSafety = secondDoor.east();
+        BlockPos extraFirstSafety = firstDoor.east();
         BlockPos collisionExit = secondSideSafety.above();
         Map<BlockPos, BlockState> before = new LinkedHashMap<>();
-        for (BlockPos pos : java.util.List.of(firstDoor, firstSafety, secondDoor, secondSafety, firstSideSafety, secondSideSafety, collisionExit)) {
+        for (BlockPos pos : java.util.List.of(firstDoor, firstSafety, secondDoor, secondSafety, firstSideSafety, secondSideSafety, extraFirstSafety, collisionExit)) {
             before.put(pos, level.getBlockState(pos));
             if (!level.getBlockState(pos).isAir()) throw new IllegalStateException("任意门夹具区域必须为空气，拒绝覆盖既有方块实体");
         }
@@ -60,6 +61,13 @@ public final class DoorCiScenario {
             // 目标安全点在门下方时，抵达位置仍在无碰撞门格。立即再次触发门体不能反向回跳。
             ModBlocks.ANYWHERE_DOOR.get().entityInside(level.getBlockState(secondDoor), level, secondDoor, alice);
             if (alice.position().distanceToSqr(expected) > 1.0D) throw new IllegalStateException("下方安全点抵达后发生反向回跳");
+            // 配对后临时增加第二个相邻安全点也会破坏“两门各恰有一个安全点”不变量，必须拒绝并清链。
+            level.setBlock(extraFirstSafety, ModBlocks.SAFETY_LANDING.get().defaultBlockState(), 3);
+            assertRejectedAtSource(level, alice, firstDoor, "存在第二安全点时仍发生传送");
+            if (first.linked() || second.linked()) throw new IllegalStateException("存在第二安全点时未清理双方关联");
+            level.setBlock(extraFirstSafety, Blocks.AIR.defaultBlockState(), 3);
+            pairWithProductionUse(level, alice, firstDoor, secondDoor);
+            assertBidirectionallyLinked(first, second);
             level.setBlock(secondSafety, Blocks.AIR.defaultBlockState(), 3);
             if (first.linked() || second.linked()) throw new IllegalStateException("拆除目标侧安全点后未清理双方关联");
             DoorService.clearSelection(alice);

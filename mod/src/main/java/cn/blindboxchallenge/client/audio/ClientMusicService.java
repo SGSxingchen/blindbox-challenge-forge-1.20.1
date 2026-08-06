@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -24,14 +25,17 @@ public final class ClientMusicService {
         return thread;
     });
     private static final Set<UUID> PLAYED_EVENTS = new LinkedHashSet<>();
+    private static long connectionEpoch;
 
     private ClientMusicService() {}
 
     @SubscribeEvent
     public static void play(MusicBoxPlaybackEvent event) {
+        final long eventEpoch;
         synchronized (PLAYED_EVENTS) {
             if (!PLAYED_EVENTS.add(event.eventId())) return;
             if (PLAYED_EVENTS.size() > 256) PLAYED_EVENTS.remove(PLAYED_EVENTS.iterator().next());
+            eventEpoch = connectionEpoch;
         }
         final String normalized;
         try {
@@ -43,12 +47,30 @@ public final class ClientMusicService {
         CompletableFuture.supplyAsync(() -> {
             try { return RemoteAudioDownload.fetch(normalized); }
             catch (Exception exception) { throw new IllegalStateException(exception); }
-        }, AUDIO_EXECUTOR).thenAccept(audio -> Minecraft.getInstance().execute(() ->
-                Minecraft.getInstance().getSoundManager().play(new RemoteMusicSoundInstance(audio, event.source()))))
+        }, AUDIO_EXECUTOR).thenApplyAsync(audio -> RemoteMusicSoundInstance.prepare(audio, event.source()), AUDIO_EXECUTOR)
+                .thenAccept(sound -> Minecraft.getInstance().execute(() -> {
+            if (!isCurrentConnection(eventEpoch)) return;
+            Minecraft.getInstance().getSoundManager().play(sound);
+        }))
                 .exceptionally(exception -> {
                     Minecraft.getInstance().execute(() -> clientMessage("message.blindboxchallenge.music_box_download_failed"));
                     return null;
                 });
+    }
+
+    /** 断线或换服后旧下载只能自行结束，绝不能把前一服务器的音频带入主菜单或新世界。 */
+    @SubscribeEvent
+    public static void loggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        synchronized (PLAYED_EVENTS) {
+            connectionEpoch++;
+            PLAYED_EVENTS.clear();
+        }
+    }
+
+    private static boolean isCurrentConnection(long eventEpoch) {
+        synchronized (PLAYED_EVENTS) {
+            return connectionEpoch == eventEpoch && Minecraft.getInstance().player != null && Minecraft.getInstance().level != null;
+        }
     }
 
     private static void clientMessage(String key) {

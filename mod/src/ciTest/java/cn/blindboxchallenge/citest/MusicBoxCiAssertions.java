@@ -7,6 +7,7 @@ import cn.blindboxchallenge.registry.ModBlocks;
 import cn.blindboxchallenge.service.AudioUrlPolicy;
 import java.util.List;
 import java.util.UUID;
+import java.net.InetAddress;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -61,6 +62,7 @@ public final class MusicBoxCiAssertions {
             }
             String normalized = AudioUrlPolicy.normalizeHttpsUrl("HTTPS://Example.COM/a/../tone.ogg?x=1");
             if (!"https://example.com/tone.ogg?x=1".equals(normalized)) throw new IllegalStateException("安全 URL 未稳定规范化");
+            assertAddressPolicy();
             source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P4_MUSIC_NEGATIVE=success"), false);
             return 1;
         } catch (Exception exception) {
@@ -81,6 +83,21 @@ public final class MusicBoxCiAssertions {
             throw new IllegalStateException("危险八音盒 URL 被接受：" + value);
         } catch (IllegalArgumentException expected) {
             // 生产 URL 策略已拒绝，继续下一条独立负例。
+        }
+    }
+
+    private static void assertAddressPolicy() throws Exception {
+        if (!AudioUrlPolicy.isPublicAddress(InetAddress.getByAddress(new byte[] {8, 8, 8, 8}))) {
+            throw new IllegalStateException("公网 IPv4 被错误拒绝");
+        }
+        for (byte[] unsafe : List.of(
+                new byte[] {0, 100, (byte) 0xff, (byte) 0x9b, 0, 0, 0, 0, 0, 0, 0, 0, (byte) 192, (byte) 168, 1, 1},
+                new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (byte) 0xff, (byte) 0xff, 127, 0, 0, 1},
+                new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 1},
+                new byte[] {0x20, 0x01, 0x0d, (byte) 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})) {
+            if (AudioUrlPolicy.isPublicAddress(InetAddress.getByAddress(unsafe))) {
+                throw new IllegalStateException("IPv6 私网、映射或保留地址被错误接受");
+            }
         }
     }
 }

@@ -45,27 +45,60 @@ public final class AudioUrlPolicy {
         if (address.isAnyLocalAddress() || address.isLoopbackAddress() || address.isLinkLocalAddress()
                 || address.isSiteLocalAddress() || address.isMulticastAddress()) return false;
         byte[] value = address.getAddress();
-        if (value.length == 4) {
-            int a = Byte.toUnsignedInt(value[0]);
-            int b = Byte.toUnsignedInt(value[1]);
-            int c = Byte.toUnsignedInt(value[2]);
-            return a != 0 && a != 10 && a != 127 && a < 224
-                    && !(a == 100 && b >= 64 && b <= 127)
-                    && !(a == 169 && b == 254)
-                    && !(a == 172 && b >= 16 && b <= 31)
-                    && !(a == 192 && b == 168)
-                    && !(a == 192 && b == 0 && c <= 2)
-                    && !(a == 198 && (b == 18 || b == 19 || b == 51))
-                    && !(a == 203 && b == 0 && c == 113);
-        }
-        if (value.length == 16) {
-            int first = Byte.toUnsignedInt(value[0]);
-            int second = Byte.toUnsignedInt(value[1]);
-            return (first & 0xfe) != 0xfc && first != 0xff
-                    && !(first == 0x20 && second == 0x01 && Byte.toUnsignedInt(value[2]) == 0x0d && Byte.toUnsignedInt(value[3]) == 0xb8);
-        }
-        return false;
+        if (value.length == 4) return isPublicIpv4(value, 0);
+        if (value.length != 16) return false;
+
+        // 这些 IPv6 形式最后四字节实际决定 IPv4 目标。若不展开，NAT64 或 IPv4-mapped 地址可把
+        // 127.0.0.1 / 192.168.0.0 等危险目标伪装成 IPv6，从而绕过 DNS 结果的逐地址拒绝。
+        if (isIpv4Mapped(value) || isIpv4Compatible(value) || isWellKnownNat64(value)) return isPublicIpv4(value, 12);
+
+        int first = unsigned(value, 0);
+        int second = unsigned(value, 1);
+        // 只接受 IANA 当前可公开路由的 global-unicast 范围 2000::/3，再排除其中已保留的特殊用途块。
+        if ((first & 0xe0) != 0x20) return false;
+        if (first == 0x20 && second == 0x01 && (unsigned(value, 2) & 0xfe) == 0x00) return false; // 2001::/23
+        if (first == 0x20 && second == 0x01 && unsigned(value, 2) == 0x00 && unsigned(value, 3) == 0x02
+                && unsigned(value, 4) == 0x00 && unsigned(value, 5) == 0x00) return false; // 2001:2::/48
+        if (first == 0x20 && second == 0x01 && unsigned(value, 2) == 0x00 && (unsigned(value, 3) & 0xf0) == 0x10) return false; // 2001:10::/28
+        return !(first == 0x20 && second == 0x01 && unsigned(value, 2) == 0x0d && unsigned(value, 3) == 0xb8); // 2001:db8::/32
     }
+
+    private static boolean isPublicIpv4(byte[] value, int offset) {
+        int a = unsigned(value, offset);
+        int b = unsigned(value, offset + 1);
+        int c = unsigned(value, offset + 2);
+        return a != 0 && a != 10 && a != 127 && a < 224
+                && !(a == 100 && b >= 64 && b <= 127)
+                && !(a == 169 && b == 254)
+                && !(a == 172 && b >= 16 && b <= 31)
+                && !(a == 192 && b == 0 && c == 0)
+                && !(a == 192 && b == 0 && c == 2)
+                && !(a == 192 && b == 31 && c == 196)
+                && !(a == 192 && b == 52 && c == 193)
+                && !(a == 192 && b == 88 && c == 99)
+                && !(a == 192 && b == 168)
+                && !(a == 192 && b == 175 && c == 48)
+                && !(a == 198 && (b == 18 || b == 19 || b == 51))
+                && !(a == 203 && b == 0 && c == 113);
+    }
+
+    private static boolean isIpv4Mapped(byte[] value) {
+        for (int index = 0; index < 10; index++) if (value[index] != 0) return false;
+        return value[10] == (byte) 0xff && value[11] == (byte) 0xff;
+    }
+
+    private static boolean isIpv4Compatible(byte[] value) {
+        for (int index = 0; index < 12; index++) if (value[index] != 0) return false;
+        return true;
+    }
+
+    private static boolean isWellKnownNat64(byte[] value) {
+        return value[0] == 0x00 && value[1] == 0x64 && value[2] == (byte) 0xff && value[3] == (byte) 0x9b
+                && value[4] == 0 && value[5] == 0 && value[6] == 0 && value[7] == 0
+                && value[8] == 0 && value[9] == 0 && value[10] == 0 && value[11] == 0;
+    }
+
+    private static int unsigned(byte[] value, int index) { return Byte.toUnsignedInt(value[index]); }
 
     private static boolean looksLikeIpv4(String value) {
         if (!value.matches("[0-9.]+")) return false;
