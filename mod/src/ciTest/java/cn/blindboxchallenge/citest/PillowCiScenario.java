@@ -272,6 +272,8 @@ public final class PillowCiScenario {
 
         private PillowProjectileEntity launchFullCharge(Item item, PillowVariant expectedVariant) {
             ItemStack stack = new ItemStack(item);
+            // 用每变体不同的完整 NBT 证明投掷实体不是只按默认物品返还，而是原样保存单件栈。
+            stack.getOrCreateTag().putString("PillowCiVariant", expectedVariant.name());
             alice.setItemInHand(InteractionHand.MAIN_HAND, stack);
             if (!stack.getItem().use(level, alice, InteractionHand.MAIN_HAND).getResult().consumesAction()) {
                 throw new IllegalStateException("抱枕 Item 真实空气使用入口被拒绝：" + item);
@@ -341,6 +343,11 @@ public final class PillowCiScenario {
             if (stoneReturn.getItem().getCount() != 1 || diamondReturn.getItem().getCount() != 1
                     || countReturned(ModItems.STONE_PILLOW.get()) != 1 || countReturned(ModItems.DIAMOND_PILLOW.get()) != 1) {
                 throw new IllegalStateException("抱枕命中或超时后出现吞物/复制，回收数量不是每变体恰好一件");
+            }
+            if (!stoneReturn.getItem().hasTag() || !diamondReturn.getItem().hasTag()
+                    || !"STONE".equals(stoneReturn.getItem().getTag().getString("PillowCiVariant"))
+                    || !"DIAMOND".equals(diamondReturn.getItem().getTag().getString("PillowCiVariant"))) {
+                throw new IllegalStateException("抱枕投掷实体没有完整保存并返还变体对应 NBT");
             }
             // impacted()/hitTargetId() 由生产实体同步并持久化；客户端 marker 也必须看到同一状态。
             if (!stoneProjectile.impacted() || !stoneProjectile.hitTargetId().filter(expectedTargetId::equals).isPresent()

@@ -32,6 +32,12 @@ public final class PillowProjectileEntity extends ThrowableItemProjectile {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final EntityDataAccessor<Integer> DATA_VARIANT =
             SynchedEntityData.defineId(PillowProjectileEntity.class, EntityDataSerializers.INT);
+    /**
+     * 父类会为了默认物品省略空 NBT 栈；这里必须独立保存完整栈，避免石抱枕这类默认变体
+     * 在命中后只能得到空的 getItemRaw() 而无法证明或返还完整 NBT。
+     */
+    private static final EntityDataAccessor<ItemStack> DATA_PILLOW_STACK =
+            SynchedEntityData.defineId(PillowProjectileEntity.class, EntityDataSerializers.ITEM_STACK);
     private static final EntityDataAccessor<Boolean> DATA_RETURN_ITEM =
             SynchedEntityData.defineId(PillowProjectileEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_IMPACTED =
@@ -39,6 +45,7 @@ public final class PillowProjectileEntity extends ThrowableItemProjectile {
     private static final EntityDataAccessor<Optional<UUID>> DATA_HIT_TARGET =
             SynchedEntityData.defineId(PillowProjectileEntity.class, EntityDataSerializers.OPTIONAL_UUID);
     private static final String VARIANT_TAG = "PillowVariant";
+    private static final String PILLOW_STACK_TAG = "PillowStack";
     private static final String RETURN_ITEM_TAG = "ReturnItem";
     private static final String FINISHED_TAG = "Finished";
     private static final String IMPACTED_TAG = "Impacted";
@@ -62,8 +69,14 @@ public final class PillowProjectileEntity extends ThrowableItemProjectile {
 
     public void setPillowStack(ItemStack stack) {
         ItemStack onePillow = stack.copyWithCount(1);
-        setItem(onePillow);
+        entityData.set(DATA_PILLOW_STACK, onePillow);
+        super.setItem(onePillow);
         setVariant(PillowVariant.fromItem(onePillow));
+    }
+
+    /** 投出时的完整单件物品栈；返回副本防止外部修改受同步状态。 */
+    public ItemStack pillowStack() {
+        return entityData.get(DATA_PILLOW_STACK).copy();
     }
 
     public PillowVariant variant() {
@@ -101,6 +114,7 @@ public final class PillowProjectileEntity extends ThrowableItemProjectile {
     protected void defineSynchedData() {
         super.defineSynchedData();
         entityData.define(DATA_VARIANT, PillowVariant.STONE.serializedId());
+        entityData.define(DATA_PILLOW_STACK, ItemStack.EMPTY);
         entityData.define(DATA_RETURN_ITEM, true);
         entityData.define(DATA_IMPACTED, false);
         entityData.define(DATA_HIT_TARGET, Optional.empty());
@@ -110,6 +124,8 @@ public final class PillowProjectileEntity extends ThrowableItemProjectile {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putInt(VARIANT_TAG, variant().serializedId());
+        ItemStack stack = pillowStack();
+        if (!stack.isEmpty()) tag.put(PILLOW_STACK_TAG, stack.save(new CompoundTag()));
         tag.putBoolean(RETURN_ITEM_TAG, shouldReturnItem());
         tag.putBoolean(FINISHED_TAG, finished);
         tag.putBoolean(IMPACTED_TAG, impacted());
@@ -121,6 +137,9 @@ public final class PillowProjectileEntity extends ThrowableItemProjectile {
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         setVariant(PillowVariant.fromSerializedId(tag.getInt(VARIANT_TAG)));
+        ItemStack restoredStack = tag.contains(PILLOW_STACK_TAG, net.minecraft.nbt.Tag.TAG_COMPOUND)
+                ? ItemStack.of(tag.getCompound(PILLOW_STACK_TAG)) : super.getItem().copy();
+        entityData.set(DATA_PILLOW_STACK, restoredStack.isEmpty() ? ItemStack.EMPTY : restoredStack.copyWithCount(1));
         setReturnItem(!tag.contains(RETURN_ITEM_TAG) || tag.getBoolean(RETURN_ITEM_TAG));
         finished = tag.getBoolean(FINISHED_TAG);
         entityData.set(DATA_IMPACTED, tag.getBoolean(IMPACTED_TAG));
@@ -174,7 +193,7 @@ public final class PillowProjectileEntity extends ThrowableItemProjectile {
             discard();
             return;
         }
-        ItemStack returnStack = getItemRaw().copy();
+        ItemStack returnStack = pillowStack();
         if (returnStack.isEmpty()) {
             if (!missingStackReported) {
                 missingStackReported = true;
