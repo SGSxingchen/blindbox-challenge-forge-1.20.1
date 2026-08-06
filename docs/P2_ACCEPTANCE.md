@@ -1,6 +1,6 @@
 # P2 基础物品族验收矩阵
 
-> 阶段工单：[Issue #2](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/2)。本文是进行中的验收台账，不以静态实现或单条工作流成功替代完整验收。
+> 阶段工单：[Issue #2](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/2)。验收提交：`179c207723cbe59aa2ca03548d6870574c5a0b41`。本文记录完整动态验收，不以静态实现或单条工作流成功替代阶段验收。
 
 ## 范围与排除
 
@@ -25,19 +25,20 @@ P2 只覆盖可按原版或受控轻交互语义验收的基础物品族。TAC �
 
 |门禁|验收要求|状态|
 |---|---|---|
-|质量与构建|编译、检查、正式 Jar 与隔离 ciTest Jar；正式 Jar 不含探针|待本批同一 SHA 验证|
-|真实专用服务器|加载正式模组、启动、命令与正常停止|待本批同一 SHA 验证|
-|生命周期强杀恢复|`save-all flush → SIGKILL → 同世界重启`，保持 P1 资产守恒基线|待本批同一 SHA 验证|
-|真实单客户端|Xvfb 启动 Forge 客户端并稳定进入主菜单|待本批同一 SHA 验证|
-|真实双客户端|两独立客户端同服；P1 资产守恒与 P2 服务端业务探针均成功|待本批同一 SHA 验证|
-|强制回归汇总|同一 SHA 的五项必需工作流均成功；缺失、取消、跳过或失败均失败|待本批同一 SHA 验证|
+|质量与构建|编译、检查、正式 Jar 与隔离 ciTest Jar；正式 Jar 不含探针|成功：[31079219016](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31079219016)|
+|真实专用服务器|加载正式模组、启动、命令与正常停止|成功：[31079219309](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31079219309)|
+|生命周期强杀恢复|`save-all flush → SIGKILL → 同世界重启`，保持 P1 资产守恒基线|成功：[31079219313](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31079219313)|
+|真实单客户端|Xvfb 启动 Forge 客户端并稳定进入主菜单|成功：[31079219018](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31079219018)|
+|真实双客户端|两独立客户端同服；P1 资产守恒与 P2 服务端业务探针均成功|成功：[31079219446](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31079219446)|
+|强制回归汇总|同一 SHA 的五项必需工作流均成功；缺失、取消、跳过或失败均失败|成功：[31079477840](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31079477840)|
 
 探针只能打入独立 `ciTest` Jar，必须从真实服务端状态断言，且不能破坏 P1 canonical 资产。禁止 `continue-on-error`、预写通过标志、删失败场景或将编译成功冒充行为覆盖。
 
-## 当前批次与已知边界
+## 最终验收与真实边界
 
-- 当前已验收代码基线为 `b9084e4`：其质量构建、真实专服、强杀恢复、单客户端、双客户端和汇总门禁均已成功。本批在此基础上完成 020、027、029、039-B、046-E、046-G 的代码与探针，尚未将本批提交交给 Hosted Runner；不得把前一批绿灯外推为本批验收。
+- 全部 50 项已在提交 `179c207` 通过同一 SHA 的六项 Hosted Runner 门禁。质量构建产出的正式 Jar 为 `blindboxchallenge-0.1.0-p1.jar`，SHA-256：`e374f98286b6868fc2083c625810e7cf2fa8fcda735f91c38203a4128592409a`。该版本号是 P1 工程版本遗留，P5 正式发布前会统一更新，不能误称为正式 Release。
+- 本批探针在两名真实客户端均已在线的专服中，保留 P1 canonical 资产守恒测试，同时覆盖 020、027、029、039-B、046-E、046-G 的真实服务端入口、确定性分支与状态恢复。
 - 020 的客户端表现是原版恶心效果；不含额外自定义醉酒着色器。027 仅播放原版音乐事件；URL 在线音频完整链路留给 P4 的 047-B 八音盒。
 - 029 只对成功格挡的直接活体攻击者反伤；039-B 反面只清除有益状态效果而保留中毒、凋零等负面效果；046-E 的四种候选增益、046-G 的 10–40 tick 与 0.45–0.90 速度是保守默认值，尚未配置化。彩虹圈不免疫落伤。
 - P1 已覆盖的是 `save-all flush` 后 SIGKILL 恢复；未 flush 的真实掉电窗口仍未覆盖，不能外推为已验收。
-- 本批通过后仍须补录最终提交、六个运行编号、50 项逐项状态、正式 Jar SHA-256 与以上真实未覆盖边界，才能关闭 Issue #2。
+- TAC、魔女服、金色手枪、乐魂和编号 012 继续按已定范围排除；P3 及之后的能力、投掷、GUI、任意门、在线音频、摆件与正式发布均不属于 P2 验收结论。
