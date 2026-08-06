@@ -14,11 +14,24 @@ import org.jetbrains.annotations.Nullable;
 public final class PlayerAbilityProvider implements ICapabilitySerializable<CompoundTag> {
     public static final ResourceLocation ID = new ResourceLocation(BlindBoxChallenge.MOD_ID, "player_ability");
     private final PlayerAbilityData data = new PlayerAbilityData();
-    private final LazyOptional<PlayerAbilityData> optional = LazyOptional.of(() -> data);
+    /**
+     * 玩家死亡时原实体会先被原版移除，Forge 随即使附件的 LazyOptional 失效；而稍后的
+     * {@code PlayerEvent.Clone} 允许通过 {@code reviveCaps()} 读取同一份持久数据。LazyOptional
+     * 本身不能重新生效，因此在实体已复活后首次查询时重新包装既有数据对象。
+     */
+    private LazyOptional<PlayerAbilityData> optional = createOptional();
+
+    private LazyOptional<PlayerAbilityData> createOptional() {
+        return LazyOptional.of(() -> data);
+    }
 
     @Override
     public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> capability, @Nullable Direction side) {
-        return capability == ModCapabilities.PLAYER_ABILITY ? optional.cast() : LazyOptional.empty();
+        if (capability != ModCapabilities.PLAYER_ABILITY) return LazyOptional.empty();
+        // Entity#reviveCaps 只恢复外层 CapabilityProvider 的可访问性，不能让已失效的
+        // LazyOptional 再次有效。这里不创建新的数据，因而不会丢失死亡前的持久 NBT。
+        if (!optional.isPresent()) optional = createOptional();
+        return optional.cast();
     }
 
     @Override public CompoundTag serializeNBT() { return data.serializeNBT(); }
