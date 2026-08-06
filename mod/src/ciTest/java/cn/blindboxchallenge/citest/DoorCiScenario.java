@@ -52,10 +52,7 @@ public final class DoorCiScenario {
                 throw new IllegalStateException("任意门方块实体未创建");
             }
             pairWithProductionUse(level, alice, firstDoor, secondDoor);
-            if (!first.linked() || !second.linked() || !first.partnerDoorId().filter(second.doorId()::equals).isPresent()
-                    || !second.partnerDoorId().filter(first.doorId()::equals).isPresent()) {
-                throw new IllegalStateException("潜行正式配对入口没有写入双向反链");
-            }
+            assertBidirectionallyLinked(first, second);
             alice.teleportTo(level, firstDoor.getX() + 0.5D, firstDoor.getY() + 0.1D, firstDoor.getZ() + 0.5D, 0.0F, 0.0F);
             ModBlocks.ANYWHERE_DOOR.get().entityInside(level.getBlockState(firstDoor), level, firstDoor, alice);
             Vec3 expected = Vec3.atBottomCenterOf(secondSafety.above());
@@ -114,6 +111,7 @@ public final class DoorCiScenario {
             }
             currentSecond.clearLink();
             pairWithProductionUse(level, alice, firstDoor, secondDoor);
+            assertBidirectionallyLinked(currentFirst, currentSecond);
             level.setBlock(collisionExit, Blocks.OBSIDIAN.defaultBlockState(), 3);
             assertRejectedAtSource(level, alice, firstDoor, "出口碰撞时仍发生传送");
             source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P4_DOOR=success"), false);
@@ -139,6 +137,13 @@ public final class DoorCiScenario {
                     net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.phys.BlockHitResult(Vec3.atCenterOf(second), net.minecraft.core.Direction.UP, second, false));
         } finally {
             player.setShiftKeyDown(false);
+        }
+    }
+
+    private static void assertBidirectionallyLinked(AnywhereDoorBlockEntity first, AnywhereDoorBlockEntity second) {
+        if (!first.linked() || !second.linked() || !first.partnerDoorId().filter(second.doorId()::equals).isPresent()
+                || !second.partnerDoorId().filter(first.doorId()::equals).isPresent()) {
+            throw new IllegalStateException("潜行正式配对入口没有写入双向反链");
         }
     }
 

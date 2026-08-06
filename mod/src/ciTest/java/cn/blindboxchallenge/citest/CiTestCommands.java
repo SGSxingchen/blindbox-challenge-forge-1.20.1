@@ -134,7 +134,7 @@ public final class CiTestCommands {
             }
             ClockworkChickenEntity chicken = new ClockworkChickenEntity(level, P4_CHICKEN_FIXTURE_OWNER, level.getGameTime(),
                     ModServerConfig.CLOCKWORK_CHICKEN_FUSE_TICKS.get(), ModServerConfig.CLOCKWORK_CHICKEN_EXPLOSION_POWER.get());
-            chicken.setPos(position.getX() + 0.5D, position.getY(), position.getZ() + 0.5D);
+            ((net.minecraft.world.entity.Entity) chicken).setPos(position.getX() + 0.5D, position.getY(), position.getZ() + 0.5D);
             if (!level.addFreshEntity(chicken)) throw new IllegalStateException("P4 小黄鸡恢复夹具未加入世界");
             source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P4_CHICKEN_PENDING=seeded"), false);
             return 1;

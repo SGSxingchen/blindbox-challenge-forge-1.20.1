@@ -26,7 +26,7 @@ public final class ClockworkChickenItem extends Item {
             if (!level.addFreshEntity(chicken)) return InteractionResultHolder.fail(stack);
             if (!player.getAbilities().instabuild) stack.shrink(1);
             player.awardStat(Stats.ITEM_USED.get(this));
-            level.playSound(null, chicken.blockPosition(), SoundEvents.TNT_PRIMED, SoundSource.PLAYERS, 1.0F, 1.0F);
+            level.playSound(null, chicken.stableBlockPosition(), SoundEvents.TNT_PRIMED, SoundSource.PLAYERS, 1.0F, 1.0F);
             level.gameEvent(player, GameEvent.PRIME_FUSE, chicken.position());
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
