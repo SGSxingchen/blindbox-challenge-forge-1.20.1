@@ -131,7 +131,6 @@ public final class BlindBoxService {
             if (result == PackRecoveryResult.RECOVERED) recovered++; else isolated++;
         }
         player.containerMenu.broadcastChanges();
-        player.server.getPlayerList().save(player);
         if (recovered > 0) player.sendSystemMessage(Component.literal("已幂等恢复 " + recovered + " 个盲盒打包事务。").withStyle(ChatFormatting.GREEN));
         if (isolated > 0) player.sendSystemMessage(Component.literal("另有 " + isolated + " 个事务证据冲突，已隔离且未自动增删资产。")
                 .withStyle(ChatFormatting.YELLOW));
