@@ -1,0 +1,35 @@
+name: 生命周期强杀恢复
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  flushed-sigkill-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: mod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: 构建正式模组与隔离测试探针
+        run: |
+          chmod +x gradlew scripts/ci/lifecycle-recovery.sh
+          ./gradlew --no-daemon build ciTestJar
+      - name: 执行 save-all flush 后 SIGKILL 同世界恢复
+        run: bash scripts/ci/lifecycle-recovery.sh
+      - name: 上传恢复证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifecycle-recovery-evidence
+          path: |
+            mod/build/ci-lifecycle-evidence/
+            mod/build/ci-lifecycle-server/crash-reports/
+          if-no-files-found: warn
