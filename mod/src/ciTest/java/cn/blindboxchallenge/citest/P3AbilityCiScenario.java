@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -20,6 +21,8 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -179,6 +182,10 @@ public final class P3AbilityCiScenario {
         private final ServerLevel origin;
         private final boolean originalImmediateRespawn;
         private final int initialAliceEntityId;
+        private BlockPos aliceSupport;
+        private BlockPos bobSupport;
+        private BlockState originalAliceSupport;
+        private BlockState originalBobSupport;
         private Phase phase = Phase.WAITING_DETRACK;
         private int phaseTicks;
         private boolean clientPathVerified;
@@ -214,6 +221,14 @@ public final class P3AbilityCiScenario {
             // 先让 Bob 离开追踪范围并等待服务器实际撤销追踪，再学习；因此 Bob 的 true 快照只能来自随后真实 StartTracking。
             double x = Math.floor(alice.getX()) + 0.5D;
             double z = Math.floor(alice.getZ()) + 0.5D;
+            aliceSupport = BlockPos.containing(x, 219.0D, z);
+            bobSupport = BlockPos.containing(x + 512.0D, 119.0D, z);
+            // 先让两名真实客户端站在高空临时平台，避免等待撤销追踪/同步时被专服的
+            // anti-fly 机制踢出；只在学习后移除 Alice 平台以走合法的腾空 C2S 路径。
+            originalAliceSupport = origin.getBlockState(aliceSupport);
+            originalBobSupport = origin.getBlockState(bobSupport);
+            origin.setBlock(aliceSupport, Blocks.STONE.defaultBlockState(), 3);
+            origin.setBlock(bobSupport, Blocks.STONE.defaultBlockState(), 3);
             alice.stopRiding();
             bob.stopRiding();
             alice.teleportTo(origin, x, 220.0D, z, 0.0F, 0.0F);
@@ -235,7 +250,9 @@ public final class P3AbilityCiScenario {
             }
             phaseTicks++;
             if (phase == Phase.WAITING_DETRACK && phaseTicks >= DETRACK_SETTLE_TICKS) {
-                learnThroughProductionItem(player(server, "BlindBoxAlice"));
+                ServerPlayer alice = player(server, "BlindBoxAlice");
+                releaseAliceForAirJump(alice);
+                learnThroughProductionItem(alice);
                 phase = Phase.WAITING_FOR_CLIENT_KEY;
                 phaseTicks = 0;
                 CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P3_ABILITY_SYNC_DISPATCHED=success entity={}", initialAliceEntityId);
@@ -382,6 +399,14 @@ public final class P3AbilityCiScenario {
             alice.containerMenu.broadcastChanges();
         }
 
+        /** 平台只在客户端已完成稳定追踪后移除，留出小于 anti-fly 阈值的真实腾空窗口。 */
+        private void releaseAliceForAirJump(ServerPlayer alice) {
+            if (aliceSupport != null) origin.setBlock(aliceSupport, Blocks.AIR.defaultBlockState(), 3);
+            alice.setOnGround(false);
+            alice.setDeltaMovement(0.0D, -0.08D, 0.0D);
+            alice.hurtMarked = true;
+        }
+
         private void cleanup() {
             ServerPlayer alice = server.getPlayerList().getPlayer(aliceUuid);
             if (alice != null) {
@@ -389,6 +414,8 @@ public final class P3AbilityCiScenario {
                 alice.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
                 alice.containerMenu.broadcastChanges();
             }
+            if (aliceSupport != null && originalAliceSupport != null) origin.setBlock(aliceSupport, originalAliceSupport, 3);
+            if (bobSupport != null && originalBobSupport != null) origin.setBlock(bobSupport, originalBobSupport, 3);
             server.getGameRules().getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(originalImmediateRespawn, server);
         }
 

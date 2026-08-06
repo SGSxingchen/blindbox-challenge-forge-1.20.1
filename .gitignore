@@ -7,3 +7,9 @@ run/
 __pycache__/
 *.pyc
 .DS_Store
+
+# 需求审阅原始素材与本地生成的联系表只作参考，绝不进入版本库或发布 Jar。
+/archive/
+/source-package/
+/contact-sheet.jpg
+/archive-manifest.json
