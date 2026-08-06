@@ -53,7 +53,7 @@ public final class CiClientSmokeEvents {
     private static void runMultiplayerSmoke(Minecraft minecraft) {
         if (!connectStarted && minecraft.screen instanceof TitleScreen && minecraft.getOverlay() == null) {
             String address = System.getProperty("blindbox.ci.serverAddress", "127.0.0.1:25565");
-            ServerData data = new ServerData("BlindBox CI", address, ServerData.Type.OTHER);
+            ServerData data = new ServerData("BlindBox CI", address, false);
             connectStarted = true;
             ConnectScreen.startConnecting(minecraft.screen, minecraft, ServerAddress.parseString(address), data, false);
             return;
