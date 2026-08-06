@@ -5,6 +5,7 @@ import cn.blindboxchallenge.item.AdrenalineItem;
 import cn.blindboxchallenge.item.BlindBoxItem;
 import cn.blindboxchallenge.item.FairyWandItem;
 import cn.blindboxchallenge.item.LighterItem;
+import cn.blindboxchallenge.item.KazooItem;
 import cn.blindboxchallenge.item.LongScrewdriverItem;
 import cn.blindboxchallenge.item.PackingToolItem;
 import cn.blindboxchallenge.item.PickaxeHoeItem;
@@ -26,6 +27,7 @@ public final class ModItems {
     public static final RegistryObject<Item> LONG_SCREWDRIVER = ITEMS.register("long_screwdriver", LongScrewdriverItem::new);
     public static final RegistryObject<Item> PICKAXE_HOE = ITEMS.register("pickaxe_hoe", PickaxeHoeItem::new);
     public static final RegistryObject<Item> LIGHTER = ITEMS.register("lighter", LighterItem::new);
+    public static final RegistryObject<Item> KAZOO = ITEMS.register("kazoo", KazooItem::new);
     public static final RegistryObject<Item> TRUFFLE_HAM_CRACKER = ITEMS.register("truffle_ham_cracker", () -> food(2, 0.1F));
     public static final RegistryObject<Item> POTATO_SNACK = ITEMS.register("potato_snack", () -> food(8, 0.8F));
     public static final RegistryObject<Item> RATION_PACK = ITEMS.register("ration_pack", () -> food(20, 1.0F));

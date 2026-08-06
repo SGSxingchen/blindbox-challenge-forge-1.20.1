@@ -150,6 +150,19 @@ public final class CiTestCommands {
             ItemStack lighter = new ItemStack(ModItems.LIGHTER.get());
             if (lighter.getMaxDamage() != 64) throw new IllegalStateException("lighter durability is not vanilla flint-and-steel durability");
 
+            ItemStack kazoo = new ItemStack(ModItems.KAZOO.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, kazoo);
+            net.minecraft.world.InteractionResultHolder<ItemStack> kazooResult = ModItems.KAZOO.get().use(player.serverLevel(), player, InteractionHand.MAIN_HAND);
+            if (!kazooResult.getResult().consumesAction() || !player.getCooldowns().isOnCooldown(ModItems.KAZOO.get())
+                    || kazoo.getCount() != 1 || kazoo.getMaxStackSize() != 1) {
+                throw new IllegalStateException("kazoo lacks server-authoritative sound/cooldown semantics");
+            }
+            if (ModItems.KAZOO.get().use(player.serverLevel(), player, InteractionHand.MAIN_HAND).getResult() != net.minecraft.world.InteractionResult.FAIL) {
+                throw new IllegalStateException("kazoo cooldown did not reject repeated use");
+            }
+            player.getCooldowns().removeCooldown(ModItems.KAZOO.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+
             ItemStack fairyWand = new ItemStack(ModItems.FAIRY_WAND.get());
             double fairyDamage = attributeTotal(ModItems.FAIRY_WAND.get(), net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
             double fairySpeed = attributeTotal(ModItems.FAIRY_WAND.get(), net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED);
