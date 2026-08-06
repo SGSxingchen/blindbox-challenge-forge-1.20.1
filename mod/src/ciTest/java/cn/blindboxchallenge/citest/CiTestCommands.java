@@ -343,6 +343,9 @@ public final class CiTestCommands {
                 throw new IllegalStateException("bath bucket did not use vanilla-safe emptying semantics");
             }
 
+            // 前一步真实倒水会在相邻格留下水源；移除它，避免与下一个岩浆源发生原版水岩浆反应，
+            // 否则测试夹具会把待拾取的岩浆变成圆石而非验证容器的岩浆分支。
+            level.setBlock(pourPos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
             level.setBlock(fluidPos, net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState(), 3);
             if (!bath.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
                     || bath.getDamageValue() != 1
