@@ -7,6 +7,7 @@ import cn.blindboxchallenge.item.BlindBoxItem;
 import cn.blindboxchallenge.item.EggyEyeMaskItem;
 import cn.blindboxchallenge.item.SafetyExitSignShieldItem;
 import cn.blindboxchallenge.service.BlindBoxService;
+import cn.blindboxchallenge.service.DoorService;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
@@ -40,6 +41,7 @@ public final class ServerLifecycleEvents {
         if (event.getEntity() instanceof ServerPlayer player) {
             BlindBoxItem.cancelUse(player);
             PillowSeatEntity.releasePassenger(player);
+            DoorService.clearSelection(player);
         }
     }
 

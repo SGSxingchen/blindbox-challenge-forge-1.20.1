@@ -65,6 +65,8 @@ public final class CiTestCommands {
                 .then(Commands.literal("run_p3_business").executes(context -> runP3Business(context.getSource())))
                 .then(Commands.literal("run_p4_text_negative")
                         .executes(context -> P4TextNegativeCiAssertions.run(context.getSource())))
+                .then(Commands.literal("run_p4_door")
+                        .executes(context -> DoorCiScenario.run(context.getSource())))
                 .then(Commands.literal("start_p4_text_clients")
                         .executes(context -> P4TextCiScenario.start(context.getSource())))
                 .then(Commands.literal("verify_p4_text_clients")

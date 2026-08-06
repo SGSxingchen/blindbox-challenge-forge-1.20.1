@@ -4,6 +4,8 @@ import cn.blindboxchallenge.BlindBoxChallenge;
 import cn.blindboxchallenge.block.BmlCheerStickBlock;
 import cn.blindboxchallenge.block.GlowStickBlock;
 import cn.blindboxchallenge.block.PillowBlock;
+import cn.blindboxchallenge.block.AnywhereDoorBlock;
+import cn.blindboxchallenge.block.SafetyLandingBlock;
 import cn.blindboxchallenge.entity.PillowVariant;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.level.block.WallTorchBlock;
@@ -30,6 +32,10 @@ public final class ModBlocks {
             () -> new PillowBlock(PillowVariant.STONE, BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.WOOL).noOcclusion()));
     public static final RegistryObject<Block> DIAMOND_PILLOW = BLOCKS.register("diamond_pillow",
             () -> new PillowBlock(PillowVariant.DIAMOND, BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.WOOL).noOcclusion()));
+    public static final RegistryObject<Block> ANYWHERE_DOOR = BLOCKS.register("anywhere_door",
+            () -> new AnywhereDoorBlock(BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.WOOD).noOcclusion().noCollission()));
+    public static final RegistryObject<Block> SAFETY_LANDING = BLOCKS.register("safety_landing",
+            () -> new SafetyLandingBlock(BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.WOOD)));
 
     private ModBlocks() {}
 }

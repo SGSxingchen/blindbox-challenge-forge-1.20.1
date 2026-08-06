@@ -327,6 +327,14 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_TEXT_CLEANUP=success' "${SERVER_DIR}/server.log"
+# P4 任意门核心链路由正式 Block#use 潜行配对和 entityInside 进入门体执行；探针还移除
+# 目标安全落点确认玩家留在源侧。跨维客户端观察专项会在任意门批次完成时继续扩展。
+printf 'blindboxcitest run_p4_door\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P4_DOOR=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_DOOR=success' "${SERVER_DIR}/server.log"
 printf 'blindboxcitest export\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_EXPORT=' "${SERVER_DIR}/server.log" && break
