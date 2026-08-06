@@ -1,5 +1,7 @@
-package cn.blindboxchallenge.client.audio;
+package cn.blindboxchallenge.citest.client.audio;
 
+import cn.blindboxchallenge.client.audio.RemoteAudioDownload;
+import cn.blindboxchallenge.client.audio.RemoteMusicSoundInstance;
 import cn.blindboxchallenge.citest.CiTestProbe;
 import cn.blindboxchallenge.citest.P4MusicCiScenario;
 import cn.blindboxchallenge.client.MusicBoxScreen;
