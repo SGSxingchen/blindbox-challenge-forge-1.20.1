@@ -7,7 +7,7 @@ import net.minecraft.world.level.material.Fluids;
 /** 046-F：纸杯只接受水源，倒水继续沿用原版桶的安全落点判断。 */
 public final class PaperCupItem extends RestrictedFluidContainerItem {
     public PaperCupItem() {
-        super(new Item.Properties());
+        super(new Item.Properties().stacksTo(1));
     }
 
     @Override

@@ -64,6 +64,7 @@ public final class BmlCheerStickBlock extends TorchBlock {
 
         @Override
         protected void createBlockStateDefinition(StateDefinition.Builder<net.minecraft.world.level.block.Block, BlockState> builder) {
+            super.createBlockStateDefinition(builder);
             builder.add(LIT);
         }
     }

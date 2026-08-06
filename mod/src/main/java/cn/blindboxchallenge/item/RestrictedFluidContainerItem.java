@@ -34,7 +34,9 @@ public abstract class RestrictedFluidContainerItem extends Item {
     private static final String CONTAINED_FLUID_KEY = "ContainedFluid";
 
     protected RestrictedFluidContainerItem(Properties properties) {
-        super(properties.stacksTo(1));
+        // 物品耐久会自行锁定为不可堆叠；不得在 durability() 之后再次 stacksTo()，
+        // 否则 Forge 1.20.1 会在注册期抛出“Unable to have damage AND stack”。
+        super(properties);
     }
 
     @Override
