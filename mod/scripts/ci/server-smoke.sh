@@ -6,9 +6,10 @@ FORGE_VERSION="47.4.22"
 MC_VERSION="1.20.1"
 SERVER_DIR="build/ci-forge-server"
 INSTALLER="forge-${MC_VERSION}-${FORGE_VERSION}-installer.jar"
-JAR="$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-sources.jar' | head -n 1)"
+JAR="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*.jar' ! -name '*-sources.jar' ! -name '*-citest.jar' -print -quit)"
 
 test -n "${JAR}" && test -f "${JAR}"
+[[ "${JAR}" != *-citest.jar ]]
 mkdir -p "${SERVER_DIR}"
 curl --fail --location --retry 3 --connect-timeout 20 \
   -o "${SERVER_DIR}/${INSTALLER}" \

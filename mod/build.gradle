@@ -124,6 +124,12 @@ sourceSets {
 tasks.register('ciTestJar', Jar) {
     archiveClassifier = 'citest'
     from sourceSets.ciTest.output
+    finalizedBy 'reobfCiTestJar'
+}
+
+// CI probe runs in a production-mapped Forge environment and must be reobfuscated.
+reobf {
+    ciTestJar {}
 }
 
 // ciTest 的运行时类路径可见 main 资源；打包探针时只保留自己的 mods.toml。

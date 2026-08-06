@@ -26,7 +26,10 @@ jobs:
           FORMAL_JAR="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*.jar' ! -name '*-sources.jar' ! -name '*-citest.jar' -print -quit)"
           test -n "$FORMAL_JAR"
           ! jar tf "$FORMAL_JAR" | grep -q '^cn/blindboxchallenge/citest/'
-          test -f "build/libs/blindboxchallenge-0.1.0-p1-citest.jar"
+          CITEST_JAR="build/libs/blindboxchallenge-0.1.0-p1-citest.jar"
+          test -f "$CITEST_JAR"
+          jar tf "$CITEST_JAR" | grep -q '^cn/blindboxchallenge/citest/CiTestProbe.class$'
+          jar tf "$CITEST_JAR" | grep -q '^META-INF/mods.toml$'
       - name: 生成 Jar 校验和
         run: |
           find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-sources.jar' -print0 | sort -z | xargs -0 sha256sum > build/libs/SHA256SUMS

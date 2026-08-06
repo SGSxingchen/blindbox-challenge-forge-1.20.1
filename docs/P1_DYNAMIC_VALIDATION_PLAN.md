@@ -8,6 +8,8 @@
 
 测试探针须是独立 Forge 测试模组：使用 `mod/src/ciTest/` 源集、单独 `blindboxchallenge_citest` Jar 和单独重混淆任务，禁止进入正式 `blindboxchallenge-*.jar`。
 
+已落实：`ciTestJar` 通过 ForgeGradle 的 `reobfCiTestJar` 重混淆后才进入动态运行；专服烟雾脚本显式排除 `*-citest.jar`，避免把测试探针误当正式产品加载。
+
 质量构建必须编译 `ciTestJar`，并以 `jar tf` 断言正式 Jar 不含 `cn/blindboxchallenge/citest/`。该断言只证明发布纯度，不能替代任何动态场景结果。
 
 ## CI DAG
