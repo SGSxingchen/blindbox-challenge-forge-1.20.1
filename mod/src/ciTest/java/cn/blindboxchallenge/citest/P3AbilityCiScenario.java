@@ -40,6 +40,8 @@ public final class P3AbilityCiScenario {
     private static final int TRACKING_REQUEST_TICKS = 40;
     /** 约一秒真实下落窗口；干草块同时保证失败时不以摔死掩盖 C2S 物理校验。 */
     private static final int AIR_JUMP_DROP_BLOCKS = 20;
+    /** C2S/速度同步超时只生成真实服务端物理快照，不得以超时当成功。 */
+    private static final int CLIENT_KEY_RESULT_TIMEOUT_TICKS = 140;
     private static ActiveScenario active;
 
     private P3AbilityCiScenario() {
@@ -198,6 +200,8 @@ public final class P3AbilityCiScenario {
         private boolean startTrackingEventSeen;
         private boolean cloneEventSeen;
         private boolean dimensionEventSeen;
+        private boolean airJumpReleased;
+        private String lastClientKeyPhysics = "尚未释放腾空平台";
         private String failure;
 
         private ActiveScenario(MinecraftServer server, ServerPlayer alice, ServerPlayer bob) {
@@ -263,9 +267,19 @@ public final class P3AbilityCiScenario {
             tickAfterPhase();
             if (phase == Phase.CLONE_READY || phase == Phase.DIMENSION_READY) return;
             if (phase == Phase.WAITING_FOR_CLIENT_KEY) {
-                player(server, "BlindBoxAlice").getCapability(ModCapabilities.PLAYER_ABILITY).ifPresent(data -> {
+                ServerPlayer alice = player(server, "BlindBoxAlice");
+                alice.getCapability(ModCapabilities.PLAYER_ABILITY).ifPresent(data -> {
                     if (data.hasUsedDoubleJump()) clientKeyAcceptedByServer = true;
+                    if (airJumpReleased) {
+                        lastClientKeyPhysics = "phaseTick=" + phaseTicks + ", y=" + alice.getY()
+                                + ", onGround=" + alice.onGround() + ", movement=" + alice.getDeltaMovement()
+                                + ", learned=" + data.hasLearnedYiJin() + ", used=" + data.hasUsedDoubleJump()
+                                + ", cooldown=" + data.isDoubleJumpOnCooldown(alice.serverLevel().getGameTime());
+                    }
                 });
+                if (airJumpReleased && phaseTicks > CLIENT_KEY_RESULT_TIMEOUT_TICKS && !clientKeyAcceptedByServer) {
+                    throw new IllegalStateException("真实 KeyMapping 注入后服务端未接受二段跳 C2S：" + lastClientKeyPhysics);
+                }
             }
             phaseTicks++;
             if (phase == Phase.WAITING_DETRACK && phaseTicks >= DETRACK_SETTLE_TICKS) {
@@ -280,6 +294,7 @@ public final class P3AbilityCiScenario {
             }
             if (phase == Phase.WAITING_FOR_CLIENT_KEY && phaseTicks == SELF_SYNC_SETTLE_TICKS) {
                 releaseAliceForAirJump(player(server, "BlindBoxAlice"));
+                airJumpReleased = true;
                 return;
             }
             if (phase == Phase.WAITING_FOR_CLIENT_KEY && phaseTicks == TRACKING_REQUEST_TICKS) {
