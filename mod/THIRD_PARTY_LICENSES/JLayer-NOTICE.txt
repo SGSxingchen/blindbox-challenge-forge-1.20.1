@@ -1,0 +1,9 @@
+本模组的仅客户端 MP3 解码路径使用 JLayer 1.0.1（javazoom:jlayer:1.0.1）。
+
+JLayer 以 LGPL-2.1 许可发布，原始二进制不重定位、不修改，并由 Forge Jar-in-Jar 独立装载。
+Maven Central 构件 SHA-256：850508c837454a1b06017c32a36876fae516de1e89a829f725fee1e6dcc52000
+许可证全文：JLayer-LGPL-2.1.txt
+源码与上游说明：https://www.javazoom.net/javalayer/javalayer.html
+Maven 坐标：https://repo1.maven.org/maven2/javazoom/jlayer/1.0.1/
+
+P5 正式发布前必须复核 LGPL-2.1、随附独立库替换权及本项目发布许可的兼容性；本 NOTICE 不替代法律意见。

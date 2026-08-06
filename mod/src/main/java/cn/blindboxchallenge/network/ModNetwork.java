@@ -8,7 +8,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import java.util.Optional;
 
 public final class ModNetwork {
-    private static final String PROTOCOL = "3";
+    private static final String PROTOCOL = "4";
     public static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder.named(new ResourceLocation(BlindBoxChallenge.MOD_ID, "main"))
             .networkProtocolVersion(() -> PROTOCOL).clientAcceptedVersions(PROTOCOL::equals).serverAcceptedVersions(PROTOCOL::equals).simpleChannel();
     private static int nextId;
@@ -26,6 +26,10 @@ public final class ModNetwork {
                 CommitDeathNotePacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(nextId++, ShowLetterPacket.class, ShowLetterPacket::encode, ShowLetterPacket::decode,
                 ShowLetterPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(nextId++, CommitMusicBoxUrlPacket.class, CommitMusicBoxUrlPacket::encode, CommitMusicBoxUrlPacket::decode,
+                CommitMusicBoxUrlPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextId++, PlayMusicBoxPacket.class, PlayMusicBoxPacket::encode, PlayMusicBoxPacket::decode,
+                PlayMusicBoxPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     private ModNetwork() {}

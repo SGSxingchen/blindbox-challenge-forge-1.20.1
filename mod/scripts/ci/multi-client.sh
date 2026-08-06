@@ -335,6 +335,14 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_DOOR=success' "${SERVER_DIR}/server.log"
+# 八音盒服务端负例仅调用生产菜单授权和 URL 规则：危险协议、认证信息、私网字面量、错误
+# 容器/位置/实例/修订及重放均必须拒绝，且本路径不允许服务端下载任意 URL。
+printf 'blindboxcitest run_p4_music_negative\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P4_MUSIC_NEGATIVE=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_MUSIC_NEGATIVE=success' "${SERVER_DIR}/server.log"
 # P4 小黄鸡必须由正式 Item#use 武装；两个客户端真实跟踪同一实体/Fuse 后，服务端等待默认
 # 1200 tick 倒计时结束并只接受一次以该实体为 exploder 的 TNT 语义爆炸。
 printf 'blindboxcitest start_p4_chicken\n' >&3

@@ -2,6 +2,7 @@ package cn.blindboxchallenge.registry;
 
 import cn.blindboxchallenge.BlindBoxChallenge;
 import cn.blindboxchallenge.blockentity.AnywhereDoorBlockEntity;
+import cn.blindboxchallenge.blockentity.MusicBoxBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -13,6 +14,8 @@ public final class ModBlockEntities {
             DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, BlindBoxChallenge.MOD_ID);
     public static final RegistryObject<BlockEntityType<AnywhereDoorBlockEntity>> ANYWHERE_DOOR = BLOCK_ENTITIES.register("anywhere_door",
             () -> BlockEntityType.Builder.of(AnywhereDoorBlockEntity::new, ModBlocks.ANYWHERE_DOOR.get()).build(null));
+    public static final RegistryObject<BlockEntityType<MusicBoxBlockEntity>> MUSIC_BOX = BLOCK_ENTITIES.register("music_box",
+            () -> BlockEntityType.Builder.of(MusicBoxBlockEntity::new, ModBlocks.MUSIC_BOX.get()).build(null));
 
     private ModBlockEntities() {}
 }

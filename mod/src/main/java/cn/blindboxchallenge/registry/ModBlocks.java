@@ -6,6 +6,7 @@ import cn.blindboxchallenge.block.GlowStickBlock;
 import cn.blindboxchallenge.block.PillowBlock;
 import cn.blindboxchallenge.block.AnywhereDoorBlock;
 import cn.blindboxchallenge.block.SafetyLandingBlock;
+import cn.blindboxchallenge.block.MusicBoxBlock;
 import cn.blindboxchallenge.entity.PillowVariant;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.level.block.WallTorchBlock;
@@ -36,6 +37,8 @@ public final class ModBlocks {
             () -> new AnywhereDoorBlock(BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.WOOD).noOcclusion().noCollission()));
     public static final RegistryObject<Block> SAFETY_LANDING = BLOCKS.register("safety_landing",
             () -> new SafetyLandingBlock(BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.WOOD)));
+    public static final RegistryObject<Block> MUSIC_BOX = BLOCKS.register("music_box",
+            () -> new MusicBoxBlock(BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.WOOD).noOcclusion()));
 
     private ModBlocks() {}
 }

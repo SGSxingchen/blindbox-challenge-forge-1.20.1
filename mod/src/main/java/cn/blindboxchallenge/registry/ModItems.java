@@ -75,6 +75,8 @@ public final class ModItems {
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.ANYWHERE_DOOR.get(), new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> SAFETY_LANDING = ITEMS.register("safety_landing",
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.SAFETY_LANDING.get(), new Item.Properties()));
+    public static final RegistryObject<Item> MUSIC_BOX = ITEMS.register("music_box",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.MUSIC_BOX.get(), new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> RETURNING_SCISSORS = ITEMS.register("returning_scissors",
             ReturningScissorsItem::new);
     public static final RegistryObject<Item> RAT_JERKY_TOTEM = ITEMS.register("rat_jerky_totem", () -> new Item(new Item.Properties().stacksTo(1)));

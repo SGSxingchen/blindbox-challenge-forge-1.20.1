@@ -12,6 +12,10 @@ base {
     archivesName = mod_id
 }
 
+// JLayer 仅由 client/audio 下的 MP3 解码器引用。保持独立 Jar-in-Jar，不重定位、不修改；
+// 随附 LGPL 文本和 NOTICE，P5 发布前仍须做许可证复核。
+jarJar.enable()
+
 // Mojang ships Java 17 to end users in 1.18+, so your mod should target Java 17.
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
@@ -155,6 +159,8 @@ dependencies {
     // If the group id is "net.minecraft" and the artifact id is one of ["client", "server", "joined"],
     // then special handling is done to allow a setup of a vanilla dependency without the use of an external repository.
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    implementation 'javazoom:jlayer:1.0.1'
+    jarJar 'javazoom:jlayer:1.0.1'
 
     // Example mod dependency with JEI - using fg.deobf() ensures the dependency is remapped to your development mappings
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime

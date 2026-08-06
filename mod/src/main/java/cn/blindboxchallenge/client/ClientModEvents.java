@@ -6,6 +6,7 @@ import cn.blindboxchallenge.item.PurpleToyPickaxeSwordItem;
 import cn.blindboxchallenge.registry.ModItems;
 import cn.blindboxchallenge.registry.ModMenus;
 import cn.blindboxchallenge.registry.ModEntities;
+import cn.blindboxchallenge.client.MusicBoxScreen;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
@@ -38,6 +39,7 @@ public final class ClientModEvents {
             MenuScreens.register(ModMenus.PACKING_MENU.get(), PackingScreen::new);
             MenuScreens.register(ModMenus.LETTER_EDIT_MENU.get(), LetterEditScreen::new);
             MenuScreens.register(ModMenus.DEATH_NOTE_MENU.get(), DeathNoteScreen::new);
+            MenuScreens.register(ModMenus.MUSIC_BOX_MENU.get(), MusicBoxScreen::new);
             // 仅客户端渲染谓词：生产物品类完全不引用客户端类型，只读取服务器已同步的 NBT。
             ItemProperties.register(ModItems.BLACK_KNIGHT_TELESCOPIC_KNIFE.get(),
                     new ResourceLocation(BlindBoxChallenge.MOD_ID, "extended"),

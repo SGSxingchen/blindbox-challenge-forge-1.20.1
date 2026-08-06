@@ -4,6 +4,7 @@ import cn.blindboxchallenge.BlindBoxChallenge;
 import cn.blindboxchallenge.menu.PackingMenu;
 import cn.blindboxchallenge.menu.LetterEditMenu;
 import cn.blindboxchallenge.menu.DeathNoteMenu;
+import cn.blindboxchallenge.menu.MusicBoxMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.registries.DeferredRegister;
@@ -17,6 +18,8 @@ public final class ModMenus {
             () -> IForgeMenuType.create(LetterEditMenu::new));
     public static final RegistryObject<MenuType<DeathNoteMenu>> DEATH_NOTE_MENU = MENUS.register("death_note_menu",
             () -> IForgeMenuType.create(DeathNoteMenu::new));
+    public static final RegistryObject<MenuType<MusicBoxMenu>> MUSIC_BOX_MENU = MENUS.register("music_box_menu",
+            () -> IForgeMenuType.create(MusicBoxMenu::new));
 
     private ModMenus() {}
 }
