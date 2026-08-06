@@ -202,7 +202,7 @@ public final class P3AbilityCiScenario {
         private boolean clientKeyAcceptedByServer;
         private boolean startTrackingEventSeen;
         private boolean cloneEventSeen;
-        private int cloneReplacementEntityId = -1;
+        private ServerPlayer cloneReplacement;
         private boolean dimensionEventSeen;
         private boolean airJumpReleased;
         private boolean selfSyncMarkerVerified;
@@ -384,7 +384,7 @@ public final class P3AbilityCiScenario {
             if (phase != Phase.WAITING_FOR_CLONE || !(event.getEntity() instanceof ServerPlayer replacement)
                     || !aliceUuid.equals(replacement.getUUID()) || !event.isWasDeath()) return;
             cloneEventSeen = true;
-            cloneReplacementEntityId = replacement.getId();
+            cloneReplacement = replacement;
         }
 
         private void onDimensionChange(PlayerEvent.PlayerChangedDimensionEvent event) {
@@ -433,16 +433,17 @@ public final class P3AbilityCiScenario {
         }
 
         private void onCloneOrDimensionReady() {
-            ServerPlayer alice = player(server, "BlindBoxAlice");
             if (phase == Phase.WAITING_FOR_CLONE && cloneEventSeen) {
-                // Clone 事件中的 replacement 已创建，但 PlayerList 仍可能在同一服务器 tick 返回
-                // 即将销毁的旧实体；等真实在线实体切换到 replacement 后再核验 Capability。
-                if (alice.getId() != cloneReplacementEntityId) return;
-                requireLearned(alice);
+                // Clone 事件直接提供新 replacement；PlayerList 在死亡切换阶段仍可能保留旧实例，
+                // 因而不能用名称查找代替该真实 replacement 的 Capability/属性核验。
+                if (cloneReplacement == null) throw new IllegalStateException("Clone 事件缺少 replacement 实体");
+                requireLearned(cloneReplacement);
                 phase = Phase.CLONE_READY;
                 phaseTicks = 0;
-                CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P3_ABILITY_CLONE=success entity={}", alice.getId());
-            } else if (phase == Phase.WAITING_FOR_DIMENSION && dimensionEventSeen && Level.NETHER.equals(alice.level().dimension())) {
+                CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P3_ABILITY_CLONE=success entity={}", cloneReplacement.getId());
+            } else if (phase == Phase.WAITING_FOR_DIMENSION && dimensionEventSeen) {
+                ServerPlayer alice = player(server, "BlindBoxAlice");
+                if (!Level.NETHER.equals(alice.level().dimension())) return;
                 requireLearned(alice);
                 phase = Phase.DIMENSION_READY;
                 phaseTicks = 0;
