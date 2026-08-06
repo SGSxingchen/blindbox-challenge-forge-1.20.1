@@ -15,6 +15,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -119,6 +120,7 @@ public final class P4TextCiScenario {
         private final Path deathMarker;
         private final UUID bobUuid;
         private final long startedAt;
+        private final boolean originalKeepInventory;
         private int persistedLetterSlot = -1;
         private UUID persistedLetterInstance;
         private Phase phase = Phase.WAIT_LETTER_EDIT;
@@ -136,6 +138,7 @@ public final class P4TextCiScenario {
             this.deathMarker = deathMarker;
             this.bobUuid = bob.getUUID();
             this.startedAt = server.overworld().getGameTime();
+            this.originalKeepInventory = server.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).get();
         }
 
         private static ActiveScenario create(MinecraftServer server) throws IOException {
@@ -195,6 +198,8 @@ public final class P4TextCiScenario {
                     boolean remains = DeathNoteSavedData.get(server.overworld()).entries().stream()
                             .anyMatch(entry -> entry.target().equals(bobUuid));
                     if (now >= deathEntryDueTick && !remains && !bob.isAlive()) {
+                        // P1 canonical 资产仍须参与本次汇总回归；仅围绕真实死亡窗口临时保留物品。
+                        server.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(originalKeepInventory, server);
                         phase = Phase.READY;
                         CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P4_TEXT_SERVER=success");
                     } else if (now > nextActionTick) {
@@ -209,6 +214,7 @@ public final class P4TextCiScenario {
             ItemStack note = new ItemStack(ModItems.DEATH_NOTE.get());
             alice.setItemInHand(InteractionHand.MAIN_HAND, note);
             alice.containerMenu.broadcastChanges();
+            server.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, server);
             // 同样只等待真实客户端右键；不由服务端直调 DeathNoteItem#use。
         }
 
@@ -254,6 +260,7 @@ public final class P4TextCiScenario {
 
         private void cleanup() {
             alice.closeContainer();
+            server.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(originalKeepInventory, server);
             if (persistedLetterSlot >= 9) alice.getInventory().setItem(persistedLetterSlot, ItemStack.EMPTY);
             alice.getInventory().selected = originalSelectedSlot;
             alice.setItemInHand(InteractionHand.MAIN_HAND, originalSelectedStack.copy());
