@@ -198,6 +198,18 @@ public final class ReturningScissorsEntity extends AbstractArrow implements Item
         beginReturn();
     }
 
+    /**
+     * 保留原版可命中性和同乘骑组保护，但不把箭矢“尚未离开主人”这一瞬时状态外溢到普通目标。
+     * 剪刀创建后由服务端已保存主人 UUID；它永远不会伤害主人或同一乘骑组，却应能命中紧邻的其他实体。
+     */
+    @Override
+    protected boolean canHitEntity(Entity entity) {
+        if (super.canHitEntity(entity)) return true;
+        Entity owner = getOwner();
+        return owner != null && entity.canBeHitByProjectile() && entity != owner
+                && !entity.isPassengerOfSameVehicle(owner);
+    }
+
     @Override
     protected void onHitBlock(BlockHitResult result) {
         if (level().isClientSide || isReturning()) return;
