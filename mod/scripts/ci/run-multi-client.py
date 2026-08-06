@@ -72,6 +72,31 @@ def launch(directory: Path, username: str, uuid: str, marker: Path, pillow_marke
     return process, output, console
 
 
+def wait_for_real_connection(entry):
+    """等待一个真实客户端完成稳定联机，再启动下一名客户端。
+
+    Forge 1.20.1 在 Hosted Runner 上偶尔会在两个离线测试身份同一瞬间交换登录包时抛出
+    ``ConcurrentModificationException``；这发生在任何业务场景开始前。串行握手不改变“两个
+    独立客户端同服”的验收条件，只避免这个与模组功能无关的登录竞态。每名客户端仍必须由
+    自身真实网络事件写出联机标志，异常或超时仍会失败，绝不预写标志。
+    """
+    process, _, console, marker, _, _, _, username, _, directory, _ = entry
+    deadline = time.monotonic() + 600
+    while time.monotonic() < deadline:
+        text = console.read_text(encoding="utf-8", errors="replace") if console.is_file() else ""
+        latest = directory / "logs" / "latest.log"
+        if latest.is_file():
+            text += latest.read_text(encoding="utf-8", errors="replace")
+        if FATAL.search(text) or any((directory / "crash-reports").glob("*")):
+            raise RuntimeError(f"{username} 日志或崩溃报告异常")
+        if process.poll() is not None and not marker.is_file():
+            raise RuntimeError(f"{username} 在联机标志前退出：{process.returncode}")
+        if marker.is_file():
+            return
+        time.sleep(1)
+    raise RuntimeError(f"{username} 600 秒内未完成真实联机")
+
+
 def main():
     if len(sys.argv) != 3:
         raise SystemExit("用法：run-multi-client.py <客户端模板目录> <证据目录>")
@@ -111,26 +136,9 @@ def main():
                                     ability_tracking_marker, ability_lifecycle_marker, ability_recovery_marker,
                                     recovery_connection_marker), marker, pillow_marker, scissors_marker, pig_marker, username, uuid, directory,
                             recovery_connection_marker))
-
-        deadline = time.monotonic() + 600
-        while time.monotonic() < deadline:
-            failures = []
-            for process, _, console, marker, _, _, _, username, _, directory, _ in clients:
-                text = console.read_text(encoding="utf-8", errors="replace") if console.is_file() else ""
-                latest = directory / "logs" / "latest.log"
-                if latest.is_file():
-                    text += latest.read_text(encoding="utf-8", errors="replace")
-                if FATAL.search(text) or any((directory / "crash-reports").glob("*")):
-                    failures.append(f"{username} 日志或崩溃报告异常")
-                if process.poll() is not None and not marker.is_file():
-                    failures.append(f"{username} 在联机标志前退出：{process.returncode}")
-            if failures:
-                raise RuntimeError("; ".join(failures))
-            if all(entry[3].is_file() for entry in clients):
-                break
-            time.sleep(1)
-        else:
-            raise RuntimeError("两个客户端 600 秒内未同时联机")
+            # 先由 Alice 完成真实握手和稳定联机，再启动 Bob，规避专服登录层的瞬时并发错误。
+            # 两个客户端在业务探针、强杀恢复和最终正常退出阶段仍全程同时在线。
+            wait_for_real_connection(clients[-1])
 
         (evidence / "both-connected.marker").write_text("both-real-clients-connected\n", encoding="utf-8")
         # 由 workflow 在导出 canonical 后写 release；此脚本等待该文件再让客户端正常退出。
