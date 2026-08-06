@@ -28,6 +28,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -318,22 +319,24 @@ public final class ReturningScissorsCiScenario {
         private void snapshotNormalPreFlight() {
             if (phase != Phase.AWAITING_NORMAL_RETURN || normalScissors == null) return;
             Entity projectile = minecraftEntity(normalScissors);
+            AbstractArrow arrow = minecraftArrow(normalScissors);
             Vec3 start = projectile.position();
             Vec3 movement = projectile.getDeltaMovement();
             Vec3 end = start.add(movement);
             CompoundTag runtimeState = new CompoundTag();
-            normalScissors.addAdditionalSaveData(runtimeState);
+            arrow.addAdditionalSaveData(runtimeState);
             normalPreInGround = runtimeState.getBoolean("inGround");
             normalPreLeftOwner = runtimeState.getBoolean("LeftOwner");
-            normalPreNoPhysics = normalScissors.isNoPhysics();
+            normalPreNoPhysics = arrow.isNoPhysics();
             normalPreTickCount = projectile.tickCount;
             normalPrePosition = start;
             normalPreMovement = movement;
-            normalTargetCanBeHit = normalTarget.canBeHitByProjectile();
-            normalTargetAlive = normalTarget.isAlive();
-            normalTargetSpectator = normalTarget.isSpectator();
-            Entity owner = normalScissors.getOwner();
-            normalTargetSameOwnerVehicle = owner != null && normalTarget.isPassengerOfSameVehicle(owner);
+            Entity target = minecraftEntity(normalTarget);
+            normalTargetCanBeHit = target.canBeHitByProjectile();
+            normalTargetAlive = target.isAlive();
+            normalTargetSpectator = target.isSpectator();
+            Entity owner = minecraftProjectile(normalScissors).getOwner();
+            normalTargetSameOwnerVehicle = owner != null && target.isPassengerOfSameVehicle(owner);
             HitResult blockHit = level.clip(new ClipContext(start, end, ClipContext.Block.COLLIDER,
                     ClipContext.Fluid.NONE, projectile));
             if (blockHit.getType() != HitResult.Type.MISS) end = blockHit.getLocation();
@@ -357,7 +360,7 @@ public final class ReturningScissorsCiScenario {
             normalLastPosition = entity.position();
             normalLastMovement = entity.getDeltaMovement();
             normalLastReturning = normalScissors.isReturning();
-            normalLastNoPhysics = normalScissors.isNoPhysics();
+            normalLastNoPhysics = minecraftArrow(normalScissors).isNoPhysics();
         }
 
         private void recordProjectileImpact(ProjectileImpactEvent event) {
@@ -552,6 +555,11 @@ public final class ReturningScissorsCiScenario {
     private static net.minecraft.world.entity.projectile.Projectile minecraftProjectile(
             net.minecraft.world.entity.projectile.Projectile projectile) {
         return projectile;
+    }
+
+    /** ciTest 单独重混淆时，AbstractArrow 继承方法必须以 Minecraft 基类为调用者。 */
+    private static AbstractArrow minecraftArrow(AbstractArrow arrow) {
+        return arrow;
     }
 
     private record InventorySnapshot(List<ItemStack> slots, int selected) {
