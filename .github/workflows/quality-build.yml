@@ -117,6 +117,9 @@ jobs:
           ! grep -q 'InputConstants.KEY_A, 0, InputConstants.MOD_CONTROL' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
           # 文本场景须由 Bob 真实死亡并观察死亡屏，之后不复活；小黄鸡完整双端观察必须在此之前。
           grep -q 'ModItems.CLOCKWORK_CHICKEN.get().use(level, alice, InteractionHand.MAIN_HAND)' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          grep -q 'preparePlatform(safe);' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          grep -q 'safe.getY() + 1.0D' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          grep -q 'private void preparePlatform(BlockPos platform)' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
           python3 - <<'PY'
           from pathlib import Path
           source = Path('scripts/ci/multi-client.sh').read_text(encoding='utf-8')

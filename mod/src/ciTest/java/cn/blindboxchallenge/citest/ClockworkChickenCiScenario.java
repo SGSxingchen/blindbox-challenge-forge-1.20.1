@@ -163,9 +163,7 @@ public final class ClockworkChickenCiScenario {
         private void armThroughProductionItemUse() {
             // 在生成点旁的临时黑曜石平台执行真实生产 Item#use；二人随后由真实客户端接收该实体的同步包。
             BlockPos platform = level.getSharedSpawnPos().offset(28, 8, 0);
-            for (int x = -2; x <= 2; x++) {
-                for (int z = -2; z <= 2; z++) rememberAndSet(platform.offset(x, 0, z), Blocks.OBSIDIAN.defaultBlockState());
-            }
+            preparePlatform(platform);
             alice.teleportTo(level, platform.getX() + 0.5D, platform.getY() + 1.0D, platform.getZ() + 0.5D, 0.0F, 0.0F);
             bob.teleportTo(level, platform.getX() + 3.5D, platform.getY() + 1.0D, platform.getZ() + 0.5D, 0.0F, 0.0F);
             ItemStack chickenStack = new ItemStack(ModItems.CLOCKWORK_CHICKEN.get());
@@ -200,8 +198,11 @@ public final class ClockworkChickenCiScenario {
                     }
                     // 两人已实际跟踪同一实体后才移至爆炸安全距离，绝不由脚本预写观察结果。
                     BlockPos safe = level.getSharedSpawnPos().offset(-24, 3, 0);
-                    alice.teleportTo(level, safe.getX() + 0.5D, safe.getY(), safe.getZ() + 0.5D, 0.0F, 0.0F);
-                    bob.teleportTo(level, safe.getX() + 3.5D, safe.getY(), safe.getZ() + 0.5D, 0.0F, 0.0F);
+                    // 默认 1200 tick 等待期间仍必须有真实支撑面：不能把两人送入空气后再把坠落伤害
+                    // 遗留给下一场景。平台只由夹具临时铺设，cleanup 会按原状态还原。
+                    preparePlatform(safe);
+                    alice.teleportTo(level, safe.getX() + 0.5D, safe.getY() + 1.0D, safe.getZ() + 0.5D, 0.0F, 0.0F);
+                    bob.teleportTo(level, safe.getX() + 3.5D, safe.getY() + 1.0D, safe.getZ() + 0.5D, 0.0F, 0.0F);
                     phase = Phase.WAITING_FOR_EXPLOSION;
                 } else if (now - startedAt > 240L) {
                     throw new IllegalStateException("两个真实客户端未在观察窗口内同步小黄鸡实体");
@@ -270,6 +271,12 @@ public final class ClockworkChickenCiScenario {
         private void rememberAndSet(BlockPos pos, BlockState state) {
             originalBlocks.putIfAbsent(pos, level.getBlockState(pos));
             level.setBlock(pos, state, 3);
+        }
+
+        private void preparePlatform(BlockPos platform) {
+            for (int x = -2; x <= 2; x++) {
+                for (int z = -2; z <= 2; z++) rememberAndSet(platform.offset(x, 0, z), Blocks.OBSIDIAN.defaultBlockState());
+            }
         }
 
         private void fail(Exception exception) {

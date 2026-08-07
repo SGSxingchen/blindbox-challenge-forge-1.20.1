@@ -45,3 +45,5 @@
 `f1fac80` 的双客户端 run `31157726129` 已使两客户端 OGG 首次和断网缓存读取到真实 PCM（各 `22050` 字节，服务端也分别输出 `P4_MUSIC_OGG_FIRST=success` 与 `P4_MUSIC_CACHE=success`），但在 MP3 重配前停于 `WAIT_MP3_CONFIGURATION`。artifact 显示两端收到同一畸形 URL、随后真实生产失败事件为 `HTTP_HEADERS/IOException`；探针此前的“Ctrl+A”只传入修饰参数，未可靠选中已有 OGG 文本，完整 MP3 URL 因而插入旧值中间。修复仍只走已聚焦生产 EditBox 的 End/Backspace/逐字符输入和真实保存点击，质量门禁拒绝旧的伪 Ctrl 方案；不直接设字段或发包，不放宽 MP3 PCM、缓存、失败或不补播断言。P4 仍为 **0/6**。
 
 `6e2f788` 的双客户端 run `31158618130` 已将八音盒完整推进到 OGG、缓存、MP3 PCM、截断失败和 Bob 不补播均成功；新首错为小黄鸡两个客户端观察。服务器在 `P4_CHICKEN_STARTED` 后立即记录 Alice 高处坠落，artifact 仅有 Alice 的真实 UUID/Fuse marker，12 秒观察窗口后严格失败，不能把单端 marker 当通过。静态复核确认更早的确定性阻塞：文本场景为验收死亡笔记，要求 Bob 真实死亡并写 DeathScreen marker，cleanup 不复活；小黄鸡却排在其后，死亡客户端不能正常接收实体跟踪。下一轮仅把现有完整小黄鸡段移到 Alice 重连成功后、文本负例/正例之前，保证两端仍存活；生产 `Item#use`、同一实体/Fuse marker、服务端反查、超时与单次 TNT 断言不变，P4 仍为 **0/6**。
+
+`6fac110` 的双客户端已确认重排解决 Bob 死亡阻塞：两端同 UUID/Fuse marker、默认 Fuse 1200、一次 TNT 爆炸和 cleanup 全部成功。其后文本在信件编辑前失败，是因为鸡观察完成后迁移到的安全距离没有支撑面且高度落在方块内，两人在 60 秒内积累坠落伤害，cleanup 后 Alice 才死亡。下一轮仅让 `safe` 与武装点共用临时 5×5 支撑平台，并把两人落在平台上方一格；既有原状态还原、真实死亡笔记、双端 marker、超时与生产断言不变，P4 仍为 **0/6**。
