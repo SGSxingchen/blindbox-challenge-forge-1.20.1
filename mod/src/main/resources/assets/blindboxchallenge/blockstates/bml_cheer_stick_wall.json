@@ -1,12 +1,44 @@
 {
   "variants": {
-    "facing=east,lit=false": { "model": "blindboxchallenge:block/bml_cheer_stick_wall_off", "y": 270, "uvlock": true },
-    "facing=north,lit=false": { "model": "blindboxchallenge:block/bml_cheer_stick_wall_off", "y": 0, "uvlock": true },
-    "facing=south,lit=false": { "model": "blindboxchallenge:block/bml_cheer_stick_wall_off", "y": 180, "uvlock": true },
-    "facing=west,lit=false": { "model": "blindboxchallenge:block/bml_cheer_stick_wall_off", "y": 90, "uvlock": true },
-    "facing=east,lit=true": { "model": "blindboxchallenge:block/bml_cheer_stick_wall_on", "y": 270, "uvlock": true },
-    "facing=north,lit=true": { "model": "blindboxchallenge:block/bml_cheer_stick_wall_on", "y": 0, "uvlock": true },
-    "facing=south,lit=true": { "model": "blindboxchallenge:block/bml_cheer_stick_wall_on", "y": 180, "uvlock": true },
-    "facing=west,lit=true": { "model": "blindboxchallenge:block/bml_cheer_stick_wall_on", "y": 90, "uvlock": true }
+    "facing=east,lit=false": {
+      "model": "blindboxchallenge:block/bml_cheer_stick_wall_off",
+      "y": 270,
+      "uvlock": true
+    },
+    "facing=east,lit=true": {
+      "model": "blindboxchallenge:block/bml_cheer_stick_wall_on",
+      "y": 270,
+      "uvlock": true
+    },
+    "facing=north,lit=false": {
+      "model": "blindboxchallenge:block/bml_cheer_stick_wall_off",
+      "y": 0,
+      "uvlock": true
+    },
+    "facing=north,lit=true": {
+      "model": "blindboxchallenge:block/bml_cheer_stick_wall_on",
+      "y": 0,
+      "uvlock": true
+    },
+    "facing=south,lit=false": {
+      "model": "blindboxchallenge:block/bml_cheer_stick_wall_off",
+      "y": 180,
+      "uvlock": true
+    },
+    "facing=south,lit=true": {
+      "model": "blindboxchallenge:block/bml_cheer_stick_wall_on",
+      "y": 180,
+      "uvlock": true
+    },
+    "facing=west,lit=false": {
+      "model": "blindboxchallenge:block/bml_cheer_stick_wall_off",
+      "y": 90,
+      "uvlock": true
+    },
+    "facing=west,lit=true": {
+      "model": "blindboxchallenge:block/bml_cheer_stick_wall_on",
+      "y": 90,
+      "uvlock": true
+    }
   }
 }

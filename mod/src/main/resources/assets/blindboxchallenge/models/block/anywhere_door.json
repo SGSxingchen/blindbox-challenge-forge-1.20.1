@@ -1,22 +1,39 @@
 {
-  "parent": "block/block",
+  "ambientocclusion": false,
   "textures": {
-    "particle": "blindboxchallenge:block/anywhere_door",
-    "front": "blindboxchallenge:block/anywhere_door",
-    "back": "blindboxchallenge:block/anywhere_door",
-    "side": "blindboxchallenge:block/anywhere_door"
+    "all": "blindboxchallenge:block/anywhere_door"
   },
   "elements": [
     {
-      "from": [1, 0, 6],
-      "to": [15, 16, 10],
+      "from": [
+        1,
+        0,
+        6
+      ],
+      "to": [
+        15,
+        16,
+        10
+      ],
       "faces": {
-        "north": { "texture": "#front" },
-        "south": { "texture": "#back" },
-        "east": { "texture": "#side" },
-        "west": { "texture": "#side" },
-        "up": { "texture": "#side" },
-        "down": { "texture": "#side" }
+        "down": {
+          "texture": "#all"
+        },
+        "up": {
+          "texture": "#all"
+        },
+        "north": {
+          "texture": "#all"
+        },
+        "south": {
+          "texture": "#all"
+        },
+        "west": {
+          "texture": "#all"
+        },
+        "east": {
+          "texture": "#all"
+        }
       }
     }
   ]

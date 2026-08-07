@@ -1,4 +1,6 @@
 {
   "parent": "minecraft:block/wall_torch",
-  "textures": { "torch": "blindboxchallenge:block/glow_stick" }
+  "textures": {
+    "torch": "blindboxchallenge:block/glow_stick"
+  }
 }

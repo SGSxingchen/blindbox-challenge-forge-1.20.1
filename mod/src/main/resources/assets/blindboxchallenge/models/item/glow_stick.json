@@ -1,1 +1,3 @@
-{ "parent": "blindboxchallenge:block/glow_stick" }
+{
+  "parent": "blindboxchallenge:block/glow_stick"
+}

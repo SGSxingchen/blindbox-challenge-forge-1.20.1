@@ -404,6 +404,36 @@ jobs:
               assert path in recorded, path
               row = next(line for line in manifest.splitlines() if line.startswith(f'|`{path}`|'))
               assert '项目维护者（2026-08-07）' in row and '确定性几何像素' in row, path
+          model_generator = root.parent / 'tools/generate_original_models.py'
+          model_values = runpy.run_path(str(model_generator))
+          model_targets = model_values['TARGETS']
+          assert len(model_targets) == 95
+          subprocess.run(['python3', str(model_generator), '--check'], check=True)
+          for relative in model_targets:
+              path = f'mod/src/main/resources/{relative}'
+              assert path in recorded, path
+              row = next(line for line in manifest.splitlines() if line.startswith(f'|`{path}`|'))
+              assert '项目维护者（2026-08-07）' in row and '中性原版模板' in row, path
+          model_root = asset_root / 'models'
+          for model_path in model_root.rglob('*.json'):
+              model = json.loads(model_path.read_text(encoding='utf-8'))
+              parent = model.get('parent', '')
+              if parent.startswith('blindboxchallenge:block/'):
+                  assert (model_root / 'block' / (parent.rsplit('/', 1)[1] + '.json')).is_file(), model_path
+              for texture in model.get('textures', {}).values():
+                  if texture.startswith('blindboxchallenge:'):
+                      texture_path = asset_root / 'textures' / (texture.split(':', 1)[1] + '.png')
+                      assert texture_path.is_file(), (model_path, texture)
+              for override in model.get('overrides', []):
+                  target = override['model']
+                  assert target.startswith('blindboxchallenge:item/')
+                  assert (model_root / 'item' / (target.rsplit('/', 1)[1] + '.json')).is_file(), (model_path, target)
+          for state_path in (asset_root / 'blockstates').glob('*.json'):
+              state = json.loads(state_path.read_text(encoding='utf-8'))
+              for variant in state['variants'].values():
+                  target = variant['model']
+                  assert target.startswith('blindboxchallenge:block/')
+                  assert (model_root / 'block' / (target.rsplit('/', 1)[1] + '.json')).is_file(), (state_path, target)
 
           scenario = (root / 'src/ciTest/java/cn/blindboxchallenge/citest/P5DecorCiScenario.java').read_text(encoding='utf-8')
           client = (root / 'src/ciTest/java/cn/blindboxchallenge/citest/CiClientP5DecorObservation.java').read_text(encoding='utf-8')
