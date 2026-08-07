@@ -25,9 +25,13 @@ import net.minecraftforge.fml.common.Mod;
 public final class CiClientP4DoorRecoveryObservation {
     /** Hosted Runner 启动后可能有 120 个服务器刻追帧；仍小于服务端 800 刻场景总超时。 */
     private static final int WALKING_TIMEOUT_TICKS = 400;
+    /** 收到服务端第一阶段复验后，仍须无输入稳定观察的真实客户端刻数，排空跨维定位确认。 */
+    private static final int FIXTURE_SETTLE_TICKS = 40;
     private static boolean sourceSeen;
     private static boolean fixtureReady;
     private static int fixtureStableTicks;
+    private static boolean fixtureSettled;
+    private static int fixtureSettledTicks;
     private static boolean walking;
     private static int walkingTicks;
     private static boolean aliceWritten;
@@ -45,16 +49,17 @@ public final class CiClientP4DoorRecoveryObservation {
         // 此旗标仅允许“重启后服务端已验证杀前持久字段”的阶段开始，绝不是任何成功 marker。
         // 杀前夹具已经存在时，客户端必须完全不走动、不观察、更不能写 marker。
         boolean observeFixture = Files.isRegularFile(directory.resolve("p4-door-recovery-fixture-observe.flag"));
+        boolean settleFixture = Files.isRegularFile(directory.resolve("p4-door-recovery-fixture-settle.flag"));
         boolean enabled = Files.isRegularFile(directory.resolve("p4-door-recovery-enabled.flag"));
-        if (!observeFixture && !enabled) return;
+        if (!observeFixture && !settleFixture && !enabled) return;
         BlockPos source = minecraft.level.getSharedSpawnPos().offset(P4DoorRecoveryCiScenario.SOURCE_OFFSET);
         BlockPos target = P4DoorRecoveryCiScenario.NETHER_TARGET;
-        if (isAlice(self)) observeAlice(minecraft, self, source, target, directory, observeFixture, enabled);
+        if (isAlice(self)) observeAlice(minecraft, self, source, target, directory, observeFixture, settleFixture, enabled);
         else observeBob(minecraft, self, target, directory);
     }
 
     private static void observeAlice(Minecraft minecraft, LocalPlayer self, BlockPos source, BlockPos target, Path directory,
-                                     boolean observeFixture, boolean enabled) {
+                                     boolean observeFixture, boolean settleFixture, boolean enabled) {
         if (minecraft.level.dimension().equals(Level.OVERWORLD)) {
             if (isDoorWithSafety(minecraft, source)) sourceSeen = true;
             Vec3 expectedStart = P4DoorRecoveryCiScenario.fixtureStart(source);
@@ -73,7 +78,23 @@ public final class CiClientP4DoorRecoveryObservation {
                     fixtureReady = true;
                 }
             }
-            if (!enabled || !fixtureReady) {
+            // 第一份 marker 只证明客户端看到起点。服务端复验后还要再给客户端一个固定、无输入的
+            // 观察窗口，确保跨维定位的 AcceptTeleport/位置确认不与真实前进键争用同一移动包。
+            // 第二份文件也不是成功结果：它只记录仍处于源维精确起点且 keyUp 未开启的客户端事实。
+            if (settleFixture && fixtureReady && !fixtureSettled) {
+                if (atStart) fixtureSettledTicks++;
+                else fixtureSettledTicks = 0;
+                if (fixtureSettledTicks >= FIXTURE_SETTLE_TICKS) {
+                    writeMarker(directory.resolve("client-1-p4-door-fixture-settled.marker"), "schema=1\n"
+                            + "observer_uuid=" + ((Entity) self).getUUID() + "\n"
+                            + "dimension=minecraft:overworld\n"
+                            + "source=" + P4DoorRecoveryCiScenario.position(source) + "\n"
+                            + "standing=" + P4DoorRecoveryCiScenario.fixtureStartPosition(source) + "\n"
+                            + "input_free_server_phase_observed=true\n");
+                    fixtureSettled = true;
+                }
+            }
+            if (!enabled || !fixtureReady || !fixtureSettled) {
                 KeyMapping.set(minecraft.options.keyUp.getKey(), false);
                 return;
             }

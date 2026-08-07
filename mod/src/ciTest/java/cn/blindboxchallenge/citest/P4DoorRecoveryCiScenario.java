@@ -126,7 +126,7 @@ public final class P4DoorRecoveryCiScenario {
         }
     }
 
-    private enum Phase { WAIT_FOR_FIXTURE_SERVER_SYNC, WAIT_FOR_FIXTURE_CLIENT_SYNC, WAIT_FOR_CROSSING, READY, FAILED }
+    private enum Phase { WAIT_FOR_FIXTURE_SERVER_SYNC, WAIT_FOR_FIXTURE_CLIENT_SYNC, WAIT_FOR_FIXTURE_CLIENT_SETTLE, WAIT_FOR_CROSSING, READY, FAILED }
 
     private static final class ActiveScenario {
         private final MinecraftServer server;
@@ -217,8 +217,16 @@ public final class P4DoorRecoveryCiScenario {
                 if (alice.isChangingDimension()) return;
                 verifyFixtureServerPositions(alice, bob());
                 if (!verifyAliceFixtureMarker()) return;
-                phase = Phase.WAIT_FOR_CROSSING;
+                phase = Phase.WAIT_FOR_FIXTURE_CLIENT_SETTLE;
                 CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P4_DOOR_RECOVERY_FIXTURE_SYNCED=success");
+                return;
+            }
+            if (phase == Phase.WAIT_FOR_FIXTURE_CLIENT_SETTLE) {
+                if (alice.isChangingDimension()) return;
+                verifyFixtureServerPositions(alice, bob());
+                if (!verifyAliceFixtureSettledMarker()) return;
+                phase = Phase.WAIT_FOR_CROSSING;
+                CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P4_DOOR_RECOVERY_FIXTURE_SETTLED=success");
                 return;
             }
             if (phase == Phase.WAIT_FOR_CROSSING && !sourceMovementObserved && alice.serverLevel().dimension().equals(overworld.dimension())
@@ -295,6 +303,17 @@ public final class P4DoorRecoveryCiScenario {
                     && "true".equals(marker.get("source_door_and_safety_synced"));
         }
 
+        /** 第二阶段仍是输入前的客户端同步证据，确保跨维定位确认不会与真实步行包竞态。 */
+        private boolean verifyAliceFixtureSettledMarker() throws IOException {
+            Path path = markerDirectory.resolve("client-1-p4-door-fixture-settled.marker");
+            if (!Files.isRegularFile(path)) return false;
+            Map<String, String> marker = readMarker(path);
+            return "1".equals(marker.get("schema")) && aliceId.toString().equals(marker.get("observer_uuid"))
+                    && "minecraft:overworld".equals(marker.get("dimension")) && position(sourceDoor).equals(marker.get("source"))
+                    && fixtureStartPosition(sourceDoor).equals(marker.get("standing"))
+                    && "true".equals(marker.get("input_free_server_phase_observed"));
+        }
+
         private boolean verifyAliceMarker() throws IOException {
             Path path = markerDirectory.resolve("client-1-p4-door-arrived.marker");
             // 真实换维包、客户端观察和原子落盘晚于服务端 teleport；缺少文件只是尚未观察完成，
@@ -318,7 +337,8 @@ public final class P4DoorRecoveryCiScenario {
         }
 
         private void ensureNoOldMarkers() {
-            for (String name : List.of("client-1-p4-door-fixture-ready.marker", "client-1-p4-door-arrived.marker", "client-2-p4-door-observed.marker")) {
+            for (String name : List.of("client-1-p4-door-fixture-ready.marker", "client-1-p4-door-fixture-settled.marker",
+                    "client-1-p4-door-arrived.marker", "client-2-p4-door-observed.marker")) {
                 if (Files.exists(markerDirectory.resolve(name))) throw new IllegalStateException("P4 跨维门 marker 已存在，拒绝复用旧结果");
             }
         }

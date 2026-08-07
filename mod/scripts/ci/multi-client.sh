@@ -304,7 +304,17 @@ for _ in $(seq 1 120); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_FIXTURE_SYNCED=success' "${SERVER_DIR}/server.log"
-# 这只是允许杀后客户端开始观察的阶段旗标，不是成功 marker；真正结果只能由两客户端事实写入
+# 第一份客户端起点观察被服务端复验后，仍须等待第二份无输入稳定观察；它专门排空跨维
+# AcceptTeleport/位置确认，不能用增加步行超时或伪造位置包替代。
+touch "${EVIDENCE}/p4-door-recovery-fixture-settle.flag"
+for _ in $(seq 1 120); do
+  if grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_FIXTURE_SETTLED=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_FIXTURE_SETTLED=success' "${SERVER_DIR}/server.log"
+# 这只是允许杀后客户端开始真实前进的阶段旗标，不是成功 marker；真正结果只能由两客户端事实写入
 # 并由服务端读取后输出 CLIENTS=success。
 touch "${EVIDENCE}/p4-door-recovery-enabled.flag"
 for _ in $(seq 1 180); do
@@ -322,7 +332,8 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_CLEANUP=success' "${SERVER_DIR}/server.log"
-rm -f "${EVIDENCE}/p4-door-recovery-enabled.flag" "${EVIDENCE}/p4-door-recovery-fixture-observe.flag"
+rm -f "${EVIDENCE}/p4-door-recovery-enabled.flag" "${EVIDENCE}/p4-door-recovery-fixture-observe.flag" \
+  "${EVIDENCE}/p4-door-recovery-fixture-settle.flag"
 printf 'blindboxcitest prepare_reconnect\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_RECONNECT_PREPARED=success' "${SERVER_DIR}/server.log" && break
