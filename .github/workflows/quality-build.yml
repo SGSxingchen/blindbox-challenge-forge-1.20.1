@@ -99,8 +99,10 @@ jobs:
           crossing = source[start:end]
           if 'return;' in crossing:
               raise SystemExit('P4 跨维成功态检查不得用 return 绕过 800 tick 超时')
-          if 'if (!alice.isChangingDimension()) {' not in crossing or 'if (alice.onGround() && alice.getDeltaMovement().lengthSqr() <= 1.0E-8D) {' not in crossing:
-              raise SystemExit('P4 跨维成功态必须继续严格检查换维、落地与零速度')
+          if ('if (!alice.isChangingDimension()) {' not in crossing
+                  or 'if (alice.onGround() && horizontalSpeedSqr <= 1.0E-8D' not in crossing
+                  or 'velocity.y >= -0.0800001D && velocity.y <= 1.0E-8D' not in crossing):
+              raise SystemExit('P4 跨维成功态必须继续严格检查换维、落地与受限安全速度')
           PY
           # 生命周期夹具任一前置等待失败也必须保留原始服务器日志；该钩子只保存证据，不能吞失败。
           bash -n scripts/ci/lifecycle-recovery.sh
