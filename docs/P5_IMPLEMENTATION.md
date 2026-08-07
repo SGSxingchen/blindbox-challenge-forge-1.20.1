@@ -24,6 +24,8 @@
 
 `f5b4190` 的双客户端 run `31165998045` 给出首个 P5 真实失败：P4 小黄鸡、文本、门与八音盒均已通过，轮次 1 的初始 ItemEntity 也已被 Alice 正常拾取并由服务端输出 `PLACE_READY`，但在任何客户端 `keyUse` 注入、`BREAK_READY` 或 P5 成功 marker 出现前，服务端于 `P5DecorCiScenario.java:222` 超时 `WAIT_FOR_PLACE`。artifact 同时出现高空夹具的 `moved too quickly` 警告，不能猜测是定位、主手、支撑、HitResult 或输入消费。为下一轮仅补非成功的原子前置诊断：每台客户端在阶段旗标存在时记录角色、坐标、预期站位、主手/预期物品、目标/支撑状态、HitResult、瞄准 tick 与是否已注入；服务端只在超时消息汇总这些文件。诊断不作为 marker、不放宽时限或断言、不直设方块/发包，下一轮仍以真实 `keyUse` 结果为准。
 
+`aec1832` 的独立单客户端 run `31167082588` 用该诊断把根因收窄到第 2 轮：第 1 轮已依次真实右键、攻击、服务端状态/掉落实体成功；第 2 轮站位、空气目标和石质支撑均正确，但客户端主手仍是第 1 轮回收的摆件而非新拾取的画板，因而没有注入右键。服务端此前仅改 `Inventory.selected` 并广播容器，未必令真实客户端切换热键栏。现 ciTest 在确认原版 ItemEntity 拾取的实际物品槽后发送原版 `ClientboundSetCarriedItemPacket`，并在快照恢复时同步原槽；它只同步已持有槽位，不创建/替换物品、不发自定义 C2S，后续放置仍必须由客户端 `KeyMapping` 进入生产 `BlockItem` 路径。该最小修复待下一 SHA Hosted Runner 验证。
+
 ### P4 交接回归修复（待 Hosted Runner 验证）
 
 `5074e60` 的真实双客户端 artifact `31164591985` 在小黄鸡业务已成功后暴露 cleanup 首错：P3 强杀恢复保存的 Alice 高空坐标 `(0.5,128.0,0.5)` 周围没有符合只读自然地面规则的格子。现由**下一场景** `P4TextCiScenario` 在鸡 cleanup 前创建、完整保存并拥有 5×5×3 临时安全交接平台；鸡仅消费该已准备平台，不拥有或伪造它。平台一直保留到 P4 八音盒完成，避免其 cleanup 再把 Alice 送回已撤支撑；P5 cleanup 也先恢复到该平台。canonical 导出后才在同一结束流程归还所有原方块并 `save-all/stop`。这不改生产玩法、小黄鸡 Fuse/TNT、死亡笔记或音频断言。

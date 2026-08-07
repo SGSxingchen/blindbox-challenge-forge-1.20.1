@@ -333,6 +333,8 @@ jobs:
           single_workflow = (root.parent / '.github/workflows/single-client.yml').read_text(encoding='utf-8')
           assert 'WAIT_FOR_INITIAL_PICKUP' in scenario and 'WAIT_FOR_RECOVERY_PICKUP' in scenario
           assert 'client_diagnostics=' in scenario and 'client-1-p5-decor-diagnostic.marker' in scenario
+          assert 'new ClientboundSetCarriedItemPacket(found)' in scenario
+          assert 'new ClientboundSetCarriedItemPacket(selected)' in scenario
           assert 'new ItemEntity' in scenario and 'initial.setPickUpDelay(0);' in scenario
           assert 'countInventory(actor, round.item().get()) != 1' in scenario
           assert 'level.setBlock(support, Blocks.STONE.defaultBlockState(), 3);' in scenario

@@ -15,6 +15,7 @@ import java.util.UUID;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundSetCarriedItemPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -456,6 +457,7 @@ public final class P5DecorCiScenario {
             player.resetFallDistance();
             player.getInventory().selected = selected;
             player.getInventory().setItem(selected, selectedStack.copy());
+            player.connection.send(new ClientboundSetCarriedItemPacket(selected));
             player.containerMenu.broadcastChanges();
         }
     }
@@ -498,6 +500,9 @@ public final class P5DecorCiScenario {
             throw new IllegalStateException("P5 初始真实拾取未落入可选热键栏：" + player.getGameProfile().getName());
         }
         player.getInventory().selected = found;
+        // selected 仅是服务端 Inventory 字段不会必然把热键栏切换同步给真实客户端；显式使用
+        // 原版 S2C 已持有槽包，使随后 KeyMapping 仍从客户端当前主手走正常 BlockItem C2S 路径。
+        player.connection.send(new ClientboundSetCarriedItemPacket(found));
     }
 
     private static void removeDecorItems(ServerPlayer player) {
