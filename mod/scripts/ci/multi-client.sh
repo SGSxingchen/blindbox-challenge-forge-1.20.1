@@ -424,6 +424,19 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_MUSIC_STARTED=success' "${SERVER_DIR}/server.log"
+# 仅为定位固定公网 IP 直连失败而作的 Hosted Runner 外部观测：显式禁用代理、强制 IPv4/HTTP/1.1，
+# 不写 body、不输出 URL/响应头/错误文本。它不是成功 marker，也不替代随后两个真实 Forge 客户端的
+# DNS→固定 IP→TLS→PCM 链路；即使此探针失败，脚本仍让生产客户端给出自身的严格结论。
+P4_AUDIO_DIRECT_PROBE="${BLINDBOX_CITEST_P4_AUDIO_BASE_URL}/blindbox-ci-tone.ogg"
+P4_AUDIO_DIRECT_EVIDENCE="${EVIDENCE}/p4-audio-direct-preflight.txt"
+if curl --noproxy '*' --ipv4 --http1.1 --fail --silent --connect-timeout 8 --max-time 10 --range 0-0 \
+  --output /dev/null --write-out 'http_status=%{http_code}\nhttp_version=%{http_version}\nremote_ip=%{remote_ip}\nbytes=%{size_download}\n' \
+  "${P4_AUDIO_DIRECT_PROBE}" >"${P4_AUDIO_DIRECT_EVIDENCE}"; then
+  P4_AUDIO_DIRECT_EXIT=0
+else
+  P4_AUDIO_DIRECT_EXIT=$?
+fi
+printf 'exit_code=%s\n' "${P4_AUDIO_DIRECT_EXIT}" >>"${P4_AUDIO_DIRECT_EVIDENCE}"
 for _ in $(seq 1 180); do
   if grep -q 'BLINDBOX_CITEST_P4_MUSIC=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
   grep -q 'BLINDBOX_CITEST_P4_MUSIC_OGG_FIRST=success' "${SERVER_DIR}/server.log" && break
