@@ -139,7 +139,10 @@ public final class CiTestCommands {
     private static int seedP4ChickenFixture(CommandSourceStack source) {
         try {
             var level = source.getServer().overworld();
-            BlockPos position = level.getSharedSpawnPos().offset(0, 18, 40);
+            // 强杀夹具必须在已生成出生区块的高空，不能假定随机世界的 y=18+ 偏移处为空。
+            // 保持固定 X/Z 以便恢复导出可审计；距上界留出空间供实体碰撞盒和空气前置复验。
+            BlockPos spawn = level.getSharedSpawnPos();
+            BlockPos position = new BlockPos(spawn.getX(), level.getMaxBuildHeight() - 8, spawn.getZ() + 40);
             BlockPos support = position.below();
             if (!level.getEntitiesOfClass(ClockworkChickenEntity.class,
                     new net.minecraft.world.phys.AABB(position).inflate(2.0D)).isEmpty()) {

@@ -129,6 +129,11 @@ jobs:
           bash -n scripts/ci/lifecycle-recovery.sh
           grep -q 'trap on_exit EXIT' scripts/ci/lifecycle-recovery.sh
           grep -q 'canonical-state-at-exit.json' scripts/ci/lifecycle-recovery.sh
+          # 小黄鸡恢复夹具必须避开随机地形；保留三格空气前置，不能以清地形掩盖夹具错误。
+          grep -q 'level.getMaxBuildHeight() - 8' src/ciTest/java/cn/blindboxchallenge/citest/CiTestCommands.java
+          grep -q 'level.getBlockState(position).isAir()' src/ciTest/java/cn/blindboxchallenge/citest/CiTestCommands.java
+          grep -q 'level.getBlockState(position.above()).isAir()' src/ciTest/java/cn/blindboxchallenge/citest/CiTestCommands.java
+          grep -q 'level.getBlockState(support).isAir()' src/ciTest/java/cn/blindboxchallenge/citest/CiTestCommands.java
           grep -q 'player.setDeltaMovement(Vec3.ZERO);' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'player.hurtMarked = true;' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'level.mayInteract(player, clicked)' src/main/java/cn/blindboxchallenge/service/DoorService.java
