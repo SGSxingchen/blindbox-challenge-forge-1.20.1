@@ -120,6 +120,20 @@ jobs:
           grep -q 'preparePlatform(safe);' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
           grep -q 'safe.getY() + 1.0D' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
           grep -q 'private void preparePlatform(BlockPos platform)' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          # 小黄鸡夹具的三组同维定位都必须清掉上一场景的速度和坠落累计；否则安全平台也会在下一 tick
+          # 结算旧坠落。该闩只约束 ciTest 定位，不修改死亡、爆炸或正式玩法。
+          grep -q 'private void moveFixturePlayer(ServerPlayer player, Vec3 destination, float yaw, float pitch)' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          grep -q 'player.setDeltaMovement(Vec3.ZERO);' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          grep -q 'player.hurtMarked = true;' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          grep -q 'player.resetFallDistance();' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path('src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java').read_text(encoding='utf-8')
+          if source.count('moveFixturePlayer(') != 7:
+              raise SystemExit('P4 小黄鸡三组夹具定位未全部走统一状态清理方法')
+          if 'alice.teleportTo(level' in source or 'bob.teleportTo(level' in source:
+              raise SystemExit('P4 小黄鸡仍存在绕过状态清理的玩家定位')
+          PY
           python3 - <<'PY'
           from pathlib import Path
           source = Path('scripts/ci/multi-client.sh').read_text(encoding='utf-8')
