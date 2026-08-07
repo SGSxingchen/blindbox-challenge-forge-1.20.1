@@ -116,16 +116,22 @@ public final class RemoteAudioDownload {
                 String contentType = response.header("content-type");
                 if (!isAudioContentType(contentType)) throw new IOException("响应 Content-Type 不是 OGG 或 MP3");
                 String contentLength = response.header("content-length");
+                boolean chunked = "chunked".equalsIgnoreCase(response.header("transfer-encoding"));
+                if (chunked && contentLength != null && !contentLength.isBlank()) {
+                    // 分块体由 ChunkedInputStream 定界；同时接受 Content-Length 会让两个长度语义竞争。
+                    throw new IOException("在线音频响应同时声明 Content-Length 与 chunked");
+                }
+                long declaredContentLength = -1L;
                 if (contentLength != null && !contentLength.isBlank()) {
                     try {
-                        long declaredLength = Long.parseLong(contentLength.trim());
-                        if (declaredLength < 0L) throw new IOException("在线音频 Content-Length 非法");
-                        if (declaredLength > MAX_DOWNLOAD_BYTES) throw new IOException("在线音频超过 16 MiB 上限");
+                        declaredContentLength = Long.parseLong(contentLength.trim());
+                        if (declaredContentLength < 0L) throw new IOException("在线音频 Content-Length 非法");
+                        if (declaredContentLength > MAX_DOWNLOAD_BYTES) throw new IOException("在线音频超过 16 MiB 上限");
                     } catch (NumberFormatException exception) {
                         throw new IOException("在线音频 Content-Length 非法", exception);
                     }
                 }
-                return saveResponse(response.body(), cache, urlHash, deadlineNanos);
+                return saveResponse(response.body(), cache, urlHash, deadlineNanos, declaredContentLength);
             }
         }
         throw new IOException("在线音频重定向流程异常");
@@ -358,17 +364,31 @@ public final class RemoteAudioDownload {
         }
     }
 
-    private static CachedAudio saveResponse(InputStream input, Path cache, String urlHash, long deadlineNanos) throws IOException {
+    /**
+     * HTTP/1.1 的非分块响应一旦声明 Content-Length，就必须按它完成消息体定界；不能等连接 EOF，
+     * 因为合法保活响应会在完整音频后继续保持 TLS socket 打开。未声明长度的响应才读到 EOF。
+     */
+    private static CachedAudio saveResponse(InputStream input, Path cache, String urlHash, long deadlineNanos,
+                                            long declaredContentLength) throws IOException {
         Path temporary = Files.createTempFile(cache, urlHash + "-", ".part");
         MessageDigest digest = digest();
         byte[] first = new byte[10];
         int firstLength = 0;
         int total = 0;
+        long remainingContentLength = declaredContentLength;
         try (input; OutputStream output = Files.newOutputStream(temporary)) {
             byte[] buffer = new byte[8192];
-            for (int read; (read = input.read(buffer)) >= 0;) {
+            for (;;) {
                 ensureBeforeDeadline(deadlineNanos);
+                if (remainingContentLength == 0L) break;
+                int requested = remainingContentLength < 0L ? buffer.length : (int) Math.min(buffer.length, remainingContentLength);
+                int read = input.read(buffer, 0, requested);
+                if (read < 0) {
+                    if (remainingContentLength > 0L) throw new IOException("在线音频在 Content-Length 前意外结束");
+                    break;
+                }
                 if (read == 0) continue;
+                if (remainingContentLength > 0L) remainingContentLength -= read;
                 total += read;
                 if (total > MAX_DOWNLOAD_BYTES) throw new IOException("在线音频超过 16 MiB 上限");
                 if (firstLength < first.length) {
