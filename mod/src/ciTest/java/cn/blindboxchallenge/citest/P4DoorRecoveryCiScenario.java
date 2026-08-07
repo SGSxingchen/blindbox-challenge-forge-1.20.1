@@ -197,12 +197,11 @@ public final class P4DoorRecoveryCiScenario {
         private void tick() throws IOException {
             if (phase == Phase.READY || phase == Phase.FAILED) return;
             ServerPlayer alice = alice();
-            if (overworld.getGameTime() - startedAt > 800L) {
-                ServerPlayer bob = bob();
-                throw new IllegalStateException("P4 跨维门恢复场景超时：phase=" + phase
-                        + ", alice_changing=" + alice.isChangingDimension() + ", alice=" + alice.position()
-                        + ", bob_changing=" + bob.isChangingDimension() + ", bob=" + bob.position());
-            }
+            boolean timedOut = overworld.getGameTime() - startedAt > 800L;
+            // WAIT_FOR_CROSSING 的最后一个允许刻可能已经收到了真实跨维、精确落点和两份客户端
+            // marker；必须先核验这组事实再判超时。其余前置阶段没有成功态可消费，仍严格受同一
+            // 800 tick 上限约束，不能借此延长夹具或吞掉真正超时。
+            if (phase != Phase.WAIT_FOR_CROSSING && timedOut) throw timeout(alice, bob());
             if (phase == Phase.WAIT_FOR_FIXTURE_SERVER_SYNC) {
                 // Alice 是唯一要按前进键的本地客户端，必须先确认其 teleport id；确认前客户端仍可能
                 // 发旧维度位置包。Bob 仅为目标区块观察者，其客户端目标同步仍由后续 marker 严格复验。
@@ -247,22 +246,24 @@ public final class P4DoorRecoveryCiScenario {
                 reachedTargetDimension = true;
                 // 触发门的移动包会在 changeDimension 返回后继续执行；原版仅在客户端确认 teleport id 后
                 // 才以 awaiting 目标坐标完成服务端落点。确认前既不写 marker 也不放宽结果，只继续等待超时。
-                if (alice.isChangingDimension()) return;
-                Vec3 expected = Vec3.atBottomCenterOf(targetDoor);
-                Vec3 actual = alice.position();
-                double distanceSqr = actual.distanceToSqr(expected);
-                if (distanceSqr > 0.08D) {
-                    throw new IllegalStateException("杀后进入任意门未抵达下界安全站立格：expected=" + expected
-                            + ", actual=" + actual + ", distance_sqr=" + distanceSqr + ", velocity=" + alice.getDeltaMovement());
-                }
-                // changeDimension 的落点确认和首个原版物理 tick 可能同帧完成：落地前的重力增量不是
-                // 源门惯性。位置必须始终精确，且只有在真实落地、速度已归零后才能写成功结果。
-                // 若原版未在 800 tick 内稳定，保留超时失败，绝不以短暂位置或速度状态放宽验收。
-                if (!alice.onGround() || alice.getDeltaMovement().lengthSqr() > 1.0E-8D) return;
-                verifyPersistedLinks();
-                if (verifyAliceMarker() && verifyBobMarker()) {
-                    phase = Phase.READY;
-                    CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P4_DOOR_RECOVERY_CLIENTS=success");
+                if (!alice.isChangingDimension()) {
+                    Vec3 expected = Vec3.atBottomCenterOf(targetDoor);
+                    Vec3 actual = alice.position();
+                    double distanceSqr = actual.distanceToSqr(expected);
+                    if (distanceSqr > 0.08D) {
+                        throw new IllegalStateException("杀后进入任意门未抵达下界安全站立格：expected=" + expected
+                                + ", actual=" + actual + ", distance_sqr=" + distanceSqr + ", velocity=" + alice.getDeltaMovement());
+                    }
+                    // changeDimension 的落点确认和首个原版物理 tick 可能同帧完成：落地前的重力增量不是
+                    // 源门惯性。位置必须始终精确，且只有在真实落地、速度已归零后才能写成功结果。
+                    // 不稳定时自然落到同一 tick 的严格超时判断，绝不能无限等待。
+                    if (alice.onGround() && alice.getDeltaMovement().lengthSqr() <= 1.0E-8D) {
+                        verifyPersistedLinks();
+                        if (verifyAliceMarker() && verifyBobMarker()) {
+                            phase = Phase.READY;
+                            CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P4_DOOR_RECOVERY_CLIENTS=success");
+                        }
+                    }
                 }
             } else if (reachedTargetDimension) {
                 throw new IllegalStateException("P4 跨维门抵达下界后回到源维度：alice=" + alice.position()
@@ -271,6 +272,15 @@ public final class P4DoorRecoveryCiScenario {
             } else if (!alice.serverLevel().dimension().equals(overworld.dimension())) {
                 throw new IllegalStateException("Alice 杀后任意门进入了非预期维度");
             }
+            if (phase != Phase.READY && timedOut) throw timeout(alice, bob());
+        }
+
+        private IllegalStateException timeout(ServerPlayer alice, ServerPlayer bob) {
+            return new IllegalStateException("P4 跨维门恢复场景超时：phase=" + phase
+                    + ", alice_dimension=" + alice.serverLevel().dimension().location()
+                    + ", alice_changing=" + alice.isChangingDimension() + ", alice=" + alice.position()
+                    + ", bob_dimension=" + bob.serverLevel().dimension().location()
+                    + ", bob_changing=" + bob.isChangingDimension() + ", bob=" + bob.position());
         }
 
         private void verifyPersistedLinks() throws IOException {

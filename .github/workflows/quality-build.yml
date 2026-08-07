@@ -84,6 +84,20 @@ jobs:
           grep -q 'source_present={}, source_linked={}, ' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q 'overworld.mayInteract(alice, sourceDoor)' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q '真实前进键未进入 P4 跨维门：client=' src/ciTest/java/cn/blindboxchallenge/citest/CiClientP4DoorRecoveryObservation.java
+          # 800 tick 是强制上限；跨维成功事实必须先消费，但换维/落地/速度等待不能借 return 绕过超时。
+          grep -q 'phase != Phase.WAIT_FOR_CROSSING && timedOut' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
+          grep -q 'if (phase != Phase.READY && timedOut) throw timeout(alice, bob());' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path('src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java').read_text(encoding='utf-8')
+          start = source.index('if (alice.serverLevel().dimension().equals(nether.dimension())) {')
+          end = source.index('} else if (reachedTargetDimension)', start)
+          crossing = source[start:end]
+          if 'return;' in crossing:
+              raise SystemExit('P4 跨维成功态检查不得用 return 绕过 800 tick 超时')
+          if 'if (!alice.isChangingDimension()) {' not in crossing or 'if (alice.onGround() && alice.getDeltaMovement().lengthSqr() <= 1.0E-8D) {' not in crossing:
+              raise SystemExit('P4 跨维成功态必须继续严格检查换维、落地与零速度')
+          PY
           # 生命周期夹具任一前置等待失败也必须保留原始服务器日志；该钩子只保存证据，不能吞失败。
           bash -n scripts/ci/lifecycle-recovery.sh
           grep -q 'trap on_exit EXIT' scripts/ci/lifecycle-recovery.sh
