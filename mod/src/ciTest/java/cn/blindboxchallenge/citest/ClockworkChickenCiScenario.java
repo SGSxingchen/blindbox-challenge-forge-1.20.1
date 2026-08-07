@@ -164,8 +164,8 @@ public final class ClockworkChickenCiScenario {
             // 在生成点旁的临时黑曜石平台执行真实生产 Item#use；二人随后由真实客户端接收该实体的同步包。
             BlockPos platform = level.getSharedSpawnPos().offset(28, 8, 0);
             preparePlatform(platform);
-            alice.teleportTo(level, platform.getX() + 0.5D, platform.getY() + 1.0D, platform.getZ() + 0.5D, 0.0F, 0.0F);
-            bob.teleportTo(level, platform.getX() + 3.5D, platform.getY() + 1.0D, platform.getZ() + 0.5D, 0.0F, 0.0F);
+            moveFixturePlayer(alice, new Vec3(platform.getX() + 0.5D, platform.getY() + 1.0D, platform.getZ() + 0.5D), 0.0F, 0.0F);
+            moveFixturePlayer(bob, new Vec3(platform.getX() + 3.5D, platform.getY() + 1.0D, platform.getZ() + 0.5D), 0.0F, 0.0F);
             ItemStack chickenStack = new ItemStack(ModItems.CLOCKWORK_CHICKEN.get());
             alice.setItemInHand(InteractionHand.MAIN_HAND, chickenStack);
             alice.containerMenu.broadcastChanges();
@@ -201,8 +201,8 @@ public final class ClockworkChickenCiScenario {
                     // 默认 1200 tick 等待期间仍必须有真实支撑面：不能把两人送入空气后再把坠落伤害
                     // 遗留给下一场景。平台只由夹具临时铺设，cleanup 会按原状态还原。
                     preparePlatform(safe);
-                    alice.teleportTo(level, safe.getX() + 0.5D, safe.getY() + 1.0D, safe.getZ() + 0.5D, 0.0F, 0.0F);
-                    bob.teleportTo(level, safe.getX() + 3.5D, safe.getY() + 1.0D, safe.getZ() + 0.5D, 0.0F, 0.0F);
+                    moveFixturePlayer(alice, new Vec3(safe.getX() + 0.5D, safe.getY() + 1.0D, safe.getZ() + 0.5D), 0.0F, 0.0F);
+                    moveFixturePlayer(bob, new Vec3(safe.getX() + 3.5D, safe.getY() + 1.0D, safe.getZ() + 0.5D), 0.0F, 0.0F);
                     phase = Phase.WAITING_FOR_EXPLOSION;
                 } else if (now - startedAt > 240L) {
                     throw new IllegalStateException("两个真实客户端未在观察窗口内同步小黄鸡实体");
@@ -263,9 +263,23 @@ public final class ClockworkChickenCiScenario {
             }
             originalBlocks.forEach((pos, state) -> level.setBlock(pos, state, 3));
             alice.setItemInHand(InteractionHand.MAIN_HAND, aliceOriginalHand.copy());
-            alice.teleportTo(level, aliceOriginalPosition.x, aliceOriginalPosition.y, aliceOriginalPosition.z, aliceYaw, alicePitch);
-            bob.teleportTo(level, bobOriginalPosition.x, bobOriginalPosition.y, bobOriginalPosition.z, bobYaw, bobPitch);
+            moveFixturePlayer(alice, aliceOriginalPosition, aliceYaw, alicePitch);
+            moveFixturePlayer(bob, bobOriginalPosition, bobYaw, bobPitch);
             alice.containerMenu.broadcastChanges();
+        }
+
+        /**
+         * 发条小黄鸡夹具只在主世界定位玩家；每次定位都必须清空先前跨维或高空场景遗留的速度和坠落累计。
+         * 这不改变伤害或复活语义，而是保证下一场景从实际静止的支撑面开始。
+         */
+        private void moveFixturePlayer(ServerPlayer player, Vec3 destination, float yaw, float pitch) {
+            player.teleportTo(level, destination.x, destination.y, destination.z, yaw, pitch);
+            if (player.serverLevel() != level || player.position().distanceToSqr(destination) > 1.0E-6D) {
+                throw new IllegalStateException("P4 小黄鸡夹具未抵达预期主世界坐标：" + player.getGameProfile().getName());
+            }
+            player.setDeltaMovement(Vec3.ZERO);
+            player.hurtMarked = true;
+            player.resetFallDistance();
         }
 
         private void rememberAndSet(BlockPos pos, BlockState state) {
