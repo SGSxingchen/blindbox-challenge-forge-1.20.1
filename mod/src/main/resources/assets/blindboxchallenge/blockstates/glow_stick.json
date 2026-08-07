@@ -1,3 +1,7 @@
 {
-  "variants": { "": { "model": "blindboxchallenge:block/glow_stick" } }
+  "variants": {
+    "": {
+      "model": "blindboxchallenge:block/glow_stick"
+    }
+  }
 }

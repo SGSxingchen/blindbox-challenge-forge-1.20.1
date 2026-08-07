@@ -1,5 +1,7 @@
 {
   "variants": {
-    "": { "model": "blindboxchallenge:block/music_box" }
+    "": {
+      "model": "blindboxchallenge:block/music_box"
+    }
   }
 }

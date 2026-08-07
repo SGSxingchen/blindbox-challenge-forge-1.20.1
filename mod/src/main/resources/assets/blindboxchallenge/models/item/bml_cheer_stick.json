@@ -1,1 +1,3 @@
-{ "parent": "blindboxchallenge:block/bml_cheer_stick_off" }
+{
+  "parent": "blindboxchallenge:block/bml_cheer_stick_off"
+}

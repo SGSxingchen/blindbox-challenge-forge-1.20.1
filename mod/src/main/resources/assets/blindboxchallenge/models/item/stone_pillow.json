@@ -1,1 +1,3 @@
-{ "parent": "blindboxchallenge:block/stone_pillow" }
+{
+  "parent": "blindboxchallenge:block/stone_pillow"
+}

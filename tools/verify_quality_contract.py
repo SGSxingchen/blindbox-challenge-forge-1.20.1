@@ -99,6 +99,46 @@ def check_resource_manifest() -> None:
         require("项目内原创重绘" in row and "原版图片仅作需求输入且不进入 Release" in row, f"原创重绘清单行错误：{target}")
 
 
+def check_original_resource_definitions() -> None:
+    """校验完整原创资源链的可复现输出与稳定引用闭合，不约束实现排版或文案顺序。"""
+    model_generator = ROOT / "tools/generate_original_models.py"
+    metadata_generator = ROOT / "tools/generate_original_metadata.py"
+    subprocess.run([sys.executable, str(model_generator), "--check"], check=True)
+    subprocess.run([sys.executable, str(metadata_generator), "--check"], check=True)
+
+    model_root = ASSETS / "models"
+    for path in model_root.rglob("*.json"):
+        model = json.loads(path.read_text(encoding="utf-8"))
+        for texture in model.get("textures", {}).values():
+            if not isinstance(texture, str) or not texture.startswith("blindboxchallenge:"):
+                continue
+            namespace_path = texture.split(":", 1)[1]
+            require((ASSETS / "textures" / f"{namespace_path}.png").is_file(), f"模型纹理引用缺失：{path.relative_to(MOD)} → {texture}")
+        parent = model.get("parent")
+        if isinstance(parent, str) and parent.startswith("blindboxchallenge:"):
+            namespace_path = parent.split(":", 1)[1]
+            require((model_root / f"{namespace_path}.json").is_file(), f"模型父引用缺失：{path.relative_to(MOD)} → {parent}")
+
+    for path in (ASSETS / "blockstates").glob("*.json"):
+        for variant in json.loads(path.read_text(encoding="utf-8")).get("variants", {}).values():
+            model = variant.get("model") if isinstance(variant, dict) else None
+            if isinstance(model, str) and model.startswith("blindboxchallenge:"):
+                namespace_path = model.split(":", 1)[1]
+                require((model_root / f"{namespace_path}.json").is_file(), f"方块状态模型引用缺失：{path.relative_to(MOD)} → {model}")
+
+    registered_items = set(re.findall(r'ITEMS\.register\s*\(\s*"([a-z0-9_]+)"', read("src/main/java/cn/blindboxchallenge/registry/ModItems.java")))
+    for path in (DATA / "loot_tables/blocks").glob("*.json"):
+        for pool in json.loads(path.read_text(encoding="utf-8")).get("pools", []):
+            for entry in pool.get("entries", []):
+                identifier = entry.get("name", "")
+                if isinstance(identifier, str) and identifier.startswith("blindboxchallenge:"):
+                    require(identifier.split(":", 1)[1] in registered_items, f"战利品引用未注册物品：{path.relative_to(MOD)} → {identifier}")
+
+    zh = json.loads((ASSETS / "lang/zh_cn.json").read_text(encoding="utf-8"))
+    en = json.loads((ASSETS / "lang/en_us.json").read_text(encoding="utf-8"))
+    require(set(zh) == set(en) and all(zh.values()) and all(en.values()), "双语键集合不一致或存在空文案")
+
+
 def check_network_and_isolation() -> None:
     network = read("src/main/java/cn/blindboxchallenge/network/ModNetwork.java")
     directions = {
@@ -153,6 +193,7 @@ def check_p5_safety() -> None:
 def main() -> None:
     check_p5_resources()
     check_resource_manifest()
+    check_original_resource_definitions()
     check_network_and_isolation()
     check_p5_safety()
     print("质量静态契约通过：资源闭合、双端隔离和反绕过安全边界均成立。")
