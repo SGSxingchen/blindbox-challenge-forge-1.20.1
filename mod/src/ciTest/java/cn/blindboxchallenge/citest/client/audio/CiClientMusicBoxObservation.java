@@ -46,6 +46,8 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class CiClientMusicBoxObservation {
     private static final int RELEASE_SHIFT_TICKS = 4;
+    /** 仅在真实配置入口长期不可用时记录一次本地事实，绝不把该文件当作配置或播放成功。 */
+    private static final int CONFIGURATION_INPUT_STALL_TICKS = 100;
     private enum AlicePhase { WAIT_OGG_OPEN, WAIT_OGG_SCREEN, WAIT_OGG_PLAY, WAIT_OGG_READ, WAIT_CACHE_FLAG, WAIT_CACHE_PLAY,
         WAIT_CACHE_READ, WAIT_MP3_SNEAK, WAIT_MP3_SCREEN, WAIT_MP3_PLAY, WAIT_MP3_READ, WAIT_NETWORK_FLAG, WAIT_BROKEN_TRIGGER, WAIT_BROKEN_SNEAK,
         WAIT_BROKEN_SCREEN, WAIT_BROKEN_PLAY, WAIT_BROKEN_FAILURE, COMPLETE }
@@ -64,6 +66,8 @@ public final class CiClientMusicBoxObservation {
     private static boolean oggEditorReopenedWritten;
     private static AlicePhase shiftReleasePhase;
     private static int releasedShiftTicks;
+    private static int oggOpenWaitTicks;
+    private static boolean oggConfigurationStallWritten;
 
     private CiClientMusicBoxObservation() {}
 
@@ -168,7 +172,15 @@ public final class CiClientMusicBoxObservation {
             case WAIT_OGG_OPEN -> {
                 if (canUseMusicBox(minecraft, player)) {
                     KeyMapping.click(minecraft.options.keyUse.getKey());
+                    // 只证明真实 use 键已注入客户端队列，不能代替菜单、C2S、S2C 或 PCM 成功。
+                    writeNewMarker(markerDirectory().resolve(markerPrefix(player) + "configuration-open-attempt.marker"),
+                            configurationInputFacts(minecraft, player, true));
                     alicePhase = AlicePhase.WAIT_OGG_SCREEN;
+                } else if (++oggOpenWaitTicks >= CONFIGURATION_INPUT_STALL_TICKS && !oggConfigurationStallWritten) {
+                    // 已完成定位、同步与输入前置的有限等待仍不可用时才记录一次；不触碰 phase 或输入。
+                    writeNewMarker(markerDirectory().resolve(markerPrefix(player) + "configuration-input-stalled.marker"),
+                            configurationInputFacts(minecraft, player, false));
+                    oggConfigurationStallWritten = true;
                 }
             }
             case WAIT_OGG_SCREEN -> submitUrl(screen, oggUrl(), AlicePhase.WAIT_OGG_PLAY, minecraft);
@@ -254,6 +266,23 @@ public final class CiClientMusicBoxObservation {
         BlockPos target = minecraft.level.getSharedSpawnPos().offset(P4MusicCiScenario.MUSIC_BOX_OFFSET);
         return minecraft.screen == null && player.getItemInHand(InteractionHand.MAIN_HAND).isEmpty()
                 && player.blockPosition().equals(target.above()) && player.getXRot() >= 80.0F;
+    }
+
+    /** 仅记录无敏感的客户端输入前置；不写 URL、服务器地址、路径、会话或成功字段。 */
+    private static String configurationInputFacts(Minecraft minecraft, LocalPlayer player, boolean keyUseInjected) {
+        BlockPos target = minecraft.level.getSharedSpawnPos().offset(P4MusicCiScenario.MUSIC_BOX_OFFSET);
+        Screen currentScreen = minecraft.screen;
+        String screen = currentScreen == null ? "none" : currentScreen.getClass().getSimpleName();
+        if (screen.isBlank()) screen = "unnamed";
+        return "schema=1\n"
+                + "alice_phase=" + alicePhase + "\n"
+                + "screen=" + screen + "\n"
+                + "main_hand_empty=" + player.getItemInHand(InteractionHand.MAIN_HAND).isEmpty() + "\n"
+                + "standing=" + position(player.blockPosition()) + "\n"
+                + "target=" + position(target) + "\n"
+                + "pitch=" + player.getXRot() + "\n"
+                + "can_use_music_box=" + canUseMusicBox(minecraft, player) + "\n"
+                + "key_use_injected=" + keyUseInjected + "\n";
     }
 
     private static void observedRead(RemoteMusicSoundInstance remote, Path directory, UUID observer, String prefix, int bytes) {

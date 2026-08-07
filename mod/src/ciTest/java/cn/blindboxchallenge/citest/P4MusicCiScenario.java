@@ -274,14 +274,23 @@ public final class P4MusicCiScenario {
         /** 只汇总失败定位文件，不能用它们替代 S2C、PCM 或成功 marker。 */
         private String clientDiagnostics() throws IOException {
             long useAttempts;
+            long configurationOpenAttempts;
+            long configurationInputStalls;
             long receivedEvents;
             long failedEvents;
-            try (var uses = Files.list(markerDirectory); var received = Files.list(markerDirectory); var failed = Files.list(markerDirectory)) {
+            try (var uses = Files.list(markerDirectory); var configured = Files.list(markerDirectory);
+                 var stalled = Files.list(markerDirectory); var received = Files.list(markerDirectory); var failed = Files.list(markerDirectory)) {
                 useAttempts = uses.filter(path -> path.getFileName().toString().endsWith("p4-music-use-attempt.marker")).count();
+                configurationOpenAttempts = configured.filter(path -> path.getFileName().toString()
+                        .endsWith("p4-music-configuration-open-attempt.marker")).count();
+                configurationInputStalls = stalled.filter(path -> path.getFileName().toString()
+                        .endsWith("p4-music-configuration-input-stalled.marker")).count();
                 receivedEvents = received.filter(path -> path.getFileName().toString().contains("p4-music-received-")).count();
                 failedEvents = failed.filter(path -> path.getFileName().toString().contains("p4-music-diagnostic-failed-")).count();
             }
-            return "use_attempts=" + useAttempts + ", received_events=" + receivedEvents + ", failed_events=" + failedEvents;
+            return "configuration_open_attempts=" + configurationOpenAttempts + ", configuration_input_stalls="
+                    + configurationInputStalls + ", use_attempts=" + useAttempts + ", received_events="
+                    + receivedEvents + ", failed_events=" + failedEvents;
         }
 
         private static Map<String, String> parseMarker(Path marker) throws IOException {

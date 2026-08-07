@@ -96,6 +96,11 @@ jobs:
           grep -q '"received-" + event.eventId()' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
           grep -q '"diagnostic-failed-" + event.eventId()' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
           grep -q 'ogg-editor-reopened.marker' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          grep -q 'CONFIGURATION_INPUT_STALL_TICKS = 100' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          grep -q 'configuration-open-attempt.marker' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          grep -q 'configuration-input-stalled.marker' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          grep -q 'configuration_open_attempts=' src/ciTest/java/cn/blindboxchallenge/citest/P4MusicCiScenario.java
+          grep -q 'configuration_input_stalls=' src/ciTest/java/cn/blindboxchallenge/citest/P4MusicCiScenario.java
           grep -q 'RELEASE_SHIFT_TICKS = 4' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
           grep -q 'client_diagnostics=' src/ciTest/java/cn/blindboxchallenge/citest/P4MusicCiScenario.java
           grep -q '在线音频下载或解码失败（仅客户端）' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
