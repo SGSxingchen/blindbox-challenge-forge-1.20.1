@@ -61,9 +61,13 @@ jobs:
           # 同维 teleportTo 不能代替跨维 changeDimension；安全门必须用无门户的精确 ITeleporter 并归零速度。
           grep -q 'player.changeDimension(targetLevel, new SafeDoorTeleporter(destination, yaw, pitch))' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'return repositionEntity.apply(false);' src/main/java/cn/blindboxchallenge/service/DoorService.java
+          # 目标门免疫必须在 changeDimension 前预留，防止目标 entityInside 在同一迁移调用栈反向回跳。
+          grep -B16 'moveToVerifiedDestination(player, targetLevel, destination)' src/main/java/cn/blindboxchallenge/service/DoorService.java | grep -q 'ARRIVAL_DOOR_IMMUNITIES.put(playerId, targetDoorGlobal)'
+          grep -q 'if (player.isChangingDimension()) return;' src/main/java/cn/blindboxchallenge/service/DoorService.java
           # P4 夹具定位也必须发完整跨维玩家同步，不能用裸 teleportTo 伪造门跨维成功。
           grep -q 'player.changeDimension(destinationLevel, new FixtureTeleporter(destination, yaw, pitch))' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q 'if (alice.isChangingDimension()) return;' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
+          grep -q 'P4 跨维门抵达下界后回到源维度' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q 'player.setDeltaMovement(Vec3.ZERO);' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'player.hurtMarked = true;' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'level.mayInteract(player, clicked)' src/main/java/cn/blindboxchallenge/service/DoorService.java

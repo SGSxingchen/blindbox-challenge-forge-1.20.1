@@ -144,6 +144,8 @@ public final class P4DoorRecoveryCiScenario {
         private final ResourceKey<Level> originalBobDimension;
         private final long startedAt;
         private Phase phase = Phase.WAIT_FOR_FIXTURE_SERVER_SYNC;
+        /** 一旦生产门已把 Alice 送入下界，任何回到源维度都是生产跨维回跳，不能等待客户端超时掩盖。 */
+        private boolean reachedTargetDimension;
 
         private ActiveScenario(MinecraftServer server, ServerLevel overworld, ServerLevel nether, ServerPlayer alice, ServerPlayer bob, BlockPos sourceDoor,
                                BlockPos targetDoor, Path markerDirectory) {
@@ -217,6 +219,7 @@ public final class P4DoorRecoveryCiScenario {
                 return;
             }
             if (alice.serverLevel().dimension().equals(nether.dimension())) {
+                reachedTargetDimension = true;
                 // 触发门的移动包会在 changeDimension 返回后继续执行；原版仅在客户端确认 teleport id 后
                 // 才以 awaiting 目标坐标完成服务端落点。确认前既不写 marker 也不放宽结果，只继续等待超时。
                 if (alice.isChangingDimension()) return;
@@ -236,6 +239,10 @@ public final class P4DoorRecoveryCiScenario {
                     phase = Phase.READY;
                     CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P4_DOOR_RECOVERY_CLIENTS=success");
                 }
+            } else if (reachedTargetDimension) {
+                throw new IllegalStateException("P4 跨维门抵达下界后回到源维度：alice=" + alice.position()
+                        + ", velocity=" + alice.getDeltaMovement() + ", changing=" + alice.isChangingDimension()
+                        + ", phase=" + phase);
             } else if (!alice.serverLevel().dimension().equals(overworld.dimension())) {
                 throw new IllegalStateException("Alice 杀后任意门进入了非预期维度");
             }

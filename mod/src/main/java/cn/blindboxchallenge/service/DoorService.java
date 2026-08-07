@@ -134,9 +134,20 @@ public final class DoorService {
         Vec3 destination = Vec3.atBottomCenterOf(standingBlock);
         AABB playerBox = player.getDimensions(Pose.STANDING).makeBoundingBox(destination);
         if (!targetLevel.noCollision(player, playerBox) || targetLevel.containsAnyLiquid(playerBox)) return;
-        if (!moveToVerifiedDestination(player, targetLevel, destination)) return;
+        /*
+         * changeDimension 会在迁移过程中立即让目标门收到 entityInside 回调。若等它返回后
+         * 才登记抵达免疫，目标门会在同一个服务端移动调用栈内把玩家又送回源门；随后旧维度
+         * 的位置包还会覆盖/拒绝位置，形成跨维回跳。先仅为已完整校验过的目标门预留免疫，
+         * 迁移失败则精确恢复此前状态，不能把失败传送伪装成永久免疫。
+         */
+        UUID playerId = player.getUUID();
+        GlobalPos previousArrivalImmunity = ARRIVAL_DOOR_IMMUNITIES.put(playerId, targetDoorGlobal);
+        if (!moveToVerifiedDestination(player, targetLevel, destination)) {
+            if (previousArrivalImmunity == null) ARRIVAL_DOOR_IMMUNITIES.remove(playerId);
+            else ARRIVAL_DOOR_IMMUNITIES.put(playerId, previousArrivalImmunity);
+            return;
+        }
         TELEPORT_COOLDOWNS.put(player.getUUID(), now);
-        ARRIVAL_DOOR_IMMUNITIES.put(player.getUUID(), targetDoorGlobal);
     }
 
     /** 同维走原版位置包；跨维必须经 Forge 的 changeDimension 更新服务端世界、客户端维度包与跟踪状态。 */
@@ -224,6 +235,9 @@ public final class DoorService {
     public static void clearArrivalImmunityAfterExit(ServerPlayer player) {
         GlobalPos arrival = ARRIVAL_DOOR_IMMUNITIES.get(player.getUUID());
         if (arrival == null) return;
+        // 跨维迁移尚未完成时，玩家仍可能在源世界的 tick 收尾中；此时绝不能把为目标门
+        // 预留的免疫误判为“已离开”，否则同一迁移调用栈的目标门会反向回跳。
+        if (player.isChangingDimension()) return;
         if (!arrival.dimension().equals(player.serverLevel().dimension()) || !arrival.pos().equals(player.blockPosition())) {
             ARRIVAL_DOOR_IMMUNITIES.remove(player.getUUID());
         }
