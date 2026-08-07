@@ -130,7 +130,9 @@ jobs:
           grep -q 'trap on_exit EXIT' scripts/ci/lifecycle-recovery.sh
           grep -q 'canonical-state-at-exit.json' scripts/ci/lifecycle-recovery.sh
           # 小黄鸡恢复夹具必须避开随机地形；保留三格空气前置，不能以清地形掩盖夹具错误。
-          grep -q 'level.getMaxBuildHeight() - 8' src/ciTest/java/cn/blindboxchallenge/citest/CiTestCommands.java
+          grep -q 'CanonicalStateExporter.p4ChickenFixturePosition(level)' src/ciTest/java/cn/blindboxchallenge/citest/CiTestCommands.java
+          grep -q 'level.getMaxBuildHeight() - 8' src/ciTest/java/cn/blindboxchallenge/citest/CanonicalStateExporter.java
+          grep -q 'new AABB(p4ChickenFixturePosition(level)).inflate(2.0D)' src/ciTest/java/cn/blindboxchallenge/citest/CanonicalStateExporter.java
           grep -q 'level.getBlockState(position).isAir()' src/ciTest/java/cn/blindboxchallenge/citest/CiTestCommands.java
           grep -q 'level.getBlockState(position.above()).isAir()' src/ciTest/java/cn/blindboxchallenge/citest/CiTestCommands.java
           grep -q 'level.getBlockState(support).isAir()' src/ciTest/java/cn/blindboxchallenge/citest/CiTestCommands.java

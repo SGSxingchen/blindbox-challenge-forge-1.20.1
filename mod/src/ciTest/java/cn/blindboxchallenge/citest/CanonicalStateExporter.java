@@ -141,10 +141,16 @@ public final class CanonicalStateExporter {
         return out;
     }
 
-    /** 生命周期夹具只用固定的出生点偏移，导出仍从真实已加载方块实体和实体 NBT 读取。 */
+    /** 小黄鸡恢复夹具与写入端共用该位置，避免高空夹具被出生点附近的导出范围遗漏。 */
+    static BlockPos p4ChickenFixturePosition(ServerLevel level) {
+        BlockPos spawn = level.getSharedSpawnPos();
+        return new BlockPos(spawn.getX(), level.getMaxBuildHeight() - 8, spawn.getZ() + 40);
+    }
+
+    /** 生命周期夹具只读取固定高空位置的真实已加载实体 NBT，不混入自然生成的实体。 */
     private static List<Map<String, Object>> chickens(ServerLevel level) {
         List<Map<String, Object>> out = new ArrayList<>();
-        AABB area = new AABB(level.getSharedSpawnPos()).inflate(96.0D);
+        AABB area = new AABB(p4ChickenFixturePosition(level)).inflate(2.0D);
         level.getEntitiesOfClass(ClockworkChickenEntity.class, area).stream()
                 .sorted(Comparator.comparing(entity -> entity.stableEntityId().toString()))
                 .forEach(chicken -> {
