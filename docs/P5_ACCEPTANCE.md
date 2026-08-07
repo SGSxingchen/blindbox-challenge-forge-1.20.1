@@ -1,6 +1,6 @@
 # P5 中性原创装饰方块与发布准备验收矩阵
 
-> 阶段工单：[Issue #5](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/5)。P5 **技术范围**已于 `d9c0aea` 取得同 SHA 六门禁；工单仍因正式资源授权和项目许可证的真实外部条件保持 OPEN，故不得 Release。所有动态 Forge/Minecraft 结论仅以 GitHub Hosted Runner 为准。
+> 阶段工单：[Issue #5](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/5)。P5 **技术范围**已于 `d9c0aea` 取得同 SHA 六门禁；范围收束后的新 SHA 仍须复验并完成版本、说明和发布件。所有动态 Forge/Minecraft 结论仅以 GitHub Hosted Runner 为准。
 
 |范围|必须真实验收|
 |---|---|
@@ -10,7 +10,7 @@
 |音频压力|真实 GUI→下载→PCM 覆盖 64 MiB LRU、驱逐重下、同 URL 单飞、损坏缓存删除重试，测试音频只在 ciTest|
 |发行准备|统一正式版本、中文说明、JLayer 许可证、Jar SHA-256、真实未覆盖边界；仅全量同 SHA 六门禁成功后创建 tag/Release|
 
-P5 技术验收通过不等于获得发行授权；不得把受控测试推广为第三方音频可用性、授权或长期压力承诺。
+不得把受控测试推广为第三方音频可用性、版权或长期压力承诺；本项目不外推对项目外第三方的再授权。
 
 ## 缓存压力实现与验收设计（历史记录）
 
@@ -20,7 +20,7 @@ Alice 对每个 URL 都必须经过生产 `MusicBoxScreen` 的潜行右键、真
 
 最后，两端只能在自己的两条单飞事件都已真实读取 PCM 后，截断各自实际存在的 fill-5 缓存到 64 字节并写非成功操作事实；服务端回读两个截断事实后，Alice 仍须从 GUI 重配 fill-5，两个客户端均以新的事件 UUID、非命中与 PCM 证明摘要校验删除坏文件并真实重试。脚本只写阶段旗标，严格等待服务端成功日志后放行下一步；成功 marker 一律由客户端 SoundEngine read 写入。P5 大 OGG 仅位于 `src/ciTest/resources/ci-audio/`、严格大于 13 MiB 且不超过生产 16 MiB，通过同 SHA 的只读 jsDelivr HTTPS 映射提供真实公网下载（GitHub Raw 对该大 OGG 返回泛 MIME，生产严格拒绝）；正式 Jar 与正式资源清单继续排除它。
 
-生产缓存同时补齐短租约与确定性 LRU：同 URL 等待者不共享可关闭值；从 fetch 返回到完整解码打开文件前，仍在租约中的条目不得被并发 LRU 删除；缓存命中/新提交的 mtime 在同毫秒仍单调递增。这些机制的动态结果见文末 `d9c0aea` 验收结论；#5 仅因发行授权条件继续 OPEN。
+生产缓存同时补齐短租约与确定性 LRU：同 URL 等待者不共享可关闭值；从 fetch 返回到完整解码打开文件前，仍在租约中的条目不得被并发 LRU 删除；缓存命中/新提交的 mtime 在同毫秒仍单调递增。这些机制的动态结果见文末 `d9c0aea` 验收结论；#5 在范围收束后的同 SHA 六项门禁、版本、说明和发布件齐备前保持 OPEN。
 
 ## 装饰方块排障历史（已归档）
 
@@ -47,7 +47,7 @@ Alice 对每个 URL 都必须经过生产 `MusicBoxScreen` 的潜行右键、真
 |真实双客户端|[success 31171119931](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31171119931)：R1 Alice 摆件、R2 Bob 画板、R3 Alice 奖杯均完成；两份 marker 对三轮 BlockState/掉落实体 UUID 逐字段一致，随后 `SERVER`、`CLIENTS`、`CLEANUP` 成功；P4 文本、音频、导出和交接平台归还也在其后成功|
 |强制回归汇总|[success 31171667037](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31171667037)：同 SHA 与五项 canonical 运行匹配|
 
-这只验收三个原创中性装饰方块及其真实单/双端路径；**不是 P5 整体验收或 Release 结论**。64 MiB 音频缓存的 LRU/驱逐重下/单飞/损坏删除重试、中文发行说明、正式版本与对历史资源授权的可验证处理仍未完成，Issue #5 不关闭。
+这只验收三个原创中性装饰方块及其真实单/双端路径；**不是 P5 整体验收或 Release 结论**。64 MiB 音频缓存的 LRU/驱逐重下/单飞/损坏删除重试、中文发行说明与正式版本仍未完成，Issue #5 不关闭。
 
 `e32035e` 的质量、专服、强杀恢复和单客户端已 success，但双客户端 [31174221178](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31174221178) 在 P5 段前失败。artifact 的首个业务错误为 P4 小黄鸡“两个真实客户端未在观察窗口内同步小黄鸡实体”：跨维门 cleanup 把 Bob 交回 P3 强杀恢复的无支撑/嵌墙原位，日志记录其真实窒息，两个 chicken marker 均缺失。当前仅将文本场景拥有的双人安全交接平台提前至 door cleanup 前并由该 cleanup 真实交接；不复活、跳过、延长窗口或伪造 marker。必须先以新 SHA 回归此首错，P5 音频压力尚未开始，不能评价其结果。
 
@@ -79,6 +79,6 @@ Alice 对每个 URL 都必须经过生产 `MusicBoxScreen` 的潜行右键、真
 
 ### 发行结论与真实未覆盖边界
 
-P5 技术范围已完成，**但公开发行尚未获准**。批次 A 已以可复现源码替换 68 张历史 PNG；`ASSET_MANIFEST.md` 记录的 182 项正式资源现仍有 99 项为“待权利人/法务确认；Release 阻塞”，83 项为“随项目分发；仍需发行前项目许可证确认”。技术成功不授予素材、名称、商标或整体项目的可再发行权；在收到书面授权和许可证条件，或全部替换为可审计原创资源并完成名称/商标审查前，Issue #5 保持 OPEN，不创建 tag、不发布 Release、不上传 Jar。
+P5 技术范围已完成。68 张正式 PNG 为项目内原创重绘，原版图片仅作需求输入且不进入 Release；其余项目资产由项目方提供，许可本项目使用、修改与发行，不外推对项目外第三方的再授权。Issue #5 在范围收束后的同 SHA 六项门禁、正式版本、中文说明、Jar 与 SHA-256 齐备前保持 OPEN。
 
 此外，受控 P5 场景只证明单客户端进程/游戏目录内的缓存语义与受控 HTTPS 夹具；不承诺任意第三方 URL、带宽、版权或长期可用性。未 `save-all flush` 的掉电窗口、死亡笔记伤害前后的非原子窗口、未加载伙伴门与任意拓扑恢复亦仍是如实保留的运行边界。

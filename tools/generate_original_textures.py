@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """生成并校验 P5 发行整改中的确定性原创像素贴图。
 
-本工具只处理 TARGETS 中此前无法追溯授权的 PNG。它不读取、不采样或
+本工具只处理 TARGETS 中不得直接发行的原版 PNG。它不读取、不采样或
 拼接原贴图：每个像素仅由文件标识、明确的类别轮廓和固定调色板计算得出。
 因此同一源码可重复得到同一 RGBA PNG，也可用 --check 防止手工漂移。
 """
@@ -284,9 +284,9 @@ def update_manifest() -> None:
             if relative is not None:
                 checksum = hashlib.sha256((RESOURCE_ROOT / relative).read_bytes()).hexdigest()
                 rows.append(
-                    f"|`{path}`|`{checksum}`|项目维护者（2026-08-07）|"
-                    "确定性几何像素；不含人物、赛事、商标、画作、照片|"
-                    "随项目分发；仍需发行前项目许可证确认|2026-08-07|"
+                    f"|`{path}`|`{checksum}`|项目内原创重绘|"
+                    "原版图片仅作需求输入且不进入 Release；不读取、采样或混合原图|"
+                    "项目方提供需求背景；发行使用项目内原创重绘 PNG|2026-08-07|"
                 )
                 updated.add(path)
                 continue

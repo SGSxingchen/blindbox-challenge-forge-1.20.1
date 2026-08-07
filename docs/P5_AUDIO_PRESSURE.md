@@ -1,6 +1,6 @@
 # P5 八音盒缓存压力实施与验收设计
 
-> 阶段工单：[Issue #5](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/5)。本文件记录生产缓存加固、验收边界及 `d9c0aea` 的 Hosted Runner 技术证据；技术成功不等同于音频或资源的发行授权。
+> 阶段工单：[Issue #5](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/5)。本文件记录生产缓存加固、验收边界及 `d9c0aea` 的 Hosted Runner 技术证据。
 
 ## 已落盘的生产缓存加固
 
@@ -31,7 +31,7 @@ P4 的短音频继续从同一提交的 `raw.githubusercontent.com` 读取。P5 
 
 ## 未覆盖边界
 
-该场景只验证受控 GitHub HTTPS 夹具与单进程缓存语义，不承诺任意第三方音频的可用性、带宽、版权、长期地址稳定性，也不替代历史正式资源的作者/许可证追溯。历史资源授权仍是正式 Release 阻塞项。
+该场景只验证受控 HTTPS 夹具与单进程缓存语义，不承诺任意第三方音频的可用性、带宽、版权或长期地址稳定性；本项目不外推对项目外第三方的再授权。
 
 
 ## `d9c0aea` Hosted Runner 技术证据

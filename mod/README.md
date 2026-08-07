@@ -4,4 +4,4 @@
 
 本机禁止运行 Gradle、Forge 或 Minecraft 动态验证；构建、专服及真实客户端验证只在 GitHub Hosted Runner 执行。`src/ciTest` 与 `*-citest.jar` 是 CI 专用探针/夹具，绝不能作为正式模组安装或分发。
 
-目前没有公开 Release：P5 批次 A 已替换 68 张历史 PNG，正式资源中仍有 99 项尚待权利人/法务确认，83 项尚待项目发行许可证确认。获得书面授权或完成全量可审计原创替换之前，不得创建公开 Release 或发布 Jar。详见 [资源审计清单](../docs/ASSET_MANIFEST.md)。
+当前尚未发布正式版。P5 的 68 张正式 PNG 已完成项目内原创重绘，原版图片仅作需求输入且不进入 Release；其余项目资产由项目方提供，许可本项目使用、修改与发行，不外推对项目外第三方的再授权。详见 [资源审计清单](../docs/ASSET_MANIFEST.md)。
