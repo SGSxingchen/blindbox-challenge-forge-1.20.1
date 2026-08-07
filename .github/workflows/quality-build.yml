@@ -320,6 +320,8 @@ jobs:
           assert 'range(1, 6)' in runner and 'p5MusicCacheMarkerDir' in runner and 'p5AudioBase' in runner
           assert 'BLINDBOX_CITEST_P5_AUDIO_BASE_URL' in script and 'cdn.jsdelivr.net/gh/${GITHUB_REPOSITORY}@${GITHUB_SHA}' in script
           assert 'BLINDBOX_CITEST_P5_AUDIO_BASE_URL' in server and 'blindbox.ci.p5AudioBase' in client
+          assert 'MARKER_FIELDS = Set.of' in server and 'separator = line.indexOf(\'=\')' in server
+          assert 'separator != line.lastIndexOf' not in server
           assert 'continue-on-error' not in script and 'continue-on-error' not in runner
           PY
           CITEST_JAR="build/libs/blindboxchallenge-0.1.0-p1-citest.jar"

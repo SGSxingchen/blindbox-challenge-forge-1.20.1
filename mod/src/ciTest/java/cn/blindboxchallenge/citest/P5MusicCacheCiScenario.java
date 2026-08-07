@@ -89,6 +89,9 @@ public final class P5MusicCacheCiScenario {
     }
 
     private static final class ActiveScenario {
+        /** 所有由 P5 服务端读取的客户端事实字段；未知字段不能静默混入验收输入。 */
+        private static final Set<String> MARKER_FIELDS = Set.of("schema", "observer_uuid", "event_uuid", "url", "kind", "cache_hit",
+                "single_flight_follower", "source", "pcm_bytes", "s2c_observed", "original_bytes", "truncated_bytes", "corruption_injected");
         private final ServerLevel level;
         private final ServerPlayer alice;
         private final UUID aliceId;
@@ -296,10 +299,15 @@ public final class P5MusicCacheCiScenario {
             Map<String, String> values = new HashMap<>();
             for (String line : Files.readAllLines(marker, StandardCharsets.UTF_8)) {
                 int separator = line.indexOf('=');
-                if (separator <= 0 || separator != line.lastIndexOf('=')) throw new IllegalStateException("P5 八音盒缓存 marker 格式非法：" + marker);
-                if (values.put(line.substring(0, separator), line.substring(separator + 1)) != null) {
-                    throw new IllegalStateException("P5 八音盒缓存 marker 有重复字段：" + marker);
+                // URL 的 query 允许合法的 key=value；只以第一个等号分隔字段名和值，不能把 URL
+                // 自身的等号误判为 marker 结构错误。字段名、空值、未知字段和重复字段仍严格拒绝。
+                if (separator <= 0) throw new IllegalStateException("P5 八音盒缓存 marker 格式非法：" + marker);
+                String key = line.substring(0, separator);
+                String value = line.substring(separator + 1);
+                if (!key.matches("[a-z][a-z0-9_]*") || value.isEmpty() || !MARKER_FIELDS.contains(key)) {
+                    throw new IllegalStateException("P5 八音盒缓存 marker 字段非法：" + marker);
                 }
+                if (values.put(key, value) != null) throw new IllegalStateException("P5 八音盒缓存 marker 有重复字段：" + marker);
             }
             return values;
         }
