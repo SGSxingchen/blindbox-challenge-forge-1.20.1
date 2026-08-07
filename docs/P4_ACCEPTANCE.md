@@ -41,3 +41,5 @@
 `f92ee0d` 的同 SHA 双客户端 run `31155161783` 证实两客户端均先记录 `TLS_HANDSHAKE/IOException`、再记录 IPv6 回退 `SocketException`，服务器只收到两份生产失败事件并严格在 `WAIT_OGG_FIRST` 失败；质量、专服、强杀恢复和单客户端虽成功，汇总仍因双客户端失败而失败。`TLS_HANDSHAKE` 当前覆盖多个 TLS 内部操作，不能将该泛型异常虚报为握手、证书、HTTP 或解码根因。下一轮仅细分不含敏感数据的 TLS 内部阶段；所有真实 GUI、S2C、固定地址 TLS、PCM marker、缓存、失败和重连断言不变，P4 仍为 **0/6**。
 
 `0dc40e6` 的双客户端同 SHA 重跑 `31156100974` 第二次尝试已经通过强杀恢复、真实重连、文本与跨维门路径，音频首错收敛为两端 `TLS_HOSTNAME_VERIFY/IOException`（随后才有 IPv6 回退失败）。修复仅删除可被全局替换的 `HttpsURLConnection` 默认 verifier 的重复复验，保留当前 `SSLSocket` 的 `HTTPS` endpoint identification 和 SNI，故证书主机名校验仍由 JSSE 在真实握手中强制执行。质量闩同时禁止默认 verifier 且锁定这两项 JSSE 配置；没有增加时限、改用代理或把失败事件伪装成 PCM 成功。P4 仍为 **0/6**，必须重新取得同 SHA 六门禁全绿。
+
+`f1fac80` 的双客户端 run `31157726129` 已使两客户端 OGG 首次和断网缓存读取到真实 PCM（各 `22050` 字节，服务端也分别输出 `P4_MUSIC_OGG_FIRST=success` 与 `P4_MUSIC_CACHE=success`），但在 MP3 重配前停于 `WAIT_MP3_CONFIGURATION`。artifact 显示两端收到同一畸形 URL、随后真实生产失败事件为 `HTTP_HEADERS/IOException`；探针此前的“Ctrl+A”只传入修饰参数，未可靠选中已有 OGG 文本，完整 MP3 URL 因而插入旧值中间。修复仍只走已聚焦生产 EditBox 的 End/Backspace/逐字符输入和真实保存点击，质量门禁拒绝旧的伪 Ctrl 方案；不直接设字段或发包，不放宽 MP3 PCM、缓存、失败或不补播断言。P4 仍为 **0/6**。

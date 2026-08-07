@@ -8,6 +8,7 @@ import cn.blindboxchallenge.client.MusicBoxScreen;
 import cn.blindboxchallenge.event.MusicBoxPlaybackEvent;
 import cn.blindboxchallenge.event.MusicBoxPlaybackFailedEvent;
 import cn.blindboxchallenge.registry.ModBlocks;
+import cn.blindboxchallenge.service.AudioUrlPolicy;
 import com.mojang.blaze3d.platform.InputConstants;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -259,11 +260,23 @@ public final class CiClientMusicBoxObservation {
         int left = (screen.width - 286) / 2;
         int top = (screen.height - 116) / 2;
         screen.mouseClicked(left + 20.0D, top + 48.0D, 0);
-        screen.keyPressed(InputConstants.KEY_A, 0, InputConstants.MOD_CONTROL);
+        clearExistingUrl(screen);
         for (char character : url.toCharArray()) screen.charTyped(character, 0);
         screen.mouseClicked(left + 142.0D, top + 86.0D, 0);
         screen.mouseReleased(left + 142.0D, top + 86.0D, 0);
         alicePhase = next;
+    }
+
+    /**
+     * Screen 的 Ctrl 状态来自真实键盘状态，不能把带修饰参数的 {@code keyPressed} 当作可靠全选。
+     * 这里仍通过已聚焦的生产 EditBox 的 End/Backspace 输入路径逐项清空，随后才用同一 Screen 的
+     * {@code charTyped} 输入新 URL；不接触菜单字段、C2S 包或服务端状态。
+     */
+    private static void clearExistingUrl(Screen screen) {
+        screen.keyPressed(InputConstants.KEY_END, 0, 0);
+        for (int index = 0; index < AudioUrlPolicy.MAX_URL_LENGTH; index++) {
+            screen.keyPressed(InputConstants.KEY_BACKSPACE, 0, 0);
+        }
     }
 
     private static boolean canUseMusicBox(Minecraft minecraft, LocalPlayer player) {

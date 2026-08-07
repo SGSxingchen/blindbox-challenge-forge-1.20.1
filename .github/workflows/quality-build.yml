@@ -108,6 +108,13 @@ jobs:
           grep -q 'configuration-input-stalled.marker' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
           grep -q 'if (!observesMusicBox(minecraft)) return;' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
           grep -q 'ModBlocks.MUSIC_BOX.get()' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          # 已有 URL 的重配必须沿生产 EditBox 的真实 End/Backspace/charTyped 路径清空，不能把修饰
+          # 参数伪作物理 Ctrl 状态，避免把 MP3 URL 插进旧 OGG URL 后仍误以为已提交。
+          grep -q 'clearExistingUrl(screen);' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          grep -q 'screen.keyPressed(InputConstants.KEY_END, 0, 0);' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          grep -q 'screen.keyPressed(InputConstants.KEY_BACKSPACE, 0, 0);' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          grep -q 'AudioUrlPolicy.MAX_URL_LENGTH' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          ! grep -q 'InputConstants.KEY_A, 0, InputConstants.MOD_CONTROL' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
           grep -q 'configuration_open_attempts=' src/ciTest/java/cn/blindboxchallenge/citest/P4MusicCiScenario.java
           grep -q 'configuration_input_stalls=' src/ciTest/java/cn/blindboxchallenge/citest/P4MusicCiScenario.java
           grep -q 'RELEASE_SHIFT_TICKS = 4' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
