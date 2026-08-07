@@ -45,6 +45,7 @@ import net.minecraftforge.fml.common.Mod;
  */
 @Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class CiClientMusicBoxObservation {
+    private static final int RELEASE_SHIFT_TICKS = 4;
     private enum AlicePhase { WAIT_OGG_OPEN, WAIT_OGG_SCREEN, WAIT_OGG_PLAY, WAIT_OGG_READ, WAIT_CACHE_FLAG, WAIT_CACHE_PLAY,
         WAIT_CACHE_READ, WAIT_MP3_SNEAK, WAIT_MP3_SCREEN, WAIT_MP3_PLAY, WAIT_MP3_READ, WAIT_NETWORK_FLAG, WAIT_BROKEN_TRIGGER, WAIT_BROKEN_SNEAK,
         WAIT_BROKEN_SCREEN, WAIT_BROKEN_PLAY, WAIT_BROKEN_FAILURE, COMPLETE }
@@ -60,6 +61,9 @@ public final class CiClientMusicBoxObservation {
     private static volatile boolean replayAfterReconnect;
     private static int noReplayTicks;
     private static boolean noReplayWritten;
+    private static boolean oggEditorReopenedWritten;
+    private static AlicePhase shiftReleasePhase;
+    private static int releasedShiftTicks;
 
     private CiClientMusicBoxObservation() {}
 
@@ -67,9 +71,20 @@ public final class CiClientMusicBoxObservation {
     public static void receivedPlayback(MusicBoxPlaybackEvent event) {
         RECEIVED_EVENTS.add(event.eventId());
         EVENT_URLS.put(event.eventId(), event.url());
+        // 仅证明收到生产 S2C，绝不代表下载、解码或 PCM read 成功。
+        Minecraft minecraft = Minecraft.getInstance();
+        LocalPlayer player = minecraft.player;
+        Path directory = markerDirectory();
+        if (player != null && directory != null) {
+            writeNewMarker(directory.resolve(markerPrefix(player) + "received-" + event.eventId() + ".marker"), "schema=1\n"
+                    + "observer_uuid=" + player.getUUID() + "\n"
+                    + "event_uuid=" + event.eventId() + "\n"
+                    + "url=" + event.url() + "\n"
+                    + "source=" + position(event.source()) + "\n"
+                    + "production_s2c_received=true\n");
+        }
         if (reconnectedAfterFailure || (disconnectedAfterFailure && Minecraft.getInstance().getConnection() != connectionAtFailure)) {
             replayAfterReconnect = true;
-            Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.player != null && !isAlice(minecraft.player) && markerDirectory() != null) {
                 writeNewMarker(markerDirectory().resolve(markerPrefix(minecraft.player) + "replay-detected.marker"), "schema=1\n"
                         + "observer_uuid=" + minecraft.player.getUUID() + "\n"
@@ -85,7 +100,15 @@ public final class CiClientMusicBoxObservation {
         Path directory = markerDirectory();
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
-        if (directory == null || player == null || !RECEIVED_EVENTS.contains(event.eventId()) || !event.url().endsWith("blindbox-ci-broken.ogg")) return;
+        if (directory == null || player == null || !RECEIVED_EVENTS.contains(event.eventId())) return;
+        // 非预期失败也必须留定位证据；此文件不参与任何成功或预期坏文件断言。
+        writeNewMarker(directory.resolve(markerPrefix(player) + "diagnostic-failed-" + event.eventId() + ".marker"), "schema=1\n"
+                + "observer_uuid=" + player.getUUID() + "\n"
+                + "event_uuid=" + event.eventId() + "\n"
+                + "url=" + event.url() + "\n"
+                + "source=" + position(event.source()) + "\n"
+                + "production_failure_observed=true\n");
+        if (!event.url().endsWith("blindbox-ci-broken.ogg")) return;
         writeNewMarker(directory.resolve(markerPrefix(player) + "failed-" + event.eventId() + ".marker"), "schema=1\n"
                 + "observer_uuid=" + player.getUUID() + "\n"
                 + "event_uuid=" + event.eventId() + "\n"
@@ -129,6 +152,13 @@ public final class CiClientMusicBoxObservation {
             }
         }
         if (!isAlice(player) || markerDirectory() == null) return;
+        if (alicePhase == AlicePhase.WAIT_OGG_READ && minecraft.screen instanceof MusicBoxScreen && !oggEditorReopenedWritten) {
+            // 真实普通右键后若又收到编辑屏，说明服务端并未进入播放分支；这不是成功 marker。
+            writeNewMarker(markerDirectory().resolve(markerPrefix(player) + "ogg-editor-reopened.marker"), "schema=1\n"
+                    + "observer_uuid=" + player.getUUID() + "\n"
+                    + "screen_reopened_after_play_attempt=true\n");
+            oggEditorReopenedWritten = true;
+        }
         driveAlice(minecraft, player);
     }
 
@@ -171,7 +201,27 @@ public final class CiClientMusicBoxObservation {
 
     private static boolean useConfiguredMusicBox(Minecraft minecraft, LocalPlayer player) {
         if (!canUseMusicBox(minecraft, player)) return false;
+        // 普通播放必须显式释放潜行键；这仍是客户端真实输入，不伪造服务端 Block#use 或 S2C。
+        KeyMapping.set(minecraft.options.keyShift.getKey(), false);
+        if (shiftReleasePhase != alicePhase) {
+            shiftReleasePhase = alicePhase;
+            releasedShiftTicks = 0;
+        }
+        // 必须让真实客户端至少处理四个 tick 的“已释放潜行”状态，再注入普通右键；否则服务端
+        // 可能仍消费上一个潜行包并重开编辑器，不能把该网络同步竞态误判为音频下载失败。
+        if (++releasedShiftTicks < RELEASE_SHIFT_TICKS) return false;
         KeyMapping.click(minecraft.options.keyUse.getKey());
+        // 注入真实 use 键不代表服务端消费、S2C 或播放成功，只用于区分输入与后续链路。
+        Path directory = markerDirectory();
+        if (directory != null && alicePhase == AlicePhase.WAIT_OGG_PLAY) {
+            BlockPos target = minecraft.level.getSharedSpawnPos().offset(P4MusicCiScenario.MUSIC_BOX_OFFSET);
+            writeNewMarker(directory.resolve(markerPrefix(player) + "use-attempt.marker"), "schema=1\n"
+                    + "observer_uuid=" + player.getUUID() + "\n"
+                    + "target=" + position(target) + "\n"
+                    + "standing=" + player.blockPosition() + "\n"
+                    + "pitch=" + player.getXRot() + "\n"
+                    + "key_use_injected=true\n");
+        }
         return true;
     }
 

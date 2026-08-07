@@ -91,6 +91,13 @@ jobs:
           grep -q 'alice_velocity=' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q 'horizontalSpeedSqr <= 1.0E-8D' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q 'velocity.y >= -0.0800001D && velocity.y <= 1.0E-8D' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
+          # 八音盒定位文件只记录真实输入/S2C/失败事件；PCM 成功仍只能由 SoundEngine read marker 证明。
+          grep -q 'use-attempt.marker' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          grep -q '"received-" + event.eventId()' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          grep -q '"diagnostic-failed-" + event.eventId()' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          grep -q 'ogg-editor-reopened.marker' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          grep -q 'RELEASE_SHIFT_TICKS = 4' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          grep -q 'client_diagnostics=' src/ciTest/java/cn/blindboxchallenge/citest/P4MusicCiScenario.java
           python3 - <<'PY'
           from pathlib import Path
           source = Path('src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java').read_text(encoding='utf-8')

@@ -144,7 +144,8 @@ public final class P4MusicCiScenario {
 
         private void tick() throws IOException {
             if (phase == Phase.READY || phase == Phase.FAILED) return;
-            if (level.getGameTime() - startedAt > 3600L) throw new IllegalStateException("P4 八音盒真实场景超时：" + phase);
+            if (level.getGameTime() - startedAt > 3600L) throw new IllegalStateException("P4 八音盒真实场景超时：" + phase
+                    + ", client_diagnostics=" + clientDiagnostics());
             MusicBoxBlockEntity box = box();
             switch (phase) {
                 case WAIT_OGG_CONFIGURATION -> {
@@ -268,6 +269,19 @@ public final class P4MusicCiScenario {
                         && path.getFileName().toString().endsWith(".marker")).toList()) values.add(parseMarker(file));
             }
             return values;
+        }
+
+        /** 只汇总失败定位文件，不能用它们替代 S2C、PCM 或成功 marker。 */
+        private String clientDiagnostics() throws IOException {
+            long useAttempts;
+            long receivedEvents;
+            long failedEvents;
+            try (var uses = Files.list(markerDirectory); var received = Files.list(markerDirectory); var failed = Files.list(markerDirectory)) {
+                useAttempts = uses.filter(path -> path.getFileName().toString().endsWith("p4-music-use-attempt.marker")).count();
+                receivedEvents = received.filter(path -> path.getFileName().toString().contains("p4-music-received-")).count();
+                failedEvents = failed.filter(path -> path.getFileName().toString().contains("p4-music-diagnostic-failed-")).count();
+            }
+            return "use_attempts=" + useAttempts + ", received_events=" + receivedEvents + ", failed_events=" + failedEvents;
         }
 
         private static Map<String, String> parseMarker(Path marker) throws IOException {
