@@ -123,10 +123,9 @@ public final class P4DoorRecoveryCiScenario {
     private enum Phase { WAIT_FOR_CROSSING, READY, FAILED }
 
     private static final class ActiveScenario {
+        private final MinecraftServer server;
         private final ServerLevel overworld;
         private final ServerLevel nether;
-        private final ServerPlayer alice;
-        private final ServerPlayer bob;
         private final UUID aliceId;
         private final UUID bobId;
         private final BlockPos sourceDoor;
@@ -134,6 +133,7 @@ public final class P4DoorRecoveryCiScenario {
         private final Path markerDirectory;
         private final ItemStack originalAliceHand;
         private final Vec3 originalAlicePosition;
+        private final ResourceKey<Level> originalAliceDimension;
         private final float originalAliceYaw;
         private final float originalAlicePitch;
         private final Vec3 originalBobPosition;
@@ -141,12 +141,11 @@ public final class P4DoorRecoveryCiScenario {
         private final long startedAt;
         private Phase phase = Phase.WAIT_FOR_CROSSING;
 
-        private ActiveScenario(ServerLevel overworld, ServerLevel nether, ServerPlayer alice, ServerPlayer bob, BlockPos sourceDoor,
+        private ActiveScenario(MinecraftServer server, ServerLevel overworld, ServerLevel nether, ServerPlayer alice, ServerPlayer bob, BlockPos sourceDoor,
                                BlockPos targetDoor, Path markerDirectory) {
+            this.server = server;
             this.overworld = overworld;
             this.nether = nether;
-            this.alice = alice;
-            this.bob = bob;
             this.aliceId = alice.getUUID();
             this.bobId = bob.getUUID();
             this.sourceDoor = sourceDoor;
@@ -154,6 +153,7 @@ public final class P4DoorRecoveryCiScenario {
             this.markerDirectory = markerDirectory;
             this.originalAliceHand = alice.getMainHandItem().copy();
             this.originalAlicePosition = alice.position();
+            this.originalAliceDimension = alice.serverLevel().dimension();
             this.originalAliceYaw = alice.getYRot();
             this.originalAlicePitch = alice.getXRot();
             this.originalBobPosition = bob.position();
@@ -170,21 +170,24 @@ public final class P4DoorRecoveryCiScenario {
             BlockPos sourceDoor = overworld.getSharedSpawnPos().offset(SOURCE_OFFSET);
             BlockPos targetDoor = NETHER_TARGET;
             // 先保存两名真实玩家的场景前位置；Bob 随后进入下界只为按正常玩家语义加载目标区块。
-            ActiveScenario scenario = new ActiveScenario(overworld, nether, alice, bob, sourceDoor, targetDoor, markerDirectory());
+            ActiveScenario scenario = new ActiveScenario(server, overworld, nether, alice, bob, sourceDoor, targetDoor, markerDirectory());
             // 夹具通过原版跨维 tp 让 Bob 的真实玩家加载目标区块；之后才读取 BE，绝不由门逻辑强加载。
             moveFixturePlayer(server, nether, bob, new Vec3(targetDoor.getX() + 2.5D, targetDoor.getY(), targetDoor.getZ() + 0.5D), 90.0F, 0.0F);
             scenario.verifyPersistedLinks();
             scenario.ensureNoOldMarkers();
-            alice.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
             // P3 强杀恢复后 Alice 在下界；同样使用原版跨维 tp 返回主世界源门，随后只能靠生产门逻辑跨维。
             moveFixturePlayer(server, overworld, alice, new Vec3(sourceDoor.getX() + 0.5D, sourceDoor.getY(), sourceDoor.getZ() + 2.5D), 180.0F, 0.0F);
-            alice.containerMenu.broadcastChanges();
+            // 原版跨维命令可能替换服务器侧玩家对象；夹具和后续断言都必须按 UUID 重新取当前在线对象。
+            ServerPlayer movedAlice = scenario.alice();
+            movedAlice.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            movedAlice.containerMenu.broadcastChanges();
             return scenario;
         }
 
         private void tick() throws IOException {
             if (phase == Phase.READY || phase == Phase.FAILED) return;
             if (overworld.getGameTime() - startedAt > 800L) throw new IllegalStateException("P4 跨维门恢复场景超时");
+            ServerPlayer alice = alice();
             if (alice.serverLevel().dimension().equals(nether.dimension())) {
                 Vec3 expected = Vec3.atBottomCenterOf(targetDoor);
                 Vec3 actual = alice.position();
@@ -237,6 +240,7 @@ public final class P4DoorRecoveryCiScenario {
             Path path = markerDirectory.resolve("client-2-p4-door-observed.marker");
             if (!Files.isRegularFile(path)) return false;
             Map<String, String> marker = readMarker(path);
+            ServerPlayer bob = bob();
             Vec3 expectedBob = new Vec3(targetDoor.getX() + 2.5D, targetDoor.getY(), targetDoor.getZ() + 0.5D);
             return "1".equals(marker.get("schema")) && bob.serverLevel().dimension().equals(nether.dimension())
                     && bob.position().distanceToSqr(expectedBob) <= 0.35D && bobId.toString().equals(marker.get("observer_uuid")) && aliceId.toString().equals(marker.get("alice_uuid"))
@@ -251,10 +255,15 @@ public final class P4DoorRecoveryCiScenario {
         }
 
         private void cleanup() {
+            ServerPlayer alice = alice();
+            ServerPlayer bob = bob();
+            ServerLevel aliceLevel = server.getLevel(originalAliceDimension);
+            ServerLevel bobLevel = server.getLevel(originalBobDimension);
+            if (aliceLevel == null || bobLevel == null) throw new IllegalStateException("P4 跨维门清理时原维度不可用");
+            moveFixturePlayer(server, aliceLevel, alice, originalAlicePosition, originalAliceYaw, originalAlicePitch);
+            moveFixturePlayer(server, bobLevel, bob, originalBobPosition, bob.getYRot(), bob.getXRot());
+            alice = alice();
             alice.setItemInHand(InteractionHand.MAIN_HAND, originalAliceHand.copy());
-            alice.teleportTo(overworld, originalAlicePosition.x, originalAlicePosition.y, originalAlicePosition.z, originalAliceYaw, originalAlicePitch);
-            ServerLevel bobLevel = bob.getServer().getLevel(originalBobDimension);
-            if (bobLevel != null) bob.teleportTo(bobLevel, originalBobPosition.x, originalBobPosition.y, originalBobPosition.z, bob.getYRot(), bob.getXRot());
             for (BlockPos position : List.of(sourceDoor, sourceDoor.below(), sourceDoor.south().below(), sourceDoor.south(2).below())) {
                 overworld.setBlock(position, Blocks.AIR.defaultBlockState(), 3);
             }
@@ -262,6 +271,18 @@ public final class P4DoorRecoveryCiScenario {
                 nether.setBlock(position, Blocks.AIR.defaultBlockState(), 3);
             }
             alice.containerMenu.broadcastChanges();
+        }
+
+        private ServerPlayer alice() {
+            ServerPlayer player = server.getPlayerList().getPlayer(aliceId);
+            if (player == null) throw new IllegalStateException("P4 跨维门场景中的 Alice 已离线");
+            return player;
+        }
+
+        private ServerPlayer bob() {
+            ServerPlayer player = server.getPlayerList().getPlayer(bobId);
+            if (player == null) throw new IllegalStateException("P4 跨维门场景中的 Bob 已离线");
+            return player;
         }
 
         private void fail(Exception exception) {
