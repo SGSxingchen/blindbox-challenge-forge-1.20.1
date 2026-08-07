@@ -353,6 +353,36 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_RECONNECT=success' "${SERVER_DIR}/server.log"
+# 发条小黄鸡必须在 P4 文本死亡笔记之前完整完成：文本场景以 Bob 真实死亡界面为断言且不会替他
+# 点击重生。若把鸡放在其后，死亡/死亡屏客户端不能接收实体跟踪包，单端 marker 不能冒充双端观察。
+# 本段仍以生产 Item#use 武装、两端真实跟踪同一 UUID/Fuse、默认 1200 tick TNT 爆炸与显式清理为准。
+printf 'blindboxcitest start_p4_chicken\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P4_CHICKEN_STARTED=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_CHICKEN_STARTED=success' "${SERVER_DIR}/server.log"
+for _ in $(seq 1 100); do
+  if grep -q 'BLINDBOX_CITEST_P4_CHICKEN=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P4_CHICKEN_SERVER=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_CHICKEN_SERVER=success' "${SERVER_DIR}/server.log"
+test -f "${EVIDENCE}/client-1-p4-chicken-observed.marker"
+test -f "${EVIDENCE}/client-2-p4-chicken-observed.marker"
+printf 'blindboxcitest verify_p4_chicken\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P4_CHICKEN=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_CHICKEN=success' "${SERVER_DIR}/server.log"
+printf 'blindboxcitest cleanup_p4_chicken\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P4_CHICKEN_CLEANUP=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_CHICKEN_CLEANUP=success' "${SERVER_DIR}/server.log"
 # P4 负例只调用生产会话授权/文本过滤入口，验证换手、旧修订、伪造容器、控制字符与越限拒绝；
 # 它不替代下方由真实客户端右键和 Screen 控件完成的成功链路。
 printf 'blindboxcitest run_p4_text_negative\n' >&3
@@ -496,35 +526,6 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_MUSIC_CLEANUP=success' "${SERVER_DIR}/server.log"
-# P4 小黄鸡必须由正式 Item#use 武装；两个客户端真实跟踪同一实体/Fuse 后，服务端等待默认
-# 1200 tick 倒计时结束并只接受一次以该实体为 exploder 的 TNT 语义爆炸。
-printf 'blindboxcitest start_p4_chicken\n' >&3
-for _ in $(seq 1 60); do
-  grep -q 'BLINDBOX_CITEST_P4_CHICKEN_STARTED=success' "${SERVER_DIR}/server.log" && break
-  sleep 1
-done
-grep -q 'BLINDBOX_CITEST_P4_CHICKEN_STARTED=success' "${SERVER_DIR}/server.log"
-for _ in $(seq 1 100); do
-  if grep -q 'BLINDBOX_CITEST_P4_CHICKEN=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
-  grep -q 'BLINDBOX_CITEST_P4_CHICKEN_SERVER=success' "${SERVER_DIR}/server.log" && break
-  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
-  sleep 1
-done
-grep -q 'BLINDBOX_CITEST_P4_CHICKEN_SERVER=success' "${SERVER_DIR}/server.log"
-test -f "${EVIDENCE}/client-1-p4-chicken-observed.marker"
-test -f "${EVIDENCE}/client-2-p4-chicken-observed.marker"
-printf 'blindboxcitest verify_p4_chicken\n' >&3
-for _ in $(seq 1 60); do
-  grep -q 'BLINDBOX_CITEST_P4_CHICKEN=success' "${SERVER_DIR}/server.log" && break
-  sleep 1
-done
-grep -q 'BLINDBOX_CITEST_P4_CHICKEN=success' "${SERVER_DIR}/server.log"
-printf 'blindboxcitest cleanup_p4_chicken\n' >&3
-for _ in $(seq 1 60); do
-  grep -q 'BLINDBOX_CITEST_P4_CHICKEN_CLEANUP=success' "${SERVER_DIR}/server.log" && break
-  sleep 1
-done
-grep -q 'BLINDBOX_CITEST_P4_CHICKEN_CLEANUP=success' "${SERVER_DIR}/server.log"
 printf 'blindboxcitest export\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_EXPORT=' "${SERVER_DIR}/server.log" && break

@@ -115,6 +115,18 @@ jobs:
           grep -q 'screen.keyPressed(InputConstants.KEY_BACKSPACE, 0, 0);' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
           grep -q 'AudioUrlPolicy.MAX_URL_LENGTH' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
           ! grep -q 'InputConstants.KEY_A, 0, InputConstants.MOD_CONTROL' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          # 文本场景须由 Bob 真实死亡并观察死亡屏，之后不复活；小黄鸡完整双端观察必须在此之前。
+          grep -q 'ModItems.CLOCKWORK_CHICKEN.get().use(level, alice, InteractionHand.MAIN_HAND)' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path('scripts/ci/multi-client.sh').read_text(encoding='utf-8')
+          chicken_start = source.index("printf 'blindboxcitest start_p4_chicken\\n' >&3")
+          chicken_cleanup = source.index("printf 'blindboxcitest cleanup_p4_chicken\\n' >&3")
+          text_negative = source.index("printf 'blindboxcitest run_p4_text_negative\\n' >&3")
+          text_start = source.index("printf 'blindboxcitest start_p4_text_clients\\n' >&3")
+          assert chicken_start < chicken_cleanup < text_negative < text_start
+          assert source.count("printf 'blindboxcitest start_p4_chicken\\n' >&3") == 1
+          PY
           grep -q 'configuration_open_attempts=' src/ciTest/java/cn/blindboxchallenge/citest/P4MusicCiScenario.java
           grep -q 'configuration_input_stalls=' src/ciTest/java/cn/blindboxchallenge/citest/P4MusicCiScenario.java
           grep -q 'RELEASE_SHIFT_TICKS = 4' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
