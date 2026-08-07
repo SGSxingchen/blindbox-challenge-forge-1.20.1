@@ -38,6 +38,8 @@ import net.minecraftforge.common.util.ITeleporter;
 public final class P4DoorRecoveryCiScenario {
     public static final BlockPos SOURCE_OFFSET = new BlockPos(64, 160, 0);
     public static final BlockPos NETHER_TARGET = new BlockPos(64, 180, 64);
+    /** 起点碰撞盒完全在门格外，但保留足够短的真实步行距离，避免低帧 CI 在 100 客户端刻前尚未进门。 */
+    private static final double SOURCE_START_DISTANCE = 1.5D;
     private static final String MANIFEST = "p4-door-recovery-before.properties";
     private static ActiveScenario active;
 
@@ -182,7 +184,7 @@ public final class P4DoorRecoveryCiScenario {
             scenario.verifyPersistedLinks();
             scenario.ensureNoOldMarkers();
             // P3 强杀恢复后 Alice 在下界；夹具完整迁移回主世界源门，随后只能靠生产门逻辑跨维。
-            moveFixturePlayer(server, overworld, alice, new Vec3(sourceDoor.getX() + 0.5D, sourceDoor.getY(), sourceDoor.getZ() + 2.5D), 180.0F, 0.0F);
+            moveFixturePlayer(server, overworld, alice, fixtureStart(sourceDoor), 180.0F, 0.0F);
             // 原版跨维命令可能替换服务器侧玩家对象；夹具和后续断言都必须按 UUID 重新取当前在线对象。
             ServerPlayer movedAlice = scenario.alice();
             movedAlice.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
@@ -450,7 +452,9 @@ public final class P4DoorRecoveryCiScenario {
         return values;
     }
 
-    public static Vec3 fixtureStart(BlockPos door) { return new Vec3(door.getX() + 0.5D, door.getY(), door.getZ() + 2.5D); }
+    public static Vec3 fixtureStart(BlockPos door) {
+        return new Vec3(door.getX() + 0.5D, door.getY(), door.getZ() + SOURCE_START_DISTANCE);
+    }
 
     public static String fixtureStartPosition(BlockPos door) {
         Vec3 position = fixtureStart(door);
