@@ -373,8 +373,21 @@ public final class P4DoorRecoveryCiScenario {
             ServerLevel aliceLevel = server.getLevel(originalAliceDimension);
             ServerLevel bobLevel = server.getLevel(originalBobDimension);
             if (aliceLevel == null || bobLevel == null) throw new IllegalStateException("P4 跨维门清理时原维度不可用");
-            moveFixturePlayer(server, aliceLevel, alice, originalAlicePosition, originalAliceYaw, originalAlicePitch);
-            moveFixturePlayer(server, bobLevel, bob, originalBobPosition, bob.getYRot(), bob.getXRot());
+            // P3 强杀恢复保存的“原位”可能是临时高空平台，Bob 的原位也可能在平台撤除后嵌入方块。
+            // 下一场景已在本次门 cleanup 前显式创建并拥有双人安全交接台时，必须交给它而不是把活着的
+            // 双客户端还原到会在重连等待中坠落/窒息的位置；平台直到 canonical 导出才归还。
+            Vec3 aliceHandoff = P4TextCiScenario.preparedHandoffDestination("BlindBoxAlice");
+            Vec3 bobHandoff = P4TextCiScenario.preparedHandoffDestination("BlindBoxBob");
+            if ((aliceHandoff == null) != (bobHandoff == null)) {
+                throw new IllegalStateException("P4 文本安全交接平台只提供了一名玩家的位置");
+            }
+            if (aliceHandoff != null) {
+                moveFixturePlayer(server, overworld, alice, aliceHandoff, originalAliceYaw, originalAlicePitch);
+                moveFixturePlayer(server, overworld, bob, bobHandoff, bob.getYRot(), bob.getXRot());
+            } else {
+                moveFixturePlayer(server, aliceLevel, alice, originalAlicePosition, originalAliceYaw, originalAlicePitch);
+                moveFixturePlayer(server, bobLevel, bob, originalBobPosition, bob.getYRot(), bob.getXRot());
+            }
             alice = alice();
             alice.setItemInHand(InteractionHand.MAIN_HAND, originalAliceHand.copy());
             for (BlockPos position : List.of(sourceDoor, sourceDoor.below(), sourceDoor.south().below(), sourceDoor.south(2).below())) {

@@ -452,10 +452,17 @@ jobs:
           export = script.index("printf 'blindboxcitest export\\n' >&3")
           assert start < export
           handoff_prepare = script.index("printf 'blindboxcitest prepare_p4_text_handoff\\n' >&3")
+          door_clients = script.index("grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_CLIENTS=success'")
+          door_cleanup = script.index("printf 'blindboxcitest cleanup_p4_door_recovery_clients\\n' >&3")
           chicken_cleanup = script.index("printf 'blindboxcitest cleanup_p4_chicken\\n' >&3")
           text_negative = script.index("printf 'blindboxcitest run_p4_text_negative\\n' >&3")
           handoff_release = script.index("printf 'blindboxcitest release_p4_text_handoff\\n' >&3")
-          assert handoff_prepare < chicken_cleanup < start < text_negative < export < handoff_release
+          assert script.count("printf 'blindboxcitest prepare_p4_text_handoff\\n' >&3") == 1
+          assert door_clients < handoff_prepare < door_cleanup < chicken_cleanup < start < text_negative < export < handoff_release
+          door_source = (root / 'src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java').read_text(encoding='utf-8')
+          assert 'P4TextCiScenario.preparedHandoffDestination("BlindBoxAlice")' in door_source
+          assert 'P4TextCiScenario.preparedHandoffDestination("BlindBoxBob")' in door_source
+          assert 'moveFixturePlayer(server, overworld, bob, bobHandoff' in door_source
           assert 'BLINDBOX_CITEST_P5_DECOR_SINGLE_STARTED=success' in single_script
           assert 'BLINDBOX_CITEST_P5_DECOR_SINGLE_CLIENT=success' in single_script
           assert 'BLINDBOX_CITEST_P5_DECOR_SINGLE_CLEANUP=success' in single_script

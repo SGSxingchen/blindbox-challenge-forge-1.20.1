@@ -48,3 +48,5 @@ Alice 对每个 URL 都必须经过生产 `MusicBoxScreen` 的潜行右键、真
 |强制回归汇总|[success 31171667037](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31171667037)：同 SHA 与五项 canonical 运行匹配|
 
 这只验收三个原创中性装饰方块及其真实单/双端路径；**不是 P5 整体验收或 Release 结论**。64 MiB 音频缓存的 LRU/驱逐重下/单飞/损坏删除重试、中文发行说明、正式版本与对历史资源授权的可验证处理仍未完成，Issue #5 不关闭。
+
+`e32035e` 的质量、专服、强杀恢复和单客户端已 success，但双客户端 [31174221178](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31174221178) 在 P5 段前失败。artifact 的首个业务错误为 P4 小黄鸡“两个真实客户端未在观察窗口内同步小黄鸡实体”：跨维门 cleanup 把 Bob 交回 P3 强杀恢复的无支撑/嵌墙原位，日志记录其真实窒息，两个 chicken marker 均缺失。当前仅将文本场景拥有的双人安全交接平台提前至 door cleanup 前并由该 cleanup 真实交接；不复活、跳过、延长窗口或伪造 marker。必须先以新 SHA 回归此首错，P5 音频压力尚未开始，不能评价其结果。

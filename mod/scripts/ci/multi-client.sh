@@ -328,6 +328,14 @@ done
 grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_CLIENTS=success' "${SERVER_DIR}/server.log"
 test -f "${EVIDENCE}/client-1-p4-door-arrived.marker"
 test -f "${EVIDENCE}/client-2-p4-door-observed.marker"
+# P3 强杀恢复遗留的原始高空/嵌墙坐标不能在跨维门 cleanup 后交还给活着的 Bob。文本场景现在
+# 先创建并拥有双人安全交接平台，门 cleanup 只在该平台存在时交接；这不是文本或小黄鸡成功 marker。
+printf 'blindboxcitest prepare_p4_text_handoff\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P4_TEXT_HANDOFF_PREPARED=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_TEXT_HANDOFF_PREPARED=success' "${SERVER_DIR}/server.log"
 printf 'blindboxcitest cleanup_p4_door_recovery_clients\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_CLEANUP=success' "${SERVER_DIR}/server.log" && break
@@ -379,14 +387,7 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_CHICKEN=success' "${SERVER_DIR}/server.log"
-# P3 强杀恢复保留的是高空持久坐标，不能在鸡 cleanup 时依赖随机出生区地形。下一场景 P4 文本
-# 先显式保存并拥有一个短期交接平台；它只提供真实可站立面，不能作为小黄鸡/文本成功 marker。
-printf 'blindboxcitest prepare_p4_text_handoff\n' >&3
-for _ in $(seq 1 60); do
-  grep -q 'BLINDBOX_CITEST_P4_TEXT_HANDOFF_PREPARED=success' "${SERVER_DIR}/server.log" && break
-  sleep 1
-done
-grep -q 'BLINDBOX_CITEST_P4_TEXT_HANDOFF_PREPARED=success' "${SERVER_DIR}/server.log"
+# P4 文本已在跨维门 cleanup 前拥有安全交接平台；鸡 cleanup 只消费该已有平台，不重复创建或拥有它。
 printf 'blindboxcitest cleanup_p4_chicken\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_P4_CHICKEN_CLEANUP=success' "${SERVER_DIR}/server.log" && break
