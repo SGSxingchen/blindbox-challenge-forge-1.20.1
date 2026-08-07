@@ -287,8 +287,16 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_STARTED=success' "${SERVER_DIR}/server.log"
-# 夹具中 Alice 的跨维 teleport id 必须先确认，服务端复验双方已回到精确目标坐标后，
-# 才允许 Alice 按前进键；Bob 的真实目标维同步仍由后续观察 marker 严格复验。该日志不是门传送成功 marker。
+# 先由服务端确认跨维目标坐标；随后 Alice 在没有任何前进输入时连续观察源门起点，写出的阶段
+# 证据必须再由服务端按 UUID/维度/门/精确坐标复验。这样排空重启后滞留的旧维度移动包。
+for _ in $(seq 1 120); do
+  if grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_FIXTURE_SERVER_READY=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_FIXTURE_SERVER_READY=success' "${SERVER_DIR}/server.log"
+touch "${EVIDENCE}/p4-door-recovery-fixture-observe.flag"
 for _ in $(seq 1 120); do
   if grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
   grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_FIXTURE_SYNCED=success' "${SERVER_DIR}/server.log" && break
@@ -314,7 +322,7 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_CLEANUP=success' "${SERVER_DIR}/server.log"
-rm -f "${EVIDENCE}/p4-door-recovery-enabled.flag"
+rm -f "${EVIDENCE}/p4-door-recovery-enabled.flag" "${EVIDENCE}/p4-door-recovery-fixture-observe.flag"
 printf 'blindboxcitest prepare_reconnect\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_RECONNECT_PREPARED=success' "${SERVER_DIR}/server.log" && break

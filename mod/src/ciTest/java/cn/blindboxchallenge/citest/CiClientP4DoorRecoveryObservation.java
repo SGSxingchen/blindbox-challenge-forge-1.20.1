@@ -24,6 +24,8 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class CiClientP4DoorRecoveryObservation {
     private static boolean sourceSeen;
+    private static boolean fixtureReady;
+    private static int fixtureStableTicks;
     private static boolean walking;
     private static int walkingTicks;
     private static boolean aliceWritten;
@@ -40,18 +42,40 @@ public final class CiClientP4DoorRecoveryObservation {
         if (directory == null || self == null || minecraft.level == null || minecraft.getConnection() == null) return;
         // 此旗标仅允许“重启后服务端已验证杀前持久字段”的阶段开始，绝不是任何成功 marker。
         // 杀前夹具已经存在时，客户端必须完全不走动、不观察、更不能写 marker。
-        if (!Files.isRegularFile(directory.resolve("p4-door-recovery-enabled.flag"))) return;
+        boolean observeFixture = Files.isRegularFile(directory.resolve("p4-door-recovery-fixture-observe.flag"));
+        boolean enabled = Files.isRegularFile(directory.resolve("p4-door-recovery-enabled.flag"));
+        if (!observeFixture && !enabled) return;
         BlockPos source = minecraft.level.getSharedSpawnPos().offset(P4DoorRecoveryCiScenario.SOURCE_OFFSET);
         BlockPos target = P4DoorRecoveryCiScenario.NETHER_TARGET;
-        if (isAlice(self)) observeAlice(minecraft, self, source, target, directory);
+        if (isAlice(self)) observeAlice(minecraft, self, source, target, directory, observeFixture, enabled);
         else observeBob(minecraft, self, target, directory);
     }
 
-    private static void observeAlice(Minecraft minecraft, LocalPlayer self, BlockPos source, BlockPos target, Path directory) {
+    private static void observeAlice(Minecraft minecraft, LocalPlayer self, BlockPos source, BlockPos target, Path directory,
+                                     boolean observeFixture, boolean enabled) {
         if (minecraft.level.dimension().equals(Level.OVERWORLD)) {
             if (isDoorWithSafety(minecraft, source)) sourceSeen = true;
-            Vec3 expectedStart = new Vec3(source.getX() + 0.5D, source.getY(), source.getZ() + 2.5D);
-            if (sourceSeen && !walking && ((Entity) self).position().distanceToSqr(expectedStart) < 0.35D && minecraft.screen == null) {
+            Vec3 expectedStart = P4DoorRecoveryCiScenario.fixtureStart(source);
+            boolean atStart = sourceSeen && ((Entity) self).position().distanceToSqr(expectedStart) < 0.08D && minecraft.screen == null;
+            // 仅观察阶段绝不产生移动输入；连续 20 个真实客户端 tick 看到精确起点后才写阶段证据。
+            if (observeFixture && !fixtureReady) {
+                if (atStart) fixtureStableTicks++;
+                else fixtureStableTicks = 0;
+                if (fixtureStableTicks >= 20) {
+                    writeMarker(directory.resolve("client-1-p4-door-fixture-ready.marker"), "schema=1\n"
+                            + "observer_uuid=" + ((Entity) self).getUUID() + "\n"
+                            + "dimension=minecraft:overworld\n"
+                            + "source=" + P4DoorRecoveryCiScenario.position(source) + "\n"
+                            + "standing=" + P4DoorRecoveryCiScenario.fixtureStartPosition(source) + "\n"
+                            + "source_door_and_safety_synced=true\n");
+                    fixtureReady = true;
+                }
+            }
+            if (!enabled || !fixtureReady) {
+                KeyMapping.set(minecraft.options.keyUp.getKey(), false);
+                return;
+            }
+            if (!walking && atStart) {
                 KeyMapping.set(minecraft.options.keyUp.getKey(), true);
                 walking = true;
             }

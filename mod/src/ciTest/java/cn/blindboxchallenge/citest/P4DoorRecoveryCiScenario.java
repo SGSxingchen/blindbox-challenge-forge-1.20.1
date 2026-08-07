@@ -124,7 +124,7 @@ public final class P4DoorRecoveryCiScenario {
         }
     }
 
-    private enum Phase { WAIT_FOR_FIXTURE_SYNC, WAIT_FOR_CROSSING, READY, FAILED }
+    private enum Phase { WAIT_FOR_FIXTURE_SERVER_SYNC, WAIT_FOR_FIXTURE_CLIENT_SYNC, WAIT_FOR_CROSSING, READY, FAILED }
 
     private static final class ActiveScenario {
         private final MinecraftServer server;
@@ -143,7 +143,7 @@ public final class P4DoorRecoveryCiScenario {
         private final Vec3 originalBobPosition;
         private final ResourceKey<Level> originalBobDimension;
         private final long startedAt;
-        private Phase phase = Phase.WAIT_FOR_FIXTURE_SYNC;
+        private Phase phase = Phase.WAIT_FOR_FIXTURE_SERVER_SYNC;
 
         private ActiveScenario(MinecraftServer server, ServerLevel overworld, ServerLevel nether, ServerPlayer alice, ServerPlayer bob, BlockPos sourceDoor,
                                BlockPos targetDoor, Path markerDirectory) {
@@ -197,20 +197,21 @@ public final class P4DoorRecoveryCiScenario {
                         + ", alice_changing=" + alice.isChangingDimension() + ", alice=" + alice.position()
                         + ", bob_changing=" + bob.isChangingDimension() + ", bob=" + bob.position());
             }
-            if (phase == Phase.WAIT_FOR_FIXTURE_SYNC) {
-                ServerPlayer bob = bob();
+            if (phase == Phase.WAIT_FOR_FIXTURE_SERVER_SYNC) {
                 // Alice 是唯一要按前进键的本地客户端，必须先确认其 teleport id；确认前客户端仍可能
                 // 发旧维度位置包。Bob 仅为目标区块观察者，其客户端目标同步仍由后续 marker 严格复验。
                 if (alice.isChangingDimension()) return;
-                Vec3 expectedAlice = new Vec3(sourceDoor.getX() + 0.5D, sourceDoor.getY(), sourceDoor.getZ() + 2.5D);
-                Vec3 expectedBob = new Vec3(targetDoor.getX() + 2.5D, targetDoor.getY(), targetDoor.getZ() + 0.5D);
-                if (!alice.serverLevel().dimension().equals(overworld.dimension()) || alice.position().distanceToSqr(expectedAlice) > 0.08D
-                        || !bob.serverLevel().dimension().equals(nether.dimension()) || bob.position().distanceToSqr(expectedBob) > 0.08D) {
-                    throw new IllegalStateException("P4 跨维门夹具确认后玩家未处于预期站立格：Alice=" + alice.position()
-                            + ", Bob=" + bob.position());
-                }
-                // changeDimension 的精确位置确认不会立即重建 ServerPlayer 的 onGround 缓存；该缓存
-                // 不属于夹具同步完成条件。真实进入生产门后的落地与零速度仍在下方严格验收。
+                verifyFixtureServerPositions(alice, bob());
+                // 先让 Alice 在没有任何前进输入时连续观察源门起点，再由服务端复验这份客户端事实。
+                // 该阶段不是门成功 marker，专门排除重启后滞留的旧维度移动包。
+                phase = Phase.WAIT_FOR_FIXTURE_CLIENT_SYNC;
+                CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P4_DOOR_RECOVERY_FIXTURE_SERVER_READY=success");
+                return;
+            }
+            if (phase == Phase.WAIT_FOR_FIXTURE_CLIENT_SYNC) {
+                if (alice.isChangingDimension()) return;
+                verifyFixtureServerPositions(alice, bob());
+                if (!verifyAliceFixtureMarker()) return;
                 phase = Phase.WAIT_FOR_CROSSING;
                 CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P4_DOOR_RECOVERY_FIXTURE_SYNCED=success");
                 return;
@@ -259,6 +260,26 @@ public final class P4DoorRecoveryCiScenario {
             }
         }
 
+        private void verifyFixtureServerPositions(ServerPlayer alice, ServerPlayer bob) {
+            Vec3 expectedAlice = fixtureStart(sourceDoor);
+            Vec3 expectedBob = new Vec3(targetDoor.getX() + 2.5D, targetDoor.getY(), targetDoor.getZ() + 0.5D);
+            if (!alice.serverLevel().dimension().equals(overworld.dimension()) || alice.position().distanceToSqr(expectedAlice) > 0.08D
+                    || !bob.serverLevel().dimension().equals(nether.dimension()) || bob.position().distanceToSqr(expectedBob) > 0.08D) {
+                throw new IllegalStateException("P4 跨维门夹具确认后玩家未处于预期站立格：Alice=" + alice.position()
+                        + ", Bob=" + bob.position());
+            }
+        }
+
+        private boolean verifyAliceFixtureMarker() throws IOException {
+            Path path = markerDirectory.resolve("client-1-p4-door-fixture-ready.marker");
+            if (!Files.isRegularFile(path)) return false;
+            Map<String, String> marker = readMarker(path);
+            return "1".equals(marker.get("schema")) && aliceId.toString().equals(marker.get("observer_uuid"))
+                    && "minecraft:overworld".equals(marker.get("dimension")) && position(sourceDoor).equals(marker.get("source"))
+                    && fixtureStartPosition(sourceDoor).equals(marker.get("standing"))
+                    && "true".equals(marker.get("source_door_and_safety_synced"));
+        }
+
         private boolean verifyAliceMarker() throws IOException {
             Path path = markerDirectory.resolve("client-1-p4-door-arrived.marker");
             // 真实换维包、客户端观察和原子落盘晚于服务端 teleport；缺少文件只是尚未观察完成，
@@ -282,7 +303,7 @@ public final class P4DoorRecoveryCiScenario {
         }
 
         private void ensureNoOldMarkers() {
-            for (String name : List.of("client-1-p4-door-arrived.marker", "client-2-p4-door-observed.marker")) {
+            for (String name : List.of("client-1-p4-door-fixture-ready.marker", "client-1-p4-door-arrived.marker", "client-2-p4-door-observed.marker")) {
                 if (Files.exists(markerDirectory.resolve(name))) throw new IllegalStateException("P4 跨维门 marker 已存在，拒绝复用旧结果");
             }
         }
@@ -420,6 +441,13 @@ public final class P4DoorRecoveryCiScenario {
             if (values.put(line.substring(0, separator), line.substring(separator + 1)) != null) throw new IllegalStateException("P4 跨维门证据字段重复");
         }
         return values;
+    }
+
+    public static Vec3 fixtureStart(BlockPos door) { return new Vec3(door.getX() + 0.5D, door.getY(), door.getZ() + 2.5D); }
+
+    public static String fixtureStartPosition(BlockPos door) {
+        Vec3 position = fixtureStart(door);
+        return position.x + "," + position.y + "," + position.z;
     }
 
     public static String position(BlockPos position) { return position.getX() + "," + position.getY() + "," + position.getZ(); }
