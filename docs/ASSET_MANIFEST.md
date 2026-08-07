@@ -4,15 +4,15 @@
 
 ## 审计结论与发行边界
 
-* 三项 P5 装饰资源由本项目维护者在 2026-08-07 新建；其余正式资源已在 P5 发行整改的 A（68 张 PNG）、B（95 个模型/状态/战利品 JSON）和 C（双语与 Forge 元数据）批次重建。具体可复现来源见 [原创资源替换记录](ORIGINAL_ASSET_REPLACEMENT.md)：PNG、JSON 和元数据均由仓库内生成器/本地定义产生，不读取、采样、裁切或混合原始照片、包装、截图、压缩素材或第三方成品。
-* 182 项当前都可追溯到项目维护者的本地来源；这不能单独授予项目整体许可证、名称/商标使用权或公开再发行权。所有条目仍明确标为“随项目分发；仍需发行前项目许可证确认”。在权利人确认许可证、可再发行范围及必要署名，并完成名称/商标审查前，不创建 Release。
+* 三项 P5 资源（抽象白色小摆件、风格化地面画板、中性纪念奖杯）的 PNG、模型、方块状态、物品模型与战利品表由本项目维护者在 2026-08-07 新建；图案为确定性抽象几何像素绘制，不使用角色、赛事、商标、画作、原始照片或压缩素材。
+* 其余历史资源的作者、原始参考和可再发行授权不能仅靠现有 Git 文件可靠推断，以下逐条明确标为“待权利人/法务追溯”，不会被虚报为原创或已授权。它们是正式 Release 的真实未覆盖法律边界；在取得书面授权或全部替换为已审计原创资源前，不创建 Release。
 * 禁止格式：JPG/JPEG、WEBP、PSD、压缩包、正式 OGG/MP3/WAV；当前正式目录只允许 JSON、PNG、MCMeta 与 TOML。
 
 ## 逐文件记录
 
 |路径|SHA-256|作者/来源|参考与中性边界|许可证/署名状态|审核日期|
 |---|---|---|---|---|---|
-|`mod/src/main/resources/META-INF/mods.toml`|`3d1628cbb07e60d693d5b88a61409f50e5075bec2c98d35b5fd8b46e7eba65a5`|项目维护者（2026-08-07）|本地定义的中性双语与 Forge 元数据；不含人物、赛事、商标、画作、照片|随项目分发；仍需发行前项目许可证确认|2026-08-07|
+|`mod/src/main/resources/META-INF/mods.toml`|`560b60084e526e4b10e9636c000c1b1eb25b36f0ab634d8ade2cd5c0f0a4c3ae`|历史仓库资源；作者待追溯|不可由当前文件可靠推断；不得宣称原创/授权|待权利人/法务确认；Release 阻塞|2026-08-07|
 |`mod/src/main/resources/assets/blindboxchallenge/blockstates/abstract_white_figurine.json`|`881a904a901e940b5cbf8cb7ca40e00f5d019a2afc714e35aa565c4233ee9982`|项目维护者（2026-08-07）|原创抽象几何；不含人物、赛事、商标、画作、照片|随项目分发；仍需发行前项目许可证确认|2026-08-07|
 |`mod/src/main/resources/assets/blindboxchallenge/blockstates/anywhere_door.json`|`0ca1c9fc4d3fac1f2f1e910f3d6696855b1bbcedd394487af0aba144ae09cade`|项目维护者（2026-08-07）|中性原版模板与明确兼容约束；不含人物、赛事、商标、画作、照片|随项目分发；仍需发行前项目许可证确认|2026-08-07|
 |`mod/src/main/resources/assets/blindboxchallenge/blockstates/bml_cheer_stick.json`|`70bd956c8ce072c4b392c3d256867034e056b1ca7d6ad36ece2c545eb720c842`|项目维护者（2026-08-07）|中性原版模板与明确兼容约束；不含人物、赛事、商标、画作、照片|随项目分发；仍需发行前项目许可证确认|2026-08-07|
@@ -25,8 +25,8 @@
 |`mod/src/main/resources/assets/blindboxchallenge/blockstates/neutral_trophy.json`|`8cb105b01c124422a46dde560c2f59669c4b5647d831a77ab4a7b1d04ae0c426`|项目维护者（2026-08-07）|原创抽象几何；不含人物、赛事、商标、画作、照片|随项目分发；仍需发行前项目许可证确认|2026-08-07|
 |`mod/src/main/resources/assets/blindboxchallenge/blockstates/safety_landing.json`|`7fbd9bd211b77b9a77187885cabb489c33c15570df15fe29e7702b6afe3618bf`|项目维护者（2026-08-07）|中性原版模板与明确兼容约束；不含人物、赛事、商标、画作、照片|随项目分发；仍需发行前项目许可证确认|2026-08-07|
 |`mod/src/main/resources/assets/blindboxchallenge/blockstates/stone_pillow.json`|`a97a1668f4e592f05b3cde0bbdb640f9dcc66f02c87ba2f0f59bf0cd8f247fcc`|项目维护者（2026-08-07）|中性原版模板与明确兼容约束；不含人物、赛事、商标、画作、照片|随项目分发；仍需发行前项目许可证确认|2026-08-07|
-|`mod/src/main/resources/assets/blindboxchallenge/lang/en_us.json`|`e7abfec879c00122711293160b91b680ad5c71ce1e3b85d3cc0861350dc8b4d4`|项目维护者（2026-08-07）|本地定义的中性双语与 Forge 元数据；不含人物、赛事、商标、画作、照片|随项目分发；仍需发行前项目许可证确认|2026-08-07|
-|`mod/src/main/resources/assets/blindboxchallenge/lang/zh_cn.json`|`6365c789a2402fb6b437885e868d94ccca39d531fb3a2bbff18dc98e5ecef515`|项目维护者（2026-08-07）|本地定义的中性双语与 Forge 元数据；不含人物、赛事、商标、画作、照片|随项目分发；仍需发行前项目许可证确认|2026-08-07|
+|`mod/src/main/resources/assets/blindboxchallenge/lang/en_us.json`|`2591e8bd425000af66b1947a73fbf9907ae6d9c601761afdab22737ea31aec5c`|历史仓库资源；作者待追溯|不可由当前文件可靠推断；不得宣称原创/授权|待权利人/法务确认；Release 阻塞|2026-08-07|
+|`mod/src/main/resources/assets/blindboxchallenge/lang/zh_cn.json`|`9a73c9060f87bb8a7daba63c3efe0d38984a91f4f5e75b21de3dca3eeb5fafae`|历史仓库资源；作者待追溯|不可由当前文件可靠推断；不得宣称原创/授权|待权利人/法务确认；Release 阻塞|2026-08-07|
 |`mod/src/main/resources/assets/blindboxchallenge/models/block/abstract_white_figurine.json`|`c979a6a30e60278e95baf6ca47cc13e0bdb20dcd0cb38dc38a2802eeab6845c9`|项目维护者（2026-08-07）|原创抽象几何；不含人物、赛事、商标、画作、照片|随项目分发；仍需发行前项目许可证确认|2026-08-07|
 |`mod/src/main/resources/assets/blindboxchallenge/models/block/anywhere_door.json`|`2d9a94187c5860171595c55edbeeeb387bca5bc164ab05e7b5a7a21186e2b6db`|项目维护者（2026-08-07）|中性原版模板与明确兼容约束；不含人物、赛事、商标、画作、照片|随项目分发；仍需发行前项目许可证确认|2026-08-07|
 |`mod/src/main/resources/assets/blindboxchallenge/models/block/bml_cheer_stick_off.json`|`987f8190b10811ee351f10aaee4d5595c0bc59586e0ca38df6fa3abf73ca6789`|项目维护者（2026-08-07）|中性原版模板与明确兼容约束；不含人物、赛事、商标、画作、照片|随项目分发；仍需发行前项目许可证确认|2026-08-07|
@@ -193,7 +193,7 @@
 |`mod/src/main/resources/data/blindboxchallenge/loot_tables/blocks/neutral_trophy.json`|`b7296f69534d64e730efa67a3e83a6521819074cc9ea1bcbf96cd549d80ee4fb`|项目维护者（2026-08-07）|原创抽象几何；不含人物、赛事、商标、画作、照片|随项目分发；仍需发行前项目许可证确认|2026-08-07|
 |`mod/src/main/resources/data/blindboxchallenge/loot_tables/blocks/safety_landing.json`|`b51c215fe9761eb0dbc813b644ef6de09665c8cc5a2c3c12cf0bff05da63896e`|项目维护者（2026-08-07）|中性原版模板与明确兼容约束；不含人物、赛事、商标、画作、照片|随项目分发；仍需发行前项目许可证确认|2026-08-07|
 |`mod/src/main/resources/data/blindboxchallenge/loot_tables/blocks/stone_pillow.json`|`ceb8de53a1f4449f186198edffb021bcb50bb3e4df671f05eb1643fd6b53b1bc`|项目维护者（2026-08-07）|中性原版模板与明确兼容约束；不含人物、赛事、商标、画作、照片|随项目分发；仍需发行前项目许可证确认|2026-08-07|
-|`mod/src/main/resources/pack.mcmeta`|`6b9fd5e8544bdf380fb34fab4e86755401cf473ca918a4bd5016e4ec3f047fa1`|项目维护者（2026-08-07）|本地定义的中性双语与 Forge 元数据；不含人物、赛事、商标、画作、照片|随项目分发；仍需发行前项目许可证确认|2026-08-07|
+|`mod/src/main/resources/pack.mcmeta`|`42cd5aa26fabac495ede0b61d34be22f00879c314893e7931297765089eafded`|历史仓库资源；作者待追溯|不可由当前文件可靠推断；不得宣称原创/授权|待权利人/法务确认；Release 阻塞|2026-08-07|
 
 ## 维护规则
 

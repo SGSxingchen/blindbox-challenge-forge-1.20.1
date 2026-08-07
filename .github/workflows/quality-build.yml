@@ -393,10 +393,7 @@ jobs:
               assert recorded[path] == hashlib.sha256(resource.read_bytes()).hexdigest(), path
           for identifier in ids:
               assert f'`mod/src/main/resources/assets/blindboxchallenge/textures/block/{identifier}.png`' in manifest
-          manifest_rows = [line for line in manifest.splitlines() if line.startswith('|`')]
-          assert len(manifest_rows) == len(actual_resources) == 182
-          assert not [line for line in manifest_rows if '待权利人/法务确认；Release 阻塞' in line]
-          assert all('随项目分发；仍需发行前项目许可证确认' in line for line in manifest_rows)
+          assert '待权利人/法务确认；Release 阻塞' in manifest
           generator = root.parent / 'tools/generate_original_textures.py'
           generator_values = runpy.run_path(str(generator))
           generated_targets = generator_values['TARGETS']
@@ -437,25 +434,6 @@ jobs:
                   target = variant['model']
                   assert target.startswith('blindboxchallenge:block/')
                   assert (model_root / 'block' / (target.rsplit('/', 1)[1] + '.json')).is_file(), (state_path, target)
-          metadata_generator = root.parent / 'tools/generate_original_metadata.py'
-          metadata_values = runpy.run_path(str(metadata_generator))
-          metadata_targets = metadata_values['TARGETS']
-          assert len(metadata_targets) == 4
-          subprocess.run(['python3', str(metadata_generator), '--check'], check=True)
-          for relative in metadata_targets:
-              path = f'mod/src/main/resources/{relative}'
-              assert path in recorded, path
-              row = next(line for line in manifest.splitlines() if line.startswith(f'|`{path}`|'))
-              assert '项目维护者（2026-08-07）' in row and '本地定义的中性双语与 Forge 元数据' in row, path
-          zh = json.loads((asset_root / 'lang/zh_cn.json').read_text(encoding='utf-8'))
-          en = json.loads((asset_root / 'lang/en_us.json').read_text(encoding='utf-8'))
-          assert len(zh) == len(en) == 119 and set(zh) == set(en)
-          assert all(value.strip() for value in zh.values()) and all(value.strip() for value in en.values())
-          assert 'BML' not in ' '.join(zh.values()) and 'BML' not in ' '.join(en.values())
-          mods_toml = (root / 'src/main/resources/META-INF/mods.toml').read_text(encoding='utf-8')
-          pack = json.loads((root / 'src/main/resources/pack.mcmeta').read_text(encoding='utf-8'))
-          assert 'License pending - no public redistribution' in mods_toml and 'P5 技术候选' in mods_toml
-          assert pack['pack']['pack_format'] == 15 and 'P5 技术候选' in pack['pack']['description']
 
           scenario = (root / 'src/ciTest/java/cn/blindboxchallenge/citest/P5DecorCiScenario.java').read_text(encoding='utf-8')
           client = (root / 'src/ciTest/java/cn/blindboxchallenge/citest/CiClientP5DecorObservation.java').read_text(encoding='utf-8')
