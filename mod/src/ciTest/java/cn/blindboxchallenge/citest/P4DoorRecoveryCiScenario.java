@@ -148,6 +148,7 @@ public final class P4DoorRecoveryCiScenario {
         private Phase phase = Phase.WAIT_FOR_FIXTURE_SERVER_SYNC;
         /** 一旦生产门已把 Alice 送入下界，任何回到源维度都是生产跨维回跳，不能等待客户端超时掩盖。 */
         private boolean reachedTargetDimension;
+        private boolean sourceMovementObserved;
 
         private ActiveScenario(MinecraftServer server, ServerLevel overworld, ServerLevel nether, ServerPlayer alice, ServerPlayer bob, BlockPos sourceDoor,
                                BlockPos targetDoor, Path markerDirectory) {
@@ -219,6 +220,11 @@ public final class P4DoorRecoveryCiScenario {
                 phase = Phase.WAIT_FOR_CROSSING;
                 CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P4_DOOR_RECOVERY_FIXTURE_SYNCED=success");
                 return;
+            }
+            if (phase == Phase.WAIT_FOR_CROSSING && !sourceMovementObserved && alice.serverLevel().dimension().equals(overworld.dimension())
+                    && alice.position().distanceToSqr(fixtureStart(sourceDoor)) > 0.08D) {
+                sourceMovementObserved = true;
+                CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P4_DOOR_RECOVERY_SOURCE_MOVED=observed, alice={}", alice.position());
             }
             if (alice.serverLevel().dimension().equals(nether.dimension())) {
                 reachedTargetDimension = true;

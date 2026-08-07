@@ -23,6 +23,8 @@ import net.minecraftforge.fml.common.Mod;
 /** 杀后跨维门的两端真实观察：Alice 只按前进键走入门，Bob 只观察同步后的远程 Alice。 */
 @Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class CiClientP4DoorRecoveryObservation {
+    /** Hosted Runner 启动后可能有 120 个服务器刻追帧；仍小于服务端 800 刻场景总超时。 */
+    private static final int WALKING_TIMEOUT_TICKS = 400;
     private static boolean sourceSeen;
     private static boolean fixtureReady;
     private static int fixtureStableTicks;
@@ -83,7 +85,7 @@ public final class CiClientP4DoorRecoveryObservation {
             // 门格时，ServerTick.END 可能尚未消费对应位置包。必须以真实按键深入门格，确保服务端
             // 已有可供 AABB 重验的入门位置；到门格北侧深处才松开，避免输入带进跨维同步首帧。
             if (walking && enteredFixtureDoorDeeply(self, source)) KeyMapping.set(minecraft.options.keyUp.getKey(), false);
-            if (walking && ++walkingTicks > 100) {
+            if (walking && ++walkingTicks > WALKING_TIMEOUT_TICKS) {
                 throw new IllegalStateException("真实前进键未进入 P4 跨维门：client=" + ((Entity) self).position()
                         + ", source=" + source + ", ticks=" + walkingTicks);
             }
