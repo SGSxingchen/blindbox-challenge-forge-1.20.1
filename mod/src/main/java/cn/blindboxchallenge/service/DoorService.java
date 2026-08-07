@@ -31,6 +31,11 @@ public final class DoorService {
     private static final Map<UUID, Long> TELEPORT_COOLDOWNS = new HashMap<>();
     /** 落在“门正下方安全点”时玩家的碰撞盒仍位于门格；离开该格前绝不能被反向再传送。 */
     private static final Map<UUID, GlobalPos> ARRIVAL_DOOR_IMMUNITIES = new HashMap<>();
+    /**
+     * 门不能在 entityInside / 玩家移动包调用栈内直接传送：原版会继续消费同一位置包。这里只保存
+     * 已通过入口可信检查的源门，ServerTick.END 会按 UUID、碰撞盒与门格重新验全量事实。
+     */
+    private static final Map<UUID, GlobalPos> PENDING_TELEPORTS = new HashMap<>();
 
     private DoorService() {}
 
@@ -94,6 +99,36 @@ public final class DoorService {
         if (!(sourceLevel.getBlockEntity(sourcePos) instanceof AnywhereDoorBlockEntity source)) return;
         reconcileInvalidatedDoor(sourceLevel, source);
         if (!source.linked()) return;
+        // 同一 tick 同一玩家只允许一个候选；此 Map 不是授权结果，执行前必须重新校验全部远端事实。
+        PENDING_TELEPORTS.putIfAbsent(player.getUUID(), sourceGlobal);
+    }
+
+    /** ServerTick.END 在原始移动包已经返回后消费请求；拒绝离开门格、死亡或状态变化的请求。 */
+    public static void processPendingTeleports(MinecraftServer server) {
+        if (PENDING_TELEPORTS.isEmpty()) return;
+        Map<UUID, GlobalPos> pending = new HashMap<>(PENDING_TELEPORTS);
+        PENDING_TELEPORTS.clear();
+        for (Map.Entry<UUID, GlobalPos> entry : pending.entrySet()) {
+            ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+            GlobalPos source = entry.getValue();
+            if (player == null || !player.isAlive() || player.isPassenger() || !player.mayBuild()
+                    || player.isChangingDimension() || !source.dimension().equals(player.serverLevel().dimension())
+                    || !insideDoorCell(player, source.pos())) continue;
+            executeVerifiedTeleport(player, player.serverLevel(), source.pos());
+        }
+    }
+
+    /** 首次进入门体与延迟消费共用这一整套权威重验；延迟路径绝不信任首次排队时的远端状态。 */
+    private static void executeVerifiedTeleport(ServerPlayer player, ServerLevel sourceLevel, BlockPos sourcePos) {
+        if (player.isPassenger() || !player.mayBuild()
+                || !sourceLevel.mayInteract(player, sourcePos)) return;
+        GlobalPos sourceGlobal = GlobalPos.of(sourceLevel.dimension(), sourcePos);
+        if (sourceGlobal.equals(ARRIVAL_DOOR_IMMUNITIES.get(player.getUUID()))) return;
+        long now = sourceLevel.getGameTime();
+        if (TELEPORT_COOLDOWNS.getOrDefault(player.getUUID(), Long.MIN_VALUE) + TELEPORT_COOLDOWN_TICKS > now) return;
+        if (!(sourceLevel.getBlockEntity(sourcePos) instanceof AnywhereDoorBlockEntity source)) return;
+        reconcileInvalidatedDoor(sourceLevel, source);
+        if (!source.linked()) return;
         GlobalPos targetDoorGlobal = source.partnerDoor().orElse(null);
         GlobalPos targetSafetyGlobal = source.destinationSafety().orElse(null);
         UUID targetDoorId = source.partnerDoorId().orElse(null);
@@ -135,10 +170,9 @@ public final class DoorService {
         AABB playerBox = player.getDimensions(Pose.STANDING).makeBoundingBox(destination);
         if (!targetLevel.noCollision(player, playerBox) || targetLevel.containsAnyLiquid(playerBox)) return;
         /*
-         * changeDimension 会在迁移过程中立即让目标门收到 entityInside 回调。若等它返回后
-         * 才登记抵达免疫，目标门会在同一个服务端移动调用栈内把玩家又送回源门；随后旧维度
-         * 的位置包还会覆盖/拒绝位置，形成跨维回跳。先仅为已完整校验过的目标门预留免疫，
-         * 迁移失败则精确恢复此前状态，不能把失败传送伪装成永久免疫。
+         * 延迟到 ServerTick.END 后 changeDimension 仍可能立即让目标门收到 entityInside 回调；
+         * 因此在迁移前预留已完整校验过的目标门免疫。迁移失败则精确恢复此前状态，不能把
+         * 失败传送伪装成永久免疫。
          */
         UUID playerId = player.getUUID();
         GlobalPos previousArrivalImmunity = ARRIVAL_DOOR_IMMUNITIES.put(playerId, targetDoorGlobal);
@@ -229,6 +263,7 @@ public final class DoorService {
         SELECTED_DOORS.remove(player.getUUID());
         TELEPORT_COOLDOWNS.remove(player.getUUID());
         ARRIVAL_DOOR_IMMUNITIES.remove(player.getUUID());
+        PENDING_TELEPORTS.remove(player.getUUID());
     }
 
     /** 仅在真实离开抵达门格后撤销免疫，之后再次进入该门仍可正常反向传送。 */
@@ -263,5 +298,11 @@ public final class DoorService {
         if (safety.equals(door.below())) return true;
         for (Direction direction : Direction.Plane.HORIZONTAL) if (safety.equals(door.relative(direction))) return true;
         return false;
+    }
+
+    /** 与原版无碰撞门的 entityInside 语义对齐：延迟一个 tick 后仍须保持碰撞盒和源门方块相交。 */
+    private static boolean insideDoorCell(ServerPlayer player, BlockPos door) {
+        return player.getBoundingBox().intersects(new AABB(door.getX(), door.getY(), door.getZ(),
+                door.getX() + 1.0D, door.getY() + 1.0D, door.getZ() + 1.0D));
     }
 }

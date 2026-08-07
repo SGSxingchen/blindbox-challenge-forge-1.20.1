@@ -55,11 +55,11 @@ public final class DoorCiScenario {
             pairWithProductionUse(level, alice, firstDoor, secondDoor);
             assertBidirectionallyLinked(first, second);
             alice.teleportTo(level, firstDoor.getX() + 0.5D, firstDoor.getY() + 0.1D, firstDoor.getZ() + 0.5D, 0.0F, 0.0F);
-            ModBlocks.ANYWHERE_DOOR.get().entityInside(level.getBlockState(firstDoor), level, firstDoor, alice);
+            enterDoorAtTickEnd(level, firstDoor, alice);
             Vec3 expected = Vec3.atBottomCenterOf(secondSafety.above());
             if (alice.position().distanceToSqr(expected) > 1.0D) throw new IllegalStateException("进入门体后未抵达目标安全落点");
             // 目标安全点在门下方时，抵达位置仍在无碰撞门格。立即再次触发门体不能反向回跳。
-            ModBlocks.ANYWHERE_DOOR.get().entityInside(level.getBlockState(secondDoor), level, secondDoor, alice);
+            enterDoorAtTickEnd(level, secondDoor, alice);
             if (alice.position().distanceToSqr(expected) > 1.0D) throw new IllegalStateException("下方安全点抵达后发生反向回跳");
             // 配对后临时增加第二个相邻安全点也会破坏“两门各恰有一个安全点”不变量，必须拒绝并清链。
             level.setBlock(extraFirstSafety, ModBlocks.SAFETY_LANDING.get().defaultBlockState(), 3);
@@ -72,7 +72,7 @@ public final class DoorCiScenario {
             if (first.linked() || second.linked()) throw new IllegalStateException("拆除目标侧安全点后未清理双方关联");
             DoorService.clearSelection(alice);
             alice.teleportTo(level, firstDoor.getX() + 0.5D, firstDoor.getY() + 0.1D, firstDoor.getZ() + 0.5D, 0.0F, 0.0F);
-            ModBlocks.ANYWHERE_DOOR.get().entityInside(level.getBlockState(firstDoor), level, firstDoor, alice);
+            enterDoorAtTickEnd(level, firstDoor, alice);
             if (alice.blockPosition().distSqr(firstDoor) > 4.0D) throw new IllegalStateException("缺失安全落点时仍发生传送");
 
             // 再配对后拆入口侧安全点，同样必须立即令伙伴门失效。
@@ -158,7 +158,13 @@ public final class DoorCiScenario {
     private static void assertRejectedAtSource(ServerLevel level, ServerPlayer player, BlockPos source, String message) {
         DoorService.clearSelection(player);
         player.teleportTo(level, source.getX() + 0.5D, source.getY() + 0.1D, source.getZ() + 0.5D, 0.0F, 0.0F);
-        ModBlocks.ANYWHERE_DOOR.get().entityInside(level.getBlockState(source), level, source, player);
+        enterDoorAtTickEnd(level, source, player);
         if (player.blockPosition().distSqr(source) > 4.0D) throw new IllegalStateException(message);
+    }
+
+    /** 命令夹具直接调用 Block#entityInside 后，显式推进到生产 ServerTick.END 消费点；不在回调内传送。 */
+    private static void enterDoorAtTickEnd(ServerLevel level, BlockPos door, ServerPlayer player) {
+        ModBlocks.ANYWHERE_DOOR.get().entityInside(level.getBlockState(door), level, door, player);
+        DoorService.processPendingTeleports(level.getServer());
     }
 }

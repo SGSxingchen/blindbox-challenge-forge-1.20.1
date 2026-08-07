@@ -62,6 +62,12 @@ public final class ServerLifecycleEvents {
         }
     }
 
+    /** 门传送必须等本 tick 的入站位置包完全返回后再执行，避免旧坐标在同一调用栈回写。 */
+    @SubscribeEvent
+    public static void serverTick(TickEvent.ServerTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) DoorService.processPendingTeleports(event.getServer());
+    }
+
     @SubscribeEvent
     public static void death(LivingDeathEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) BlindBoxItem.cancelUse(player);

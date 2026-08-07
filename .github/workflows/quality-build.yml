@@ -61,7 +61,11 @@ jobs:
           # 同维 teleportTo 不能代替跨维 changeDimension；安全门必须用无门户的精确 ITeleporter 并归零速度。
           grep -q 'player.changeDimension(targetLevel, new SafeDoorTeleporter(destination, yaw, pitch))' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'return repositionEntity.apply(false);' src/main/java/cn/blindboxchallenge/service/DoorService.java
-          # 目标门免疫必须在 changeDimension 前预留，防止目标 entityInside 在同一迁移调用栈反向回跳。
+          # 所有门传送都必须等原移动包退出后在 ServerTick.END 以 AABB/全量事实重验执行，目标门免疫须在 changeDimension 前预留。
+          grep -q 'PENDING_TELEPORTS.putIfAbsent(player.getUUID(), sourceGlobal)' src/main/java/cn/blindboxchallenge/service/DoorService.java
+          grep -q 'processPendingTeleports(event.getServer())' src/main/java/cn/blindboxchallenge/event/ServerLifecycleEvents.java
+          grep -q 'insideDoorCell(player, source.pos())' src/main/java/cn/blindboxchallenge/service/DoorService.java
+          grep -q 'DoorService.processPendingTeleports(level.getServer())' src/ciTest/java/cn/blindboxchallenge/citest/DoorCiScenario.java
           grep -B16 'moveToVerifiedDestination(player, targetLevel, destination)' src/main/java/cn/blindboxchallenge/service/DoorService.java | grep -q 'ARRIVAL_DOOR_IMMUNITIES.put(playerId, targetDoorGlobal)'
           grep -q 'if (player.isChangingDimension()) return;' src/main/java/cn/blindboxchallenge/service/DoorService.java
           # P4 夹具定位也必须发完整跨维玩家同步，不能用裸 teleportTo 伪造门跨维成功。
