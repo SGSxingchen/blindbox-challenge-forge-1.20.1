@@ -79,25 +79,8 @@ Alice 对每个 URL 都必须经过生产 `MusicBoxScreen` 的潜行右键、真
 
 ### 发行结论与真实未覆盖边界
 
-P5 技术范围已完成，**但公开发行尚未获准**。批次 A 已以可复现源码替换 68 张历史 PNG；批次 B/C 的 99 项模型、状态、战利品、双语和 Forge 元数据已经由 `b864e83` 的 Hosted Runner 同 SHA 六门禁裁定通过。`ASSET_MANIFEST.md` 当前工作树的 182 项正式资源均为项目维护者新建，但全数仍为“随项目分发；仍需发行前项目许可证确认”。技术成功不授予素材、名称、商标或整体项目的可再发行权；在权利人确认项目许可证、可再发行范围及必要署名，并完成名称/商标审查前，Issue #5 保持 OPEN，不创建 tag、不发布 Release、不上传 Jar。
+P5 技术范围已完成，**但公开发行尚未获准**。批次 A 已以可复现源码替换 68 张历史 PNG；批次 B/C 的 99 项模型、状态、战利品、双语和 Forge 元数据已完成静态审计，仍须由其提交的 Hosted Runner 门禁裁定。`ASSET_MANIFEST.md` 当前工作树的 182 项正式资源均为项目维护者新建，但全数仍为“随项目分发；仍需发行前项目许可证确认”。技术成功不授予素材、名称、商标或整体项目的可再发行权；在权利人确认项目许可证、可再发行范围及必要署名，并完成名称/商标审查前，Issue #5 保持 OPEN，不创建 tag、不发布 Release、不上传 Jar。
 
 此外，受控 P5 场景只证明单客户端进程/游戏目录内的缓存语义与受控 HTTPS 夹具；不承诺任意第三方 URL、带宽、版权或长期可用性。未 `save-all flush` 的掉电窗口、死亡笔记伤害前后的非原子窗口、未加载伙伴门与任意拓扑恢复亦仍是如实保留的运行边界。
 
 发行候选归档同时固定 Jar 的文件顺序、关闭归档时间戳并删除清单中的构建时刻；质量门禁会拒绝仍含 `Implementation-Timestamp` 的正式 Jar。此项只消除本工程已知的时间/顺序差异，最终 Release 的 SHA-256 仍必须从**最终同 SHA 成功质量 run 的 artifact**提取并复算，不能把静态配置虚报为跨工具链可复现证明。
-
-## `b864e83` 全部原创资源整改与技术回归：6/6
-
-`b864e83021b57391c9c13abc5c0e4903b17a7e6f` 是当前最终技术候选。回归 artifact `p1-required-workflows.json` 已逐项核验五个前置均为该 SHA 的 `completed/success`，不接受旧 SHA 或被取消的汇总替代。
-
-|门禁|Hosted Runner 真实结果|
-|---|---|
-|质量与构建|[success 31183343726](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31183343726)|
-|专用服务器|[success 31183343363](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31183343363)|
-|强杀恢复|[success 31183342868](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31183342868)|
-|真实单客户端|[success 31183343336](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31183343336)|
-|真实双客户端|[success 31183345059](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31183345059)|
-|强制回归汇总|[success 31184181742](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31184181742)|
-
-质量 artifact `blindboxchallenge-jar`（8995749793）中的正式候选 `blindboxchallenge-0.1.0-p1-all.jar` 已下载复算，SHA-256 为 `916c72feb039e1b10894e3497600472b20c8bdbb96c3add5afd724d0957c728e`。正式 Jar 不含 `cn/blindboxchallenge/citest/` 或 `ci-audio/`，仍含 JLayer Jar-in-Jar、LGPL-2.1 和 NOTICE，且清单不含 `Implementation-Timestamp`。
-
-双客户端 artifact 证明三项装饰方块的三轮原版拾取、放置、破坏、掉落及回收在 Alice/Bob 两端对同一 BlockState/掉落实体 UUID 逐字段一致；P5 音频五个 URL 的两端 PCM 均为 OGG、非命中、22050 字节，LRU 驱逐后 fill-1 重下、每个 JVM 的单飞 owner/follower 以及截断 fill-5 后的摘要删除重试均成功。该次同时通过 P4 门、小黄鸡、文本、短音频和 canonical 回归。
