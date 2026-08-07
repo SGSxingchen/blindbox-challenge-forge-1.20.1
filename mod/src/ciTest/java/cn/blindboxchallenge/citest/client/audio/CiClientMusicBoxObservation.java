@@ -344,7 +344,18 @@ public final class CiClientMusicBoxObservation {
     private static String oggUrl() { return audioBase() + "blindbox-ci-tone.ogg"; }
     private static String mp3Url() { return audioBase() + "blindbox-ci-tone.mp3"; }
     private static String brokenUrl() { return audioBase() + "blindbox-ci-broken.ogg"; }
-    private static boolean isP4Url(String url) { return oggUrl().equals(url) || mp3Url().equals(url) || brokenUrl().equals(url); }
+    /**
+     * P4 和 P5 以独立真实客户端进程运行。P5 进程未配置 P4 基址时，P4 观察器只是非目标事件的
+     * 旁观者，绝不能在生产 S2C 分发前抛错并阻断 P5 的声音包装；真正进入 P4 场景仍由 audioBase()
+     * 严格要求该属性存在。
+     */
+    private static boolean isP4Url(String url) {
+        String configured = System.getProperty("blindbox.ci.p4AudioBase");
+        if (url == null || configured == null || configured.isBlank()) return false;
+        String base = configured.endsWith("/") ? configured : configured + "/";
+        return (base + "blindbox-ci-tone.ogg").equals(url) || (base + "blindbox-ci-tone.mp3").equals(url)
+                || (base + "blindbox-ci-broken.ogg").equals(url);
+    }
     private static boolean isAlice(LocalPlayer player) { return "BlindBoxAlice".equals(player.getGameProfile().getName()); }
     private static String markerPrefix(LocalPlayer player) { return isAlice(player) ? "client-1-p4-music-" : "client-2-p4-music-"; }
     private static String position(BlockPos pos) { return pos.getX() + "," + pos.getY() + "," + pos.getZ(); }

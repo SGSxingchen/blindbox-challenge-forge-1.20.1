@@ -263,7 +263,19 @@ public final class CiClientP5MusicCacheObservation {
     }
     private static String fillUrl(int round) { return audioBase() + "blindbox-ci-cache-pressure.ogg?ci=p5-fill-" + round; }
     private static String singleFlightUrl() { return audioBase() + "blindbox-ci-cache-pressure.ogg?ci=p5-singleflight"; }
-    private static boolean isPressureUrl(String url) { return url != null && (url.equals(singleFlightUrl()) || java.util.stream.IntStream.rangeClosed(1, P5MusicCacheCiScenario.PRESSURE_ROUNDS).anyMatch(round -> url.equals(fillUrl(round)))); }
+    /**
+     * P1—P4 回归客户端不携带 P5 音频基址。对那条独立回归链，P5 观察器必须忽略非本场景
+     * 音频，不能在事件总线上抛错而截断 P4 的生产播放；P5 实际输入和 URL 构造仍会经
+     * audioBase() 严格校验配置。
+     */
+    private static boolean isPressureUrl(String url) {
+        String configured = System.getProperty("blindbox.ci.p5AudioBase");
+        if (url == null || configured == null || configured.isBlank()) return false;
+        String base = configured.endsWith("/") ? configured : configured + "/";
+        if ((base + "blindbox-ci-cache-pressure.ogg?ci=p5-singleflight").equals(url)) return true;
+        return java.util.stream.IntStream.rangeClosed(1, P5MusicCacheCiScenario.PRESSURE_ROUNDS)
+                .anyMatch(round -> (base + "blindbox-ci-cache-pressure.ogg?ci=p5-fill-" + round).equals(url));
+    }
     private static boolean isAlice(LocalPlayer player) { return player != null && "BlindBoxAlice".equals(player.getGameProfile().getName()); }
     private static String markerPrefix(LocalPlayer player) { return isAlice(player) ? "client-1-p5-music-cache-" : "client-2-p5-music-cache-"; }
     private static String position(BlockPos pos) { return pos.getX() + "," + pos.getY() + "," + pos.getZ(); }
