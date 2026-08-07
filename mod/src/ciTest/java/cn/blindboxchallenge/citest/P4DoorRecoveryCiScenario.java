@@ -209,8 +209,8 @@ public final class P4DoorRecoveryCiScenario {
                     throw new IllegalStateException("P4 跨维门夹具确认后玩家未处于预期站立格：Alice=" + alice.position()
                             + ", Bob=" + bob.position());
                 }
-                if (!alice.onGround() || alice.getDeltaMovement().lengthSqr() > 1.0E-8D
-                        || !bob.onGround() || bob.getDeltaMovement().lengthSqr() > 1.0E-8D) return;
+                // changeDimension 的精确位置确认不会立即重建 ServerPlayer 的 onGround 缓存；该缓存
+                // 不属于夹具同步完成条件。真实进入生产门后的落地与零速度仍在下方严格验收。
                 phase = Phase.WAIT_FOR_CROSSING;
                 CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P4_DOOR_RECOVERY_FIXTURE_SYNCED=success");
                 return;
