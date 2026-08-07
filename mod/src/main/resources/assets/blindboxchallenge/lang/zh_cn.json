@@ -111,5 +111,11 @@
   "item.blindboxchallenge.returning_scissors": "返航剪刀",
   "entity.blindboxchallenge.returning_scissors": "返航剪刀",
   "entity.blindboxchallenge.thrown_pillow": "投掷抱枕",
-  "entity.blindboxchallenge.pillow_seat": "抱枕座位"
+  "entity.blindboxchallenge.pillow_seat": "抱枕座位",
+  "block.blindboxchallenge.abstract_white_figurine": "抽象白色小摆件",
+  "item.blindboxchallenge.abstract_white_figurine": "抽象白色小摆件",
+  "block.blindboxchallenge.floor_art_panel": "风格化地面画板",
+  "item.blindboxchallenge.floor_art_panel": "风格化地面画板",
+  "block.blindboxchallenge.neutral_trophy": "中性纪念奖杯",
+  "item.blindboxchallenge.neutral_trophy": "中性纪念奖杯"
 }

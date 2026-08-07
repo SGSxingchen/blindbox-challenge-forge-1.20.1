@@ -111,5 +111,11 @@
   "item.blindboxchallenge.returning_scissors": "Returning Scissors",
   "entity.blindboxchallenge.returning_scissors": "Returning Scissors",
   "entity.blindboxchallenge.thrown_pillow": "Thrown Pillow",
-  "entity.blindboxchallenge.pillow_seat": "Pillow Seat"
+  "entity.blindboxchallenge.pillow_seat": "Pillow Seat",
+  "block.blindboxchallenge.abstract_white_figurine": "Abstract White Figurine",
+  "item.blindboxchallenge.abstract_white_figurine": "Abstract White Figurine",
+  "block.blindboxchallenge.floor_art_panel": "Stylized Floor Art Panel",
+  "item.blindboxchallenge.floor_art_panel": "Stylized Floor Art Panel",
+  "block.blindboxchallenge.neutral_trophy": "Neutral Keepsake Trophy",
+  "item.blindboxchallenge.neutral_trophy": "Neutral Keepsake Trophy"
 }

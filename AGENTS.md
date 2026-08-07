@@ -18,6 +18,8 @@ P1 的盲盒、打包、全局奖池、事务隔离与调试命令，P2 的 50 �
 * [P4 交互、传送与在线音频准备记录](docs/P4_PREPARATION.md)
 * [P4 交互、传送与在线音频实施记录](docs/P4_IMPLEMENTATION.md)
 * [P4 交互、传送与在线音频验收矩阵](docs/P4_ACCEPTANCE.md)
-* [P5 正式资产与发布准备记录（P4 验收前不得开工）](docs/P5_PREPARATION.md)
+* [P5 正式资产与发布准备记录](docs/P5_PREPARATION.md)
+* [P5 中性原创装饰方块与发布准备实施记录](docs/P5_IMPLEMENTATION.md)
+* [P5 中性原创装饰方块与发布准备验收矩阵](docs/P5_ACCEPTANCE.md)
 
 后续新增或变更功能时，必须同步更新对应文档与本索引；所有代码、提交信息和工程文档使用中文。

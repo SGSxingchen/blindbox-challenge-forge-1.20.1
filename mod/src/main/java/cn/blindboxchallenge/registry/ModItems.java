@@ -77,6 +77,12 @@ public final class ModItems {
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.SAFETY_LANDING.get(), new Item.Properties()));
     public static final RegistryObject<Item> MUSIC_BOX = ITEMS.register("music_box",
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.MUSIC_BOX.get(), new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> ABSTRACT_WHITE_FIGURINE = ITEMS.register("abstract_white_figurine",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.ABSTRACT_WHITE_FIGURINE.get(), new Item.Properties()));
+    public static final RegistryObject<Item> FLOOR_ART_PANEL = ITEMS.register("floor_art_panel",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.FLOOR_ART_PANEL.get(), new Item.Properties()));
+    public static final RegistryObject<Item> NEUTRAL_TROPHY = ITEMS.register("neutral_trophy",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.NEUTRAL_TROPHY.get(), new Item.Properties()));
     public static final RegistryObject<Item> RETURNING_SCISSORS = ITEMS.register("returning_scissors",
             ReturningScissorsItem::new);
     public static final RegistryObject<Item> RAT_JERKY_TOTEM = ITEMS.register("rat_jerky_totem", () -> new Item(new Item.Properties().stacksTo(1)));
