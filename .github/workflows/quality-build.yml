@@ -78,6 +78,10 @@ jobs:
           grep -q 'WALKING_TIMEOUT_TICKS = 400' src/ciTest/java/cn/blindboxchallenge/citest/CiClientP4DoorRecoveryObservation.java
           grep -q 'P4_DOOR_RECOVERY_SOURCE_MOVED=observed' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q '真实前进键未进入 P4 跨维门：client=' src/ciTest/java/cn/blindboxchallenge/citest/CiClientP4DoorRecoveryObservation.java
+          # 生命周期夹具任一前置等待失败也必须保留原始服务器日志；该钩子只保存证据，不能吞失败。
+          bash -n scripts/ci/lifecycle-recovery.sh
+          grep -q 'trap on_exit EXIT' scripts/ci/lifecycle-recovery.sh
+          grep -q 'canonical-state-at-exit.json' scripts/ci/lifecycle-recovery.sh
           grep -q 'player.setDeltaMovement(Vec3.ZERO);' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'player.hurtMarked = true;' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'level.mayInteract(player, clicked)' src/main/java/cn/blindboxchallenge/service/DoorService.java

@@ -33,6 +33,43 @@ curl --fail --location --retry 3 --connect-timeout 20 \
 
 SERVER_PID=""
 SERVER_FD=""
+
+# 恢复门禁此前只在全部断言通过后才复制服务端日志；任何前置 wait 失败都会让 set -e
+# 直接退出，使 Hosted Runner 无法区分“服务端没启动、命令未消费或探针失败”。失败仍必须
+# 保持非零退出，下面只保留已经产生的原始证据，绝不创建成功结果或补写 marker。
+preserve_available_evidence() {
+  mkdir -p "${EVIDENCE_DIR}"
+  local log
+  for log in first.log second.log; do
+    if [[ -f "${SERVER_DIR}/${log}" ]]; then
+      cp "${SERVER_DIR}/${log}" "${EVIDENCE_DIR}/${log}" || true
+    fi
+  done
+  if [[ -f "${SERVER_DIR}/citest-results/canonical-state.json" ]]; then
+    cp "${SERVER_DIR}/citest-results/canonical-state.json" "${EVIDENCE_DIR}/canonical-state-at-exit.json" || true
+  fi
+}
+
+on_exit() {
+  local status="$?"
+  trap - EXIT
+  # 只在失败时留下现有原始证据；正常路径仍由末尾生成完整 result.json。
+  if [[ "${status}" -eq 0 ]]; then
+    exit 0
+  fi
+  preserve_available_evidence
+  printf '生命周期恢复夹具失败（退出码 %s）；以下为已产生的服务端日志尾部：\n' "${status}" >&2
+  local log
+  for log in first.log second.log; do
+    if [[ -f "${SERVER_DIR}/${log}" ]]; then
+      printf '%s\n' "===== ${log} =====" >&2
+      tail -n 240 "${SERVER_DIR}/${log}" >&2 || true
+    fi
+  done
+  exit "${status}"
+}
+
+trap on_exit EXIT
 start_server() {
   local log="$1"
   (
@@ -66,6 +103,10 @@ wait_for_log() {
     kill -0 "${SERVER_PID}" 2>/dev/null || return 1
     sleep 1
   done
+  printf '等待服务端日志超时：%s（模式：%s）\n' "${log}" "${pattern}" >&2
+  if [[ -f "${SERVER_DIR}/${log}" ]]; then
+    tail -n 240 "${SERVER_DIR}/${log}" >&2 || true
+  fi
   return 1
 }
 
