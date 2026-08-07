@@ -14,6 +14,7 @@ import net.minecraft.world.level.block.WallTorchBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -43,13 +44,16 @@ public final class ModBlocks {
     /** P5 三项均为无额外交互的中性原创装饰方块；不含任何角色、赛事或画作复刻。 */
     public static final RegistryObject<Block> ABSTRACT_WHITE_FIGURINE = BLOCKS.register("abstract_white_figurine",
             () -> new DecorativeBlock(BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.STONE).noOcclusion(),
-                    Block.box(4.0D, 0.0D, 4.0D, 12.0D, 14.0D, 12.0D)));
+                    Shapes.or(Block.box(4.0D, 0.0D, 4.0D, 12.0D, 9.0D, 12.0D),
+                            Block.box(5.0D, 9.0D, 5.0D, 11.0D, 14.0D, 11.0D))));
     public static final RegistryObject<Block> FLOOR_ART_PANEL = BLOCKS.register("floor_art_panel",
             () -> new DecorativeBlock(BlockBehaviour.Properties.of().strength(0.6F).sound(SoundType.WOOD).noOcclusion(),
                     Block.box(0.0D, 0.0D, 0.0D, 16.0D, 2.0D, 16.0D)));
     public static final RegistryObject<Block> NEUTRAL_TROPHY = BLOCKS.register("neutral_trophy",
             () -> new DecorativeBlock(BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.METAL).noOcclusion(),
-                    Block.box(4.0D, 0.0D, 4.0D, 12.0D, 12.0D, 12.0D)));
+                    Shapes.or(Block.box(4.0D, 0.0D, 4.0D, 12.0D, 3.0D, 12.0D),
+                            Block.box(7.0D, 3.0D, 7.0D, 9.0D, 7.0D, 9.0D),
+                            Block.box(5.0D, 7.0D, 5.0D, 11.0D, 12.0D, 11.0D))));
 
     private ModBlocks() {}
 }
