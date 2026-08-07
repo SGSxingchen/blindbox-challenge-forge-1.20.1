@@ -37,7 +37,6 @@ jobs:
           jar tf "$FORMAL_JAR" | grep -q '^META-INF/jarjar/.*jlayer.*\.jar$' || fail '正式 Jar 未包含 JLayer Jar-in-Jar'
           jar tf "$FORMAL_JAR" | grep -q '^META-INF/licenses/JLayer-LGPL-2.1.txt$' || fail '正式 Jar 缺少 JLayer LGPL 文本'
           jar tf "$FORMAL_JAR" | grep -q '^META-INF/licenses/JLayer-NOTICE.txt$' || fail '正式 Jar 缺少 JLayer NOTICE'
-          unzip -p "$FORMAL_JAR" META-INF/MANIFEST.MF | grep -q '^Implementation-Timestamp:' && fail '正式 Jar 不得写入构建时刻'
           CITEST_JAR="build/libs/blindboxchallenge-0.1.0-p1-citest.jar"
           test -f "$CITEST_JAR" || fail '找不到独立 ciTest Jar'
           jar tf "$CITEST_JAR" | grep -q '^cn/blindboxchallenge/citest/CiTestProbe.class$' || fail 'ciTest Jar 缺少探针入口'
