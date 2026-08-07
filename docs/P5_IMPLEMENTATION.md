@@ -12,7 +12,7 @@
 
 ## 真实放置、破坏与回收探针（待 Hosted Runner 验证）
 
-已落盘独立的 `P5DecorCiScenario` 和仅在独立 `ciTest` Jar 内存在的 `CiClientP5DecorObservation`。三轮均由同一专服与两个真实 Forge 客户端完成：仍存活的 Alice 对三个方块完成拾取、放置、破坏和回收；Bob 不被复活，持续作为第二个真实 Forge 客户端同步观察同一方块状态与掉落实体 UUID。服务端只搭临时石质支撑，并把原方块状态逐格保存；三个目标格必须开始为空，场景源码不向目标格 `setBlock`，不直调 `BlockItem#useOn`、`removeBlock`、`destroyBlock` 或 `Block.dropResources`。
+已落盘独立的 `P5DecorCiScenario` 和仅在独立 `ciTest` Jar 内存在的 `CiClientP5DecorObservation`。三轮均由同一专服与两个真实 Forge 客户端完成：Alice 处理抽象白色小摆件和中性纪念奖杯，Bob 处理风格化地面画板；P5 整段固定在 P4 文本死亡笔记之前，因此两人均存活且必须各自完成原版拾取、放置、破坏和回收，同时在每轮交叉观察同一方块状态与掉落实体 UUID。服务端只搭临时石质支撑，并把原方块状态逐格保存；三个目标格必须开始为空，场景源码不向目标格 `setBlock`，不直调 `BlockItem#useOn`、`removeBlock`、`destroyBlock` 或 `Block.dropResources`。
 
 初始 `BlockItem` 不直接写入玩家手中：临时 `ItemEntity` 必须先经原版碰撞拾取进入生存背包，服务端记录其 UUID 并要求热键栏中恰有一件。客户端仅在脚本于服务端 `PLACE_READY` 后创建的阶段旗标存在、已经同步到定位、正式手持物、石质支撑和精确 `BlockHitResult` 时，才以 `KeyMapping.click(keyUse)` 走生产 C2S 放置。服务端随后要求目标成为预期生产 `BlockState` 且手持物恰好扣为零。
 
@@ -30,11 +30,13 @@
 
 `4e79779` 的独立单客户端 run `31168158886` 已证明收近站位使第 1 轮完整通过，但第 2 轮仍在 `WAIT_FOR_BREAK`。artifact 的真实诊断为：玩家已在 `(-55.500,289.000,3.750)` 的破坏站位，主手为空、目标仍为 `floor_art_panel`、支撑为石头，却持续命中 `(-56,289,-1)` 而非目标 `(-56,289,0)`，`break_aim_ticks=0`、`attack_injected=false`；因此没有发生攻击映射注入，不能归咎于掉落或服务端结算。根因是旧代码瞄准完整方块中心 `y=targetY+0.5`，该射线会越过仅 2/16 格高的画板。下一提交只把真实准星目标降到三种装饰共同拥有的底座内 `y=targetY+0.0625`；仍由 `keyAttack` 驱动原版破坏，服务端超时、BlockState、掉落实体、双端观察和原版碰撞回收断言均不变，并由质量门禁锁定该低位命中点。
 
-同一 `4e79779` 的双客户端 run `31168158859` 则给出与低画板瞄准无关的下一首错：第 1 轮已完成 `PLACE_READY`、`BREAK_READY`、`SERVER_DROP`，第 2 轮却在 `WAIT_FOR_INITIAL_PICKUP` 超时，尚未到放置旗标。服务器日志确认 P4 文本在此前已输出 `BlindBoxBob fell out of the world` 和 `P4_TEXT_SERVER=success`；这是死亡笔记的必要真实死亡，并被既有门禁锁定为“之后不复活”。第 2 轮旧设计仍把初始 `floor_art_panel` 掉落实体交给 Bob，失败时两端已经同步到各自 R2 站位，却没有证据表明死亡玩家可以完成原版拾取。下一提交只让仍存活的 Alice 完成第 2 轮真实 `ItemEntity` 拾取、`keyUse` 和 `keyAttack`；Bob 仍以原死亡状态的第二个真实 Forge 客户端观察每轮生产状态和同 UUID 掉落实体，服务端仍强制两份 marker、同服双客户端、原版掉落与碰撞回收。它不复活 Bob、不减少客户端组合、不降低超时，也不把观察 marker 当作操作或通过。
+同一 `4e79779` 的双客户端 run `31168158859` 则给出与低画板瞄准无关的下一首错：第 1 轮已完成 `PLACE_READY`、`BREAK_READY`、`SERVER_DROP`，第 2 轮却在 `WAIT_FOR_INITIAL_PICKUP` 超时，尚未到放置旗标。服务器日志确认 P4 文本在此前已输出 `BlindBoxBob fell out of the world` 和 `P4_TEXT_SERVER=success`；这是死亡笔记的必要真实死亡，并被既有门禁锁定为“之后不复活”。当时 P5 被排在文本/八音盒之后，旧设计却把初始 `floor_art_panel` 掉落实体交给 Bob，构成死亡语义与真实拾取的冲突。后续不复活 Bob，也不把他降格成死后观察者；而是把完整 P5 双端段移至已准备安全交接平台、完成小黄鸡 cleanup 之后且 P4 文本死亡之前，使 Alice 和 Bob 都以存活真实客户端执行各自轮次，同时保留两份 marker、同服双客户端、原版掉落与碰撞回收。
 
 `0be0b2b` 的独立单客户端 run `31168748820` 已真实证明低位瞄准修正生效：第 2 轮 `hit=72,289,64` 正是目标、`break_aim_ticks=8`、`attack_injected=true`，且服务端已输出 `R2_BREAK_READY`；但方块仍未消失，严格停在 `WAIT_FOR_BREAK`。这排除手持物、站位、准星目标和稳定等待，却证明旧探针只保持攻击键状态时没有开始新的原版 destroy 动作。下一提交仅在同一稳定命中门槛到达后，通过 `KeyMapping.click(keyAttack)` 压入一次**原版攻击键**事件，再继续 `keyAttack.setDown(true)` 保持挖掘；它不访问 `gameMode`、不构造/发送网络包、不直写目标格，也不改变服务端掉落、回收或超时断言。质量门禁同时禁止这些替代调用。
 
 `7e8a533` 的独立单客户端 run `31169408832` 证明攻击 click 本身也已进入真实客户端：R2 仍命中目标、稳定 8 tick、`attack_injected=true`，但未破坏。源码与该精确时序显示唯一共享攻击键被旧 R1 回收逻辑反复取消：R1 的 `p5-decor-break-1.flag` 必须保留到场景结束；R1 方块变空气后，循环每 tick 先 `setDown(false)`，R2 只在首次注入 tick 设为 true，下一 tick 又被旧轮次抬起。下一提交不改变输入、方块或服务端，而是在完整轮次循环后只根据“仍存在且已经开始原版破坏的当前生产目标”统一决定是否抬键；旧空气轮次不再覆盖 R2/R3 的真实 held attack。质量门禁锁定此共享按键生命周期，所有 C2S、掉落、回收和超时断言不变。
+
+`6737f52` 的单客户端 run `31170034072` 已使三轮完整真实拾取、放置、破坏、生产掉落、PCM 无关的 marker 反查与 cleanup 全部成功。该 SHA 的双客户端 run `31170034066` 则证明三轮服务器链和 Alice marker 同样全成功，却缺少 Bob marker：P4 文本已让 Bob 死亡，P4 八音盒随后为不补播专项断线重连 Bob；P5 在重连后数秒即开始，死亡后的客户端没有形成三轮方块/掉落实体观察。根因不是放置、破坏、marker 复验或资源：把 P5 放在“Bob 必须死亡且不复活”的文本/音频之后，与两名存活玩家互相操作和观察冲突。现仅重排 ciTest 脚本到 P4 文本前的安全交接窗口，并恢复 Bob 的第二轮真实操作；P4 文本死亡、音频重连不补播、交接平台持有至 canonical 导出及所有服务端生产逻辑不变。
 
 ### P4 交接回归修复（待 Hosted Runner 验证）
 

@@ -333,10 +333,10 @@ jobs:
           single_workflow = (root.parent / '.github/workflows/single-client.yml').read_text(encoding='utf-8')
           assert 'WAIT_FOR_INITIAL_PICKUP' in scenario and 'WAIT_FOR_RECOVERY_PICKUP' in scenario
           assert 'target.getZ() + 3.75D' in scenario
-          # P4 必须让 Bob 真实死亡且之后不复活；P5 仍是两真实客户端观察，但全部拾取/输入须由
-          # 存活的 Alice 执行，禁止再次把地面画板材料交给死亡的 Bob 以致拾取超时。
-          assert 'new DecorRound(2, "BlindBoxAlice", ModItems.FLOOR_ART_PANEL, ModBlocks.FLOOR_ART_PANEL)' in scenario
-          assert 'new DecorRound(2, "BlindBoxBob", ModItems.FLOOR_ART_PANEL, ModBlocks.FLOOR_ART_PANEL)' not in scenario
+          # P5 必须排在 P4 文本死亡笔记之前，令两名真实客户端都存活并分别实际操作；不能复活 Bob
+          # 或把他降格为死后观察者来绕过第二轮原版拾取。
+          assert 'new DecorRound(2, "BlindBoxBob", ModItems.FLOOR_ART_PANEL, ModBlocks.FLOOR_ART_PANEL)' in scenario
+          assert 'new DecorRound(2, "BlindBoxAlice", ModItems.FLOOR_ART_PANEL, ModBlocks.FLOOR_ART_PANEL)' not in scenario
           assert 'verifyMarker(readMarker(markerDirectory().resolve("client-2-p5-decor-observed.marker")), bobUuid, "客户端二")' in scenario
           assert 'client_diagnostics=' in scenario and 'client-1-p5-decor-diagnostic.marker' in scenario
           assert 'new ClientboundSetCarriedItemPacket(found)' in scenario
@@ -382,12 +382,14 @@ jobs:
                          'BLINDBOX_CITEST_P5_DECOR_CLIENTS=success', 'BLINDBOX_CITEST_P5_DECOR_CLEANUP=success'):
               assert marker in script, marker
           start = script.index("printf 'blindboxcitest start_p5_decor_clients\\n' >&3")
+          assert script.count("printf 'blindboxcitest start_p5_decor_clients\\n' >&3") == 1
           export = script.index("printf 'blindboxcitest export\\n' >&3")
           assert start < export
           handoff_prepare = script.index("printf 'blindboxcitest prepare_p4_text_handoff\\n' >&3")
           chicken_cleanup = script.index("printf 'blindboxcitest cleanup_p4_chicken\\n' >&3")
+          text_negative = script.index("printf 'blindboxcitest run_p4_text_negative\\n' >&3")
           handoff_release = script.index("printf 'blindboxcitest release_p4_text_handoff\\n' >&3")
-          assert handoff_prepare < chicken_cleanup < start < export < handoff_release
+          assert handoff_prepare < chicken_cleanup < start < text_negative < export < handoff_release
           assert 'BLINDBOX_CITEST_P5_DECOR_SINGLE_STARTED=success' in single_script
           assert 'BLINDBOX_CITEST_P5_DECOR_SINGLE_CLIENT=success' in single_script
           assert 'BLINDBOX_CITEST_P5_DECOR_SINGLE_CLEANUP=success' in single_script
