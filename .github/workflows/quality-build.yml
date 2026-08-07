@@ -84,6 +84,13 @@ jobs:
           grep -q 'source_present={}, source_linked={}, ' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q 'overworld.mayInteract(alice, sourceDoor)' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q '真实前进键未进入 P4 跨维门：client=' src/ciTest/java/cn/blindboxchallenge/citest/CiClientP4DoorRecoveryObservation.java
+          # 文本负例临时持有信件时，客户端不得提前驱动正向 GUI 或写结果；阶段旗标只能在 STARTED 后出现。
+          grep -q 'if (!scenarioEnabled()) return;' src/ciTest/java/cn/blindboxchallenge/citest/CiClientP4TextObservation.java
+          grep -q 'p4-text-enabled.flag' src/ciTest/java/cn/blindboxchallenge/citest/CiClientP4TextObservation.java
+          grep -q -- '-Dblindbox.ci.p4TextStageDir=' scripts/ci/run-multi-client.py
+          grep -q 'BLINDBOX_CITEST_P4_TEXT_STARTED=success' scripts/ci/multi-client.sh
+          grep -A8 'BLINDBOX_CITEST_P4_TEXT_STARTED=success' scripts/ci/multi-client.sh | grep -q 'touch "${EVIDENCE}/p4-text-enabled.flag"'
+          grep -q 'rm -f "${EVIDENCE}/p4-text-enabled.flag"' scripts/ci/multi-client.sh
           # 800 tick 是强制上限；跨维成功事实必须先消费，但换维/落地/速度等待不能借 return 绕过超时。
           grep -q 'phase != Phase.WAIT_FOR_CROSSING && timedOut' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q 'if (phase != Phase.READY && timedOut) throw timeout(alice, bob());' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java

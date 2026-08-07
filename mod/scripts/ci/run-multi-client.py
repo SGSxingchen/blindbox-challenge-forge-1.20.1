@@ -46,6 +46,7 @@ def launch(directory: Path, username: str, uuid: str, marker: Path, pillow_marke
                      f"-Dblindbox.ci.pigMarker={pig_marker}",
                      f"-Dblindbox.ci.chickenMarker={chicken_marker}",
                      f"-Dblindbox.ci.p4MusicMarkerDir={p4_music_marker_directory}",
+                     f"-Dblindbox.ci.p4TextStageDir={p4_music_marker_directory}",
                      f"-Dblindbox.ci.p4DoorMarkerDir={p4_door_marker_directory}",
                      f"-Dblindbox.ci.p4AudioBase={p4_audio_base}",
                      f"-Dblindbox.ci.reconnectMarker={reconnect_marker}",
@@ -122,7 +123,7 @@ def main():
         stale.unlink()
     for stale in evidence.glob("client-*-p4-door-*.marker"):
         stale.unlink()
-    for stage_flag in (evidence / "p4-music-cache-enabled.flag", evidence / "p4-music-network-restored.flag",
+    for stage_flag in (evidence / "p4-text-enabled.flag", evidence / "p4-music-cache-enabled.flag", evidence / "p4-music-network-restored.flag",
                        evidence / "p4-door-recovery-enabled.flag"):
         stage_flag.unlink(missing_ok=True)
     release = evidence / "release-clients.marker"

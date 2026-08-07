@@ -370,6 +370,9 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_TEXT_STARTED=success' "${SERVER_DIR}/server.log"
+# 仅在服务端已确认无旧 marker、写入真实信件并启动正向场景后，才允许客户端驱动生产 GUI。
+# 此阶段旗标不表示成功；服务端仍须分别核验 C2S、NBT、排程、死亡与两端真实 Screen marker。
+touch "${EVIDENCE}/p4-text-enabled.flag"
 for _ in $(seq 1 180); do
   if grep -q 'BLINDBOX_CITEST_P4_TEXT=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
   grep -q 'BLINDBOX_CITEST_P4_TEXT_SERVER=success' "${SERVER_DIR}/server.log" && break
@@ -396,6 +399,7 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_TEXT_CLEANUP=success' "${SERVER_DIR}/server.log"
+rm -f "${EVIDENCE}/p4-text-enabled.flag"
 # P4 任意门核心链路由正式 Block#use 潜行配对和 entityInside 进入门体执行；探针还移除
 # 目标安全落点确认玩家留在源侧。跨维客户端观察专项会在任意门批次完成时继续扩展。
 printf 'blindboxcitest run_p4_door\n' >&3

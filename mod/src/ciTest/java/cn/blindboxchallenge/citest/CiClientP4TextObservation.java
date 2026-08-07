@@ -45,6 +45,9 @@ public final class CiClientP4TextObservation {
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
         if (player == null || minecraft.getConnection() == null) return;
+        // P4 文本负例也会临时持有生产信件；未收到脚本在服务端 STARTED 后写入的阶段旗标前，
+        // 绝不能驱动真实 GUI 或写 marker，否则会污染随后严格拒旧 marker 的正向场景。
+        if (!scenarioEnabled()) return;
         observeBobDeath(minecraft, player);
         if (phase == Phase.DONE || markerPath() == null) return;
         Screen screen = minecraft.screen;
@@ -125,6 +128,13 @@ public final class CiClientP4TextObservation {
     private static Path markerPath() {
         String configured = System.getProperty("blindbox.ci.p4TextMarker");
         return configured == null || configured.isBlank() ? null : Path.of(configured).toAbsolutePath();
+    }
+
+    /** 阶段旗标只安排 ciTest 输入时序；不是成功 marker，也不替代任何服务端业务校验。 */
+    private static boolean scenarioEnabled() {
+        String configured = System.getProperty("blindbox.ci.p4TextStageDir");
+        return configured != null && !configured.isBlank()
+                && Files.isRegularFile(Path.of(configured).toAbsolutePath().resolve("p4-text-enabled.flag"));
     }
 
     private static void observeBobDeath(Minecraft minecraft, LocalPlayer player) {
