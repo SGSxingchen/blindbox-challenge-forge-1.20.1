@@ -23,13 +23,9 @@ import net.minecraft.world.level.portal.PortalInfo;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.ITeleporter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** 037-B 只在逻辑服务端配对和传送；绝不加载远端区块或接受客户端传送数据。 */
 public final class DoorService {
-    /** 037-B 的服务端入门审计；只记录真实 Block#entityInside 回调，不代表授权或传送成功。 */
-    private static final Logger LOGGER = LoggerFactory.getLogger(DoorService.class);
     private static final long TELEPORT_COOLDOWN_TICKS = 20L;
     private static final Map<UUID, GlobalPos> SELECTED_DOORS = new HashMap<>();
     private static final Map<UUID, Long> TELEPORT_COOLDOWNS = new HashMap<>();
@@ -95,21 +91,20 @@ public final class DoorService {
 
     /** 玩家进入无碰撞门格后重验所有事实；任一失败都保持原地且不加载区块。 */
     public static void tryTeleport(ServerPlayer player, Level level, BlockPos sourcePos) {
-        // 审计记录只证明原版 Block#entityInside 已实际调用到服务端；它既不是授权也不是成功结果。
-        LOGGER.info("037-B entityInside 候选：player={}, source={}, dimension={}", player.getGameProfile().getName(), sourcePos,
-                level.dimension().location());
+        // Entity#checkInsideBlocks 会复用 MutableBlockPos 继续枚举相邻格。延迟到 ServerTick.END
+        // 消费时绝不能保留这个可变游标，否则候选源门会被悄然改写成相邻空气格而永久拒绝。
+        BlockPos sourceSnapshot = sourcePos.immutable();
         if (!(level instanceof ServerLevel sourceLevel) || player.isPassenger() || !player.mayBuild()
-                || !sourceLevel.mayInteract(player, sourcePos)) return;
-        GlobalPos sourceGlobal = GlobalPos.of(sourceLevel.dimension(), sourcePos);
+                || !sourceLevel.mayInteract(player, sourceSnapshot)) return;
+        GlobalPos sourceGlobal = GlobalPos.of(sourceLevel.dimension(), sourceSnapshot);
         if (sourceGlobal.equals(ARRIVAL_DOOR_IMMUNITIES.get(player.getUUID()))) return;
         long now = sourceLevel.getGameTime();
         if (TELEPORT_COOLDOWNS.getOrDefault(player.getUUID(), Long.MIN_VALUE) + TELEPORT_COOLDOWN_TICKS > now) return;
-        if (!(sourceLevel.getBlockEntity(sourcePos) instanceof AnywhereDoorBlockEntity source)) return;
+        if (!(sourceLevel.getBlockEntity(sourceSnapshot) instanceof AnywhereDoorBlockEntity source)) return;
         reconcileInvalidatedDoor(sourceLevel, source);
         if (!source.linked()) return;
         // 同一 tick 同一玩家只允许一个候选；此 Map 不是授权结果，执行前必须重新校验全部远端事实。
-        boolean newlyQueued = PENDING_TELEPORTS.putIfAbsent(player.getUUID(), sourceGlobal) == null;
-        LOGGER.info("037-B entityInside 候选已{}延迟队列：player={}, source={}", newlyQueued ? "写入" : "保留既有", player.getGameProfile().getName(), sourcePos);
+        PENDING_TELEPORTS.putIfAbsent(player.getUUID(), sourceGlobal);
     }
 
     /** ServerTick.END 在原始移动包已经返回后消费真实入门请求；拒绝死亡、换维或状态变化的请求。 */
@@ -125,7 +120,6 @@ public final class DoorService {
             // PENDING 只能由本服务器 tick 的 Block#entityInside 写入。追帧时同一 tick 可先消费多个
             // 合法移动包，玩家的最终 AABB 已越过门格；以末态 AABB 拒绝会吞掉已经发生的真实入门。
             // 下方 execute 仍对源门、权限、冷却、反链、安全点、区块和出口做完整当前态重验。
-            LOGGER.info("037-B 延迟候选开始全量复验：player={}, source={}", player.getGameProfile().getName(), source.pos());
             executeVerifiedTeleport(player, player.serverLevel(), source.pos());
         }
     }
@@ -194,8 +188,6 @@ public final class DoorService {
             return;
         }
         TELEPORT_COOLDOWNS.put(player.getUUID(), now);
-        LOGGER.info("037-B 传送已提交：player={}, destination={}, dimension={}", player.getGameProfile().getName(), destination,
-                targetLevel.dimension().location());
     }
 
     /** 同维走原版位置包；跨维必须经 Forge 的 changeDimension 更新服务端世界、客户端维度包与跟踪状态。 */

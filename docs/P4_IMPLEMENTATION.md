@@ -46,3 +46,5 @@
 第四批真实验收探针已追加但尚未在 Hosted Runner 得出结论：Alice 必须站在服务端布置的方块上，通过真实右键打开生产 `MusicBoxScreen`，分别提交 OGG、MP3、截断 OGG 三次 URL；两客户端都只在生产 `PlaySoundEvent` 进入原版音频引擎且其真实 `AudioStream.read()` 返回非空 PCM 后写一次原子 marker。服务端逐字段交叉核验两端同一事件 UUID、URL、声源、观察者、格式和缓存命中。初次 OGG 后工作流仅将 `raw.githubusercontent.com` 解析为回环地址；第二次相同 URL 若未先命中 SHA 缓存即被生产公网策略拒绝，故不能伪造为缓存成功。恢复公网解析后再验证 MP3，截断 OGG 必须先收到真实 S2C 再得到客户端失败事件且不得产生 PCM marker；最后真实踢出 Bob、经 `ConnectScreen` 重连后先连续 80 tick、再额外 40 tick 宽限不得收到历史播放事件。这里验证的是 **120 tick 有限观察窗口**，不能虚报为无限期数学证明。临时阶段旗标只安排顺序，不是成功 marker；所有结果文件由客户端或服务端事实生成，不能预写。
 
 生命周期强杀恢复门禁的失败路径同样必须可审计：即使任一前置服务端日志等待超时，脚本也只复制已产生的 `first.log`、`second.log` 与已有 canonical 导出，并把日志尾部打印到 Hosted Runner；它保持非零失败、不创建 `result.json`、不补写任何 marker。该可观测性改动不是动态通过结论，后续仍须依据保存的首个真实错误修复。
+
+最新跨维门 artifact 已定位并修复实际生产根因：`Entity#checkInsideBlocks` 将同一个 `MutableBlockPos` 传给 `Block#entityInside` 后会继续复用它枚举相邻格。旧延迟队列把该可变对象直接交给 `GlobalPos`，到 `ServerTick.END` 时源门 Y 坐标已被改为相邻空气格；候选、队列和全量复验都是真实发生的，却必然取不到源方块实体。现在 `tryTeleport` 在任何校验和排队前以 `sourcePos.immutable()` 固定源格，并仅保存该快照。为定位此问题临时加入的生产审计日志已移除；保留 ciTest 的一次性非成功源侧事实日志以及质量门闩。该修复仍待 Hosted Runner 动态结论，不能提前写为 P4 通过。

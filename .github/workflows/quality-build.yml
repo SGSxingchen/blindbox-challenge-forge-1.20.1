@@ -63,6 +63,8 @@ jobs:
           grep -q 'return repositionEntity.apply(false);' src/main/java/cn/blindboxchallenge/service/DoorService.java
           # 所有门传送都必须等原移动包退出后在 ServerTick.END 以真实 entityInside 入口和全量事实重验执行，目标门免疫须在 changeDimension 前预留。
           grep -q 'PENDING_TELEPORTS.putIfAbsent(player.getUUID(), sourceGlobal)' src/main/java/cn/blindboxchallenge/service/DoorService.java
+          grep -q 'BlockPos sourceSnapshot = sourcePos.immutable();' src/main/java/cn/blindboxchallenge/service/DoorService.java
+          grep -q 'GlobalPos.of(sourceLevel.dimension(), sourceSnapshot)' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'processPendingTeleports(event.getServer())' src/main/java/cn/blindboxchallenge/event/ServerLifecycleEvents.java
           grep -q 'PENDING 只能由本服务器 tick 的 Block#entityInside 写入' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q '!insideDoorCell(player, arrival.pos())' src/main/java/cn/blindboxchallenge/service/DoorService.java
@@ -81,9 +83,6 @@ jobs:
           grep -q 'P4_DOOR_RECOVERY_SOURCE_MOVED=observed' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q 'source_present={}, source_linked={}, ' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q 'overworld.mayInteract(alice, sourceDoor)' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
-          grep -q '037-B entityInside 候选' src/main/java/cn/blindboxchallenge/service/DoorService.java
-          grep -q '037-B entityInside 候选已' src/main/java/cn/blindboxchallenge/service/DoorService.java
-          grep -q '037-B 延迟候选开始全量复验' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q '真实前进键未进入 P4 跨维门：client=' src/ciTest/java/cn/blindboxchallenge/citest/CiClientP4DoorRecoveryObservation.java
           # 生命周期夹具任一前置等待失败也必须保留原始服务器日志；该钩子只保存证据，不能吞失败。
           bash -n scripts/ci/lifecycle-recovery.sh
