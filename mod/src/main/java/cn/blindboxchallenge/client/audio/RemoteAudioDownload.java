@@ -35,7 +35,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSocket;
@@ -47,7 +46,7 @@ public final class RemoteAudioDownload {
     /** 仅客户端日志使用的失败阶段；不含 URL、响应头、路径或异常消息。 */
     public enum FailureStage {
         DNS, PINNED_CONNECT_IPV4, PINNED_CONNECT_IPV6,
-        TLS_SOCKET_WRAP, TLS_PARAMETERS, TLS_DEADLINE_ARM, TLS_HANDSHAKE, TLS_POST_HANDSHAKE_DEADLINE, TLS_HOSTNAME_VERIFY,
+        TLS_SOCKET_WRAP, TLS_PARAMETERS, TLS_DEADLINE_ARM, TLS_HANDSHAKE, TLS_POST_HANDSHAKE_DEADLINE,
         HTTP_HEADERS, BODY, CACHE, DECODE, UNKNOWN
     }
 
@@ -251,10 +250,6 @@ public final class RemoteAudioDownload {
             tls.startHandshake();
             stage = FailureStage.TLS_POST_HANDSHAKE_DEADLINE;
             ensureBeforeDeadline(deadlineNanos);
-            stage = FailureStage.TLS_HOSTNAME_VERIFY;
-            if (!HttpsURLConnection.getDefaultHostnameVerifier().verify(uri.getHost(), tls.getSession())) {
-                throw new IOException("在线音频 TLS 证书主机名不匹配");
-            }
             stage = FailureStage.HTTP_HEADERS;
             writeRequest(tls.getOutputStream(), uri);
             InputStream input = tls.getInputStream();

@@ -115,7 +115,7 @@ jobs:
           grep -q '在线音频下载或解码失败（仅客户端）' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
           grep -q 'failureSummary(exception)' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
           ! grep -q 'getMessage()' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
-          grep -q 'TLS_SOCKET_WRAP, TLS_PARAMETERS, TLS_DEADLINE_ARM, TLS_HANDSHAKE, TLS_POST_HANDSHAKE_DEADLINE, TLS_HOSTNAME_VERIFY' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          grep -q 'TLS_SOCKET_WRAP, TLS_PARAMETERS, TLS_DEADLINE_ARM, TLS_HANDSHAKE, TLS_POST_HANDSHAKE_DEADLINE' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'throw new AudioFailureException(FailureStage.DNS, exception);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'private static FailureStage connectStage(InetAddress address)' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           # 固定连接不得把 IPv4 字面量交给默认双栈 socket；仍须保留 IPv6 回退、同一已校验地址和无代理边界。
@@ -133,7 +133,24 @@ jobs:
           grep -q 'stage = FailureStage.TLS_PARAMETERS;' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'stage = FailureStage.TLS_DEADLINE_ARM;' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'stage = FailureStage.TLS_POST_HANDSHAKE_DEADLINE;' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
-          grep -q 'stage = FailureStage.TLS_HOSTNAME_VERIFY;' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          # 主机名校验必须由当前 SSLSocket 的 JSSE HTTPS endpoint identification 在握手中强制执行，
+          # 不可调用可被全局替换的 HttpsURLConnection 默认 HostnameVerifier 作重复复验。
+          grep -q 'parameters.setEndpointIdentificationAlgorithm("HTTPS");' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          grep -q 'parameters.setServerNames(java.util.List.of(new SNIHostName(uri.getHost())));' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          grep -q 'tls.setSSLParameters(parameters);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          grep -q 'TLS_FACTORY.createSocket(plain, uri.getHost(), 443, true)' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          grep -q 'tls.startHandshake();' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          ! grep -q 'getDefaultHostnameVerifier' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path('src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java').read_text(encoding='utf-8')
+          endpoint = source.index('parameters.setEndpointIdentificationAlgorithm("HTTPS");')
+          sni = source.index('parameters.setServerNames(java.util.List.of(new SNIHostName(uri.getHost())));')
+          apply = source.index('tls.setSSLParameters(parameters);')
+          handshake = source.index('tls.startHandshake();')
+          assert endpoint < sni < apply < handshake
+          assert 'getDefaultHostnameVerifier' not in source
+          PY
           grep -q 'throw new AudioFailureException(FailureStage.BODY, exception);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'FailureStage.DECODE' src/main/java/cn/blindboxchallenge/client/audio/RemoteMusicSoundInstance.java
           grep -q 'connectionAttempts.isEmpty() ? "" : "/attempts=" + connectionAttempts' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java

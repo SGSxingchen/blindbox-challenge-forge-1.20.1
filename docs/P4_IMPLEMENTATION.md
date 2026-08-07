@@ -76,3 +76,5 @@
 `98c0aca` 的双客户端仍在同一首错失败，说明地址族精确 socket 本身尚未使 Hosted Forge 客户端进入 TLS；两端最终阶段仍为 IPv6，不能据此断言 IPv4 的实际异常类型。下一轮只让既有**单条客户端本地失败日志**附带每个已尝试失败阶段的最内层异常简单类名（例如 `PINNED_CONNECT_IPV4/SocketException`），不含地址、URL、端口、异常消息、响应头、Cookie、令牌或完整栈，也不回传服务端；它不改变连接、下载、时限、TLS 或任何 PCM marker。
 
 `f92ee0d` 的同 SHA 双客户端运行 `31155161783` 已使前四项核心门禁成功，却在两端一致得到 `TLS_HANDSHAKE/IOException` 后才回退到不可达 IPv6；服务端仍严格停在 `WAIT_OGG_FIRST`，两次都是生产失败事件而非成功。该粗阶段同时覆盖 TLS socket 包装、SSL 参数/SNI、截止任务与读超时、实际握手、握手后总截止复核和二次主机名验证，不能把泛型 `IOException` 猜成其中任一步。下一轮只把已有脱敏日志细分为这些内部阶段并继续只输出阶段与最内层异常简单类名；不输出主机、地址、端口、URL、响应、消息或栈，不改变连接、代理、TLS/主机名校验、时限、缓存或 PCM marker。待 Hosted Runner 给出精确阶段后才作最小生产修复。
+
+`0dc40e6` 的同 SHA 原样重跑 `31156100974` 第二次尝试已真实完成强杀后重启、两客户端重连、文本和跨维门恢复；其首个可归因错误是两端一致的 `TLS_HOSTNAME_VERIFY/IOException`，随后才回退到不可达 IPv6，服务端仍以两份生产失败事件严格停在 `WAIT_OGG_FIRST`。该阶段确认问题位于 `SSLSocket` 握手后的**重复**校验：此前一方面已为同一 socket 设置 JSSE `HTTPS` endpoint identification 和 SNI（握手中强制证书主机名验证），另一方面又调用可被全局替换的 `HttpsURLConnection` 默认 `HostnameVerifier`。现移除后者及其诊断阶段，保留前者；因此没有取消或放宽任何证书主机名检查，也未改变固定 IP、无代理/认证/Cookie、10 秒截止、缓存、解码、GUI/S2C、PCM marker 或失败断言。质量门禁同步锁定 JSSE endpoint identification、SNI 和禁用该全局默认 verifier，下一轮仍只由 Hosted Runner 的真实 Forge 客户端裁决。
