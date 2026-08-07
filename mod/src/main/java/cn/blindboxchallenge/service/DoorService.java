@@ -23,9 +23,13 @@ import net.minecraft.world.level.portal.PortalInfo;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.ITeleporter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** 037-B 只在逻辑服务端配对和传送；绝不加载远端区块或接受客户端传送数据。 */
 public final class DoorService {
+    /** 仅 DEBUG 级别的运行诊断；正常玩家和正式默认日志均不会输出。 */
+    private static final Logger LOGGER = LoggerFactory.getLogger(DoorService.class);
     private static final long TELEPORT_COOLDOWN_TICKS = 20L;
     private static final Map<UUID, GlobalPos> SELECTED_DOORS = new HashMap<>();
     private static final Map<UUID, Long> TELEPORT_COOLDOWNS = new HashMap<>();
@@ -91,6 +95,9 @@ public final class DoorService {
 
     /** 玩家进入无碰撞门格后重验所有事实；任一失败都保持原地且不加载区块。 */
     public static void tryTeleport(ServerPlayer player, Level level, BlockPos sourcePos) {
+        // 调试记录只证明原版 Block#entityInside 已实际调用到服务端；它既不是授权也不是成功结果。
+        LOGGER.debug("037-B entityInside 候选：player={}, source={}, dimension={}", player.getGameProfile().getName(), sourcePos,
+                level.dimension().location());
         if (!(level instanceof ServerLevel sourceLevel) || player.isPassenger() || !player.mayBuild()
                 || !sourceLevel.mayInteract(player, sourcePos)) return;
         GlobalPos sourceGlobal = GlobalPos.of(sourceLevel.dimension(), sourcePos);
