@@ -193,6 +193,9 @@ public final class P4DoorRecoveryCiScenario {
             if (overworld.getGameTime() - startedAt > 800L) throw new IllegalStateException("P4 跨维门恢复场景超时");
             ServerPlayer alice = alice();
             if (alice.serverLevel().dimension().equals(nether.dimension())) {
+                // 触发门的移动包会在 changeDimension 返回后继续执行；原版仅在客户端确认 teleport id 后
+                // 才以 awaiting 目标坐标完成服务端落点。确认前既不写 marker 也不放宽结果，只继续等待超时。
+                if (alice.isChangingDimension()) return;
                 Vec3 expected = Vec3.atBottomCenterOf(targetDoor);
                 Vec3 actual = alice.position();
                 double distanceSqr = actual.distanceToSqr(expected);
