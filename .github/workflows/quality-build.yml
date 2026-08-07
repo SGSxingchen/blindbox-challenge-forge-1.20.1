@@ -79,6 +79,8 @@ jobs:
           grep -q 'P4_DOOR_RECOVERY_FIXTURE_SETTLED=success' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q 'WALKING_TIMEOUT_TICKS = 400' src/ciTest/java/cn/blindboxchallenge/citest/CiClientP4DoorRecoveryObservation.java
           grep -q 'P4_DOOR_RECOVERY_SOURCE_MOVED=observed' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
+          grep -q 'source_present={}, source_linked={}, ' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
+          grep -q 'overworld.mayInteract(alice, sourceDoor)' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q '真实前进键未进入 P4 跨维门：client=' src/ciTest/java/cn/blindboxchallenge/citest/CiClientP4DoorRecoveryObservation.java
           # 生命周期夹具任一前置等待失败也必须保留原始服务器日志；该钩子只保存证据，不能吞失败。
           bash -n scripts/ci/lifecycle-recovery.sh

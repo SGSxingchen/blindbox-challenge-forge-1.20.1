@@ -27,6 +27,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.portal.PortalInfo;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -232,7 +233,15 @@ public final class P4DoorRecoveryCiScenario {
             if (phase == Phase.WAIT_FOR_CROSSING && !sourceMovementObserved && alice.serverLevel().dimension().equals(overworld.dimension())
                     && alice.position().distanceToSqr(fixtureStart(sourceDoor)) > 0.08D) {
                 sourceMovementObserved = true;
-                CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P4_DOOR_RECOVERY_SOURCE_MOVED=observed, alice={}", alice.position());
+                boolean sourcePresent = overworld.getBlockState(sourceDoor).is(ModBlocks.ANYWHERE_DOOR.get());
+                boolean sourceLinked = overworld.getBlockEntity(sourceDoor) instanceof AnywhereDoorBlockEntity door && door.linked();
+                boolean sourceBoxIntersects = alice.getBoundingBox().intersects(new AABB(sourceDoor.getX(), sourceDoor.getY(), sourceDoor.getZ(),
+                        sourceDoor.getX() + 1.0D, sourceDoor.getY() + 1.0D, sourceDoor.getZ() + 1.0D));
+                // 仅在真实客户端已引起服务端位置变化时记录当前事实，专供下一轮区分 entityInside
+                // 未触发与权威前置校验拒绝；它不排队、不授予传送、更不写任何成功 marker。
+                CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P4_DOOR_RECOVERY_SOURCE_MOVED=observed, alice={}, source_present={}, source_linked={}, "
+                                + "box_intersects={}, may_build={}, may_interact={}, changing={}", alice.position(), sourcePresent, sourceLinked,
+                        sourceBoxIntersects, alice.mayBuild(), overworld.mayInteract(alice, sourceDoor), alice.isChangingDimension());
             }
             if (alice.serverLevel().dimension().equals(nether.dimension())) {
                 reachedTargetDimension = true;
