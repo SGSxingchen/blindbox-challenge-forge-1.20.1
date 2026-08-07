@@ -55,13 +55,24 @@ public final class P5DecorCiScenario {
     }
 
     public static int start(CommandSourceStack source) {
+        return start(source, false);
+    }
+
+    /** 单客户端专项绝不复用双端结果：同一生产路径由唯一真实客户端独立完成三轮。 */
+    public static int startSingle(CommandSourceStack source) {
+        return start(source, true);
+    }
+
+    private static int start(CommandSourceStack source, boolean singleClient) {
         if (active != null) {
             source.sendFailure(Component.literal("已有 P5 装饰方块客户端场景未清理"));
             return 0;
         }
         try {
-            active = ActiveScenario.create(source.getServer());
-            source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P5_DECOR_STARTED=success"), false);
+            active = ActiveScenario.create(source.getServer(), singleClient);
+            source.sendSuccess(() -> Component.literal(singleClient
+                    ? "BLINDBOX_CITEST_P5_DECOR_SINGLE_STARTED=success"
+                    : "BLINDBOX_CITEST_P5_DECOR_STARTED=success"), false);
             return 1;
         } catch (Exception exception) {
             active = null;
@@ -72,13 +83,24 @@ public final class P5DecorCiScenario {
     }
 
     public static int verify(CommandSourceStack source) {
+        return verify(source, false);
+    }
+
+    public static int verifySingle(CommandSourceStack source) {
+        return verify(source, true);
+    }
+
+    private static int verify(CommandSourceStack source, boolean singleClient) {
         if (active == null) {
             source.sendFailure(Component.literal("没有可核验的 P5 装饰方块客户端场景"));
             return 0;
         }
         try {
+            if (active.singleClient != singleClient) throw new IllegalStateException("P5 单/双客户端核验命令与运行场景不匹配");
             active.verifyClientMarkers();
-            source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P5_DECOR_CLIENTS=success"), false);
+            source.sendSuccess(() -> Component.literal(singleClient
+                    ? "BLINDBOX_CITEST_P5_DECOR_SINGLE_CLIENT=success"
+                    : "BLINDBOX_CITEST_P5_DECOR_CLIENTS=success"), false);
             return 1;
         } catch (Exception exception) {
             CiTestProbe.LOGGER.error("Cannot verify P5 decorative block client markers", exception);
@@ -88,14 +110,25 @@ public final class P5DecorCiScenario {
     }
 
     public static int cleanup(CommandSourceStack source) {
+        return cleanup(source, false);
+    }
+
+    public static int cleanupSingle(CommandSourceStack source) {
+        return cleanup(source, true);
+    }
+
+    private static int cleanup(CommandSourceStack source, boolean singleClient) {
         if (active == null) {
             source.sendFailure(Component.literal("没有可清理的 P5 装饰方块客户端场景"));
             return 0;
         }
         try {
+            if (active.singleClient != singleClient) throw new IllegalStateException("P5 单/双客户端清理命令与运行场景不匹配");
             active.cleanup();
             active = null;
-            source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P5_DECOR_CLEANUP=success"), false);
+            source.sendSuccess(() -> Component.literal(singleClient
+                    ? "BLINDBOX_CITEST_P5_DECOR_SINGLE_CLEANUP=success"
+                    : "BLINDBOX_CITEST_P5_DECOR_CLEANUP=success"), false);
             return 1;
         } catch (Exception exception) {
             CiTestProbe.LOGGER.error("Cannot clean P5 decorative block client scenario", exception);
@@ -160,6 +193,7 @@ public final class P5DecorCiScenario {
     private static final class ActiveScenario {
         private final MinecraftServer server;
         private final ServerLevel level;
+        private final boolean singleClient;
         private final ServerPlayer alice;
         private final ServerPlayer bob;
         private final PlayerSnapshot aliceBefore;
@@ -175,10 +209,11 @@ public final class P5DecorCiScenario {
         private Phase phase = Phase.WAIT_FOR_PLACE;
         private String failure;
 
-        private ActiveScenario(MinecraftServer server, ServerLevel level, ServerPlayer alice, ServerPlayer bob,
+        private ActiveScenario(MinecraftServer server, ServerLevel level, boolean singleClient, ServerPlayer alice, ServerPlayer bob,
                                Map<BlockPos, BlockState> supportBefore, AABB fixtureBounds) {
             this.server = server;
             this.level = level;
+            this.singleClient = singleClient;
             this.alice = alice;
             this.bob = bob;
             this.aliceBefore = PlayerSnapshot.capture(alice);
@@ -189,11 +224,11 @@ public final class P5DecorCiScenario {
             this.bobUuid = bob.getUUID();
         }
 
-        private static ActiveScenario create(MinecraftServer server) throws IOException {
+        private static ActiveScenario create(MinecraftServer server, boolean singleClient) throws IOException {
             Path markerDirectory = markerDirectory();
-            ensureMarkersAbsent(markerDirectory);
+            ensureMarkersAbsent(markerDirectory, singleClient);
             ServerPlayer alice = requiredPlayer(server, "BlindBoxAlice");
-            ServerPlayer bob = requiredPlayer(server, "BlindBoxBob");
+            ServerPlayer bob = singleClient ? alice : requiredPlayer(server, "BlindBoxBob");
             assertNoDecorItems(alice);
             assertNoDecorItems(bob);
             if (alice.getAbilities().instabuild || bob.getAbilities().instabuild) {
@@ -205,7 +240,7 @@ public final class P5DecorCiScenario {
             ServerLevel level = server.overworld();
             Map<BlockPos, BlockState> supportBefore = captureAndValidateFixtureAir(level);
             AABB bounds = fixtureBounds(level);
-            ActiveScenario scenario = new ActiveScenario(server, level, alice, bob, supportBefore, bounds);
+            ActiveScenario scenario = new ActiveScenario(server, level, singleClient, alice, bob, supportBefore, bounds);
             try {
                 scenario.placeSupports();
                 scenario.armRound();
@@ -219,7 +254,8 @@ public final class P5DecorCiScenario {
         private void tick() {
             if (phase == Phase.READY || phase == Phase.FAILED) return;
             if (++phaseTicks > MAX_PHASE_TICKS) {
-                throw new IllegalStateException("P5 装饰方块真实客户端场景超时：" + phase + "，轮次=" + round().index());
+                throw new IllegalStateException("P5 装饰方块真实客户端场景超时：" + phase + "，轮次=" + round().index()
+                        + "，client_diagnostics=" + clientDiagnostics(singleClient));
             }
             DecorRound round = round();
             BlockPos target = target(level, round.index());
@@ -312,7 +348,8 @@ public final class P5DecorCiScenario {
             ServerPlayer actor = actor(round);
             ServerPlayer observer = observer(round);
             moveFixturePlayer(actor, placementStance(level, round.index()));
-            moveFixturePlayer(observer, observerStance(level, round.index()));
+            // 单客户端专项由同一真实玩家操作并观察，不能把刚定位到放置位的 actor 又覆盖到观察位。
+            if (observer != actor) moveFixturePlayer(observer, observerStance(level, round.index()));
             // 初始材料同样不直接写入玩家手中：只生成临时 ItemEntity，再由站在其上的真实生存玩家
             // 走原版碰撞拾取路径取得。后续仍严格要求放置后为 0、正常掉落后重新回收为 1。
             ItemEntity initial = new ItemEntity(level, actor.getX(), actor.getY(), actor.getZ(), new ItemStack(round.item().get(), 1));
@@ -332,8 +369,12 @@ public final class P5DecorCiScenario {
         private void verifyClientMarkers() throws IOException {
             if (phase == Phase.FAILED) throw new IllegalStateException("P5 装饰方块服务端场景已失败：" + failure);
             if (phase != Phase.READY) throw new IllegalStateException("P5 装饰方块服务端场景尚未完成真实放置/回收：" + phase);
-            verifyMarker(readMarker(markerDirectory().resolve("client-1-p5-decor-observed.marker")), aliceUuid, "客户端一");
-            verifyMarker(readMarker(markerDirectory().resolve("client-2-p5-decor-observed.marker")), bobUuid, "客户端二");
+            if (singleClient) {
+                verifyMarker(readMarker(markerDirectory().resolve("client-1-p5-decor-single-observed.marker")), aliceUuid, "单客户端");
+            } else {
+                verifyMarker(readMarker(markerDirectory().resolve("client-1-p5-decor-observed.marker")), aliceUuid, "客户端一");
+                verifyMarker(readMarker(markerDirectory().resolve("client-2-p5-decor-observed.marker")), bobUuid, "客户端二");
+            }
         }
 
         private void verifyMarker(Map<String, String> marker, UUID expectedObserver, String clientName) {
@@ -371,11 +412,11 @@ public final class P5DecorCiScenario {
         }
 
         private ServerPlayer actor(DecorRound round) {
-            return "BlindBoxAlice".equals(round.actorName()) ? alice : bob;
+            return singleClient || "BlindBoxAlice".equals(round.actorName()) ? alice : bob;
         }
 
         private ServerPlayer observer(DecorRound round) {
-            return "BlindBoxAlice".equals(round.actorName()) ? bob : alice;
+            return singleClient ? alice : ("BlindBoxAlice".equals(round.actorName()) ? bob : alice);
         }
 
         private void cleanup() {
@@ -521,9 +562,36 @@ public final class P5DecorCiScenario {
         return directory;
     }
 
-    private static void ensureMarkersAbsent(Path directory) throws IOException {
-        for (String name : List.of("client-1-p5-decor-observed.marker", "client-2-p5-decor-observed.marker")) {
+    private static void ensureMarkersAbsent(Path directory, boolean singleClient) throws IOException {
+        List<String> names = singleClient
+                ? List.of("client-1-p5-decor-single-observed.marker", "client-1-p5-decor-single-diagnostic.marker")
+                : List.of("client-1-p5-decor-observed.marker", "client-2-p5-decor-observed.marker",
+                        "client-1-p5-decor-diagnostic.marker", "client-2-p5-decor-diagnostic.marker");
+        for (String name : names) {
             if (Files.exists(directory.resolve(name))) throw new IllegalStateException("P5 客户端 marker 已存在，拒绝复用旧结果：" + name);
+        }
+    }
+
+    private static String clientDiagnostics(boolean singleClient) {
+        List<String> names = singleClient
+                ? List.of("client-1-p5-decor-single-diagnostic.marker")
+                : List.of("client-1-p5-decor-diagnostic.marker", "client-2-p5-decor-diagnostic.marker");
+        try {
+            Path directory = markerDirectory();
+            List<String> values = new ArrayList<>();
+            for (String name : names) {
+                Path marker = directory.resolve(name);
+                if (!Files.isRegularFile(marker)) {
+                    values.add(name + "=missing");
+                    continue;
+                }
+                String content = Files.readString(marker, StandardCharsets.UTF_8)
+                        .replace('\r', ' ').replace('\n', ';');
+                values.add(name + "=" + content);
+            }
+            return String.join("|", values);
+        } catch (Exception exception) {
+            return "unavailable:" + exception.getClass().getSimpleName();
         }
     }
 

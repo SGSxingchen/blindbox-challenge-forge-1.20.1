@@ -6,6 +6,8 @@
 
 首批新增三个无额外玩法、无方块实体、无网络包的服务端安全装饰方块：`abstract_white_figurine`、`floor_art_panel`、`neutral_trophy`，并各有同名 `BlockItem`、战利品表、双语、方块状态、模型和原创 16×16 RGBA PNG。所有图案均为项目内新绘制的抽象几何像素图，不含角色、赛事、商标、画作、原始照片或压缩素材。
 
+全部正式资源现由 [正式资源审计清单](ASSET_MANIFEST.md) 覆盖路径与 SHA-256；三项 P5 新资源有明确原创边界，历史资源中无法从仓库可靠追溯作者或许可的条目如实标为 Release 阻塞，不能借技术验收掩盖。
+
 `DecorativeBlock` 只提供与 JSON 模型对应的选择/碰撞轮廓：摆件 8×14×8、地面画板 16×2×16、奖杯 8×12×8；它不含右键行为、方块实体、Capability、菜单、客户端类或网络包。正式客户端与专服均只使用原版方块状态和掉落同步。
 
 ## 真实放置、破坏与回收探针（待 Hosted Runner 验证）
@@ -17,6 +19,10 @@
 破坏阶段同样只在服务端 `BREAK_READY` 后放行：操作客户端必须命中预期生产方块并保持原版 `keyAttack`，服务端要求目标真实变为空气、附近恰有一枚 count=1 的同名原版掉落实体，记录其 UUID。两台客户端都要先从真实同步中观察三项方块状态和三枚同 UUID 掉落实体，使用同目录临时文件原子改名写出各自 marker；服务端逐字段回查观察者 UUID、坐标、方块 ID、物品 ID 与掉落实体 UUID。40 tick 观察窗口结束后，掉落实体仍保留，由操作玩家的原版碰撞拾取回收；服务端还要求背包恰为一件且原实体 UUID 已消失，绝不删除后补物。
 
 所有 P5 marker 在启动前严格拒绝旧文件，`run-multi-client.py` 会清除本轮专用 marker 和阶段旗标；阶段旗标只安排输入时序，不代表成功。`multi-client.sh` 仍保留进程存活和 `BLINDBOX_CITEST_P5_DECOR=failed` 首错检测，再执行服务端 marker 复验、cleanup 与 canonical 导出。质量门禁已静态锁定资源闭合、16×16 RGBA PNG、模型/碰撞盒一致、正式 Jar 隔离以及上述反替代约束。
+
+同一 `P5DecorCiScenario` 另提供显式的 `start_p5_decor_single`、`verify_p5_decor_single`、`cleanup_p5_decor_single`，不会把双客户端结果降格为单端结果。Hosted-only 的 `p5-single-decor.sh` 会启动一台独立专服和一台 `BlindBoxAlice` Forge 客户端；该客户端用同一 `ciTest` 输入器完成三轮真实拾取、放置、破坏、方块/掉落实体观察与拾取回收。`single-client.yml` 保留原有主菜单 smoke，并追加这条独立业务路径和完整日志 artifact。该代码尚待 Hosted Runner 结果。
+
+`f5b4190` 的双客户端 run `31165998045` 给出首个 P5 真实失败：P4 小黄鸡、文本、门与八音盒均已通过，轮次 1 的初始 ItemEntity 也已被 Alice 正常拾取并由服务端输出 `PLACE_READY`，但在任何客户端 `keyUse` 注入、`BREAK_READY` 或 P5 成功 marker 出现前，服务端于 `P5DecorCiScenario.java:222` 超时 `WAIT_FOR_PLACE`。artifact 同时出现高空夹具的 `moved too quickly` 警告，不能猜测是定位、主手、支撑、HitResult 或输入消费。为下一轮仅补非成功的原子前置诊断：每台客户端在阶段旗标存在时记录角色、坐标、预期站位、主手/预期物品、目标/支撑状态、HitResult、瞄准 tick 与是否已注入；服务端只在超时消息汇总这些文件。诊断不作为 marker、不放宽时限或断言、不直设方块/发包，下一轮仍以真实 `keyUse` 结果为准。
 
 ### P4 交接回归修复（待 Hosted Runner 验证）
 

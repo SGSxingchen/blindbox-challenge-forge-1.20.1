@@ -9,7 +9,7 @@ on:
 jobs:
   single-client-main-menu:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: mod
@@ -30,7 +30,7 @@ jobs:
           python -m pip install 'minecraft-launcher-lib==8.0'
       - name: 构建正式模组与隔离测试探针
         run: |
-          chmod +x gradlew scripts/ci/install-client.py scripts/ci/run-client-smoke.py
+          chmod +x gradlew scripts/ci/install-client.py scripts/ci/run-client-smoke.py scripts/ci/p5-single-decor.sh scripts/ci/run-p5-single-decor.py
           ./gradlew --no-daemon build ciTestJar
       - name: 安装固定 Forge 客户端并部署本次产物
         run: |
@@ -44,6 +44,8 @@ jobs:
           printf 'earlyWindowControl=false\n' > build/ci-client/config/fml.toml
       - name: Xvfb 启动真实 Forge 客户端并稳定进入主菜单
         run: python scripts/ci/run-client-smoke.py build/ci-client
+      - name: 同一正式产物的一服一真实客户端 P5 装饰放置与回收
+        run: scripts/ci/p5-single-decor.sh
       - name: 上传客户端证据
         if: always()
         uses: actions/upload-artifact@v4
@@ -54,4 +56,9 @@ jobs:
             mod/build/ci-client/ci-client-main-menu.marker
             mod/build/ci-client/logs/
             mod/build/ci-client/crash-reports/
+            mod/build/ci-p5-single-evidence/
+            mod/build/ci-p5-single-server/server.log
+            mod/build/ci-p5-single-server/crash-reports/
+            mod/build/ci-single-p5-client/logs/
+            mod/build/ci-single-p5-client/crash-reports/
           if-no-files-found: warn

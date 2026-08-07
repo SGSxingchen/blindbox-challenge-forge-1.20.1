@@ -32,6 +32,7 @@ jobs:
           test -n "$FORMAL_JAR" || fail '找不到正式 Jar'
           test -f "$FORMAL_JAR" || fail '正式 Jar 候选不唯一'
           if jar tf "$FORMAL_JAR" | grep -q '^cn/blindboxchallenge/citest/'; then fail '正式 Jar 混入 ciTest 类'; fi
+          if jar tf "$FORMAL_JAR" | grep -q '^cn/blindboxchallenge/citest/CiClientP5DecorObservation.class$'; then fail '正式 Jar 混入 P5 客户端探针'; fi
           if jar tf "$FORMAL_JAR" | grep -q '^ci-audio/'; then fail '正式 Jar 混入 ciTest 音频'; fi
           jar tf "$FORMAL_JAR" | grep -q '^META-INF/jarjar/.*jlayer.*\.jar$' || fail '正式 Jar 未包含 JLayer Jar-in-Jar'
           jar tf "$FORMAL_JAR" | grep -q '^META-INF/licenses/JLayer-LGPL-2.1.txt$' || fail '正式 Jar 缺少 JLayer LGPL 文本'
@@ -258,11 +259,13 @@ jobs:
       - name: 校验 P5 装饰方块资源闭合与真实客户端探针门闩
         run: |
           python3 - <<'PY'
+          import hashlib
           import json
+          import re
           import struct
           from pathlib import Path
 
-          root = Path('.')
+          root = Path('.').resolve()
           asset_root = root / 'src/main/resources/assets/blindboxchallenge'
           data_root = root / 'src/main/resources/data/blindboxchallenge'
           ids = ('abstract_white_figurine', 'floor_art_panel', 'neutral_trophy')
@@ -308,13 +311,28 @@ jobs:
                   assert values[f'item.blindboxchallenge.{identifier}']
           forbidden = {'.jpg', '.jpeg', '.webp', '.psd', '.zip', '.mp3', '.ogg', '.wav'}
           assert not [path for path in asset_root.rglob('*') if path.is_file() and path.suffix.lower() in forbidden]
+          manifest = (root.parent / 'docs/ASSET_MANIFEST.md').read_text(encoding='utf-8')
+          rows = re.findall(r'\|`(mod/src/main/resources/[^`]+)`\|`([0-9a-f]{64})`\|', manifest)
+          recorded = dict(rows)
+          actual_resources = {path.relative_to(root.parent).as_posix(): path for path in (root / 'src/main/resources').rglob('*') if path.is_file()}
+          assert len(rows) == len(recorded) == len(actual_resources), (len(rows), len(recorded), len(actual_resources))
+          assert set(recorded) == set(actual_resources), (set(recorded) ^ set(actual_resources))
+          for path, resource in actual_resources.items():
+              assert recorded[path] == hashlib.sha256(resource.read_bytes()).hexdigest(), path
+          for identifier in ids:
+              assert f'`mod/src/main/resources/assets/blindboxchallenge/textures/block/{identifier}.png`' in manifest
+          assert '待权利人/法务确认；Release 阻塞' in manifest
 
           scenario = (root / 'src/ciTest/java/cn/blindboxchallenge/citest/P5DecorCiScenario.java').read_text(encoding='utf-8')
           client = (root / 'src/ciTest/java/cn/blindboxchallenge/citest/CiClientP5DecorObservation.java').read_text(encoding='utf-8')
           commands = (root / 'src/ciTest/java/cn/blindboxchallenge/citest/CiTestCommands.java').read_text(encoding='utf-8')
           runner = (root / 'scripts/ci/run-multi-client.py').read_text(encoding='utf-8')
           script = (root / 'scripts/ci/multi-client.sh').read_text(encoding='utf-8')
+          single_runner = (root / 'scripts/ci/run-p5-single-decor.py').read_text(encoding='utf-8')
+          single_script = (root / 'scripts/ci/p5-single-decor.sh').read_text(encoding='utf-8')
+          single_workflow = (root.parent / '.github/workflows/single-client.yml').read_text(encoding='utf-8')
           assert 'WAIT_FOR_INITIAL_PICKUP' in scenario and 'WAIT_FOR_RECOVERY_PICKUP' in scenario
+          assert 'client_diagnostics=' in scenario and 'client-1-p5-decor-diagnostic.marker' in scenario
           assert 'new ItemEntity' in scenario and 'initial.setPickUpDelay(0);' in scenario
           assert 'countInventory(actor, round.item().get()) != 1' in scenario
           assert 'level.setBlock(support, Blocks.STONE.defaultBlockState(), 3);' in scenario
@@ -325,9 +343,11 @@ jobs:
           assert 'KeyMapping.click(minecraft.options.keyUse.getKey())' in client
           assert 'minecraft.options.keyAttack.setDown(true)' in client
           assert 'BlockHitResult' in client and 'dropObserved' in client and 'observer_uuid' in client
+          assert 'p5DecorDiagnostic' in client and 'placement_aim_ticks=' in client and 'ATOMIC_MOVE' in client
           assert '@Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, value = Dist.CLIENT' in client
           assert 'start_p5_decor_clients' in commands and 'verify_p5_decor_clients' in commands and 'cleanup_p5_decor_clients' in commands
-          assert '-Dblindbox.ci.p5DecorMarker=' in runner and '-Dblindbox.ci.p5DecorStageDir=' in runner
+          assert 'start_p5_decor_single' in commands and 'verify_p5_decor_single' in commands and 'cleanup_p5_decor_single' in commands
+          assert '-Dblindbox.ci.p5DecorMarker=' in runner and '-Dblindbox.ci.p5DecorDiagnostic=' in runner and '-Dblindbox.ci.p5DecorStageDir=' in runner
           assert 'BLINDBOX_CITEST_P5_MARKER_DIR=' in script
           for marker in ('p5-decor-enabled.flag', 'p5-decor-place-${ROUND}.flag', 'p5-decor-break-${ROUND}.flag',
                          'BLINDBOX_CITEST_P5_DECOR_CLIENTS=success', 'BLINDBOX_CITEST_P5_DECOR_CLEANUP=success'):
@@ -339,6 +359,14 @@ jobs:
           chicken_cleanup = script.index("printf 'blindboxcitest cleanup_p4_chicken\\n' >&3")
           handoff_release = script.index("printf 'blindboxcitest release_p4_text_handoff\\n' >&3")
           assert handoff_prepare < chicken_cleanup < start < export < handoff_release
+          assert 'BLINDBOX_CITEST_P5_DECOR_SINGLE_STARTED=success' in single_script
+          assert 'BLINDBOX_CITEST_P5_DECOR_SINGLE_CLIENT=success' in single_script
+          assert 'BLINDBOX_CITEST_P5_DECOR_SINGLE_CLEANUP=success' in single_script
+          assert 'client-1-p5-decor-single-observed.marker' in single_script
+          assert 'GITHUB_ACTIONS' in single_script and 'one-real-forge-client' in single_runner
+          assert '-Dblindbox.ci.p5DecorSingle=true' in single_runner
+          assert '-Dblindbox.ci.p5DecorDiagnostic=' in single_runner
+          assert 'scripts/ci/p5-single-decor.sh' in single_workflow
           assert 'continue-on-error' not in script and 'continue-on-error' not in runner
           PY
       - name: 生成 Jar 校验和
