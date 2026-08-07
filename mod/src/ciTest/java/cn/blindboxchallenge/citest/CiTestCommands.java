@@ -132,6 +132,8 @@ public final class CiTestCommands {
 
     private static final UUID RECONNECT_TOKEN = UUID.fromString("77777777-7777-7777-7777-777777777777");
     private static final UUID P4_CHICKEN_FIXTURE_OWNER = UUID.fromString("44444444-4444-4444-4444-444444444444");
+    /** 与默认 1200 明确不同，确保强杀恢复夹具能识别 Fuse 被错误重置为配置默认值。 */
+    private static final int P4_CHICKEN_RECOVERY_FUSE_TICKS = 947;
 
     /** 强杀恢复夹具：只用生产实体的可持久构造器写入固定主人、启动刻、Fuse 和武装威力。 */
     private static int seedP4ChickenFixture(CommandSourceStack source) {
@@ -151,7 +153,7 @@ public final class CiTestCommands {
             }
             level.setBlock(support, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
             ClockworkChickenEntity chicken = new ClockworkChickenEntity(level, P4_CHICKEN_FIXTURE_OWNER, level.getGameTime(),
-                    ModServerConfig.CLOCKWORK_CHICKEN_FUSE_TICKS.get(), ModServerConfig.CLOCKWORK_CHICKEN_EXPLOSION_POWER.get());
+                    P4_CHICKEN_RECOVERY_FUSE_TICKS, ModServerConfig.CLOCKWORK_CHICKEN_EXPLOSION_POWER.get());
             ((net.minecraft.world.entity.Entity) chicken).setPos(position.getX() + 0.5D, position.getY(), position.getZ() + 0.5D);
             if (!level.addFreshEntity(chicken)) {
                 level.setBlock(support, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);

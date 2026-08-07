@@ -134,7 +134,9 @@ assert chicken_before['owner'] == '44444444-4444-4444-4444-444444444444'
 assert chicken_before['id'] == chicken_after['id'], 'chicken UUID changed across recovery'
 for key in ('owner', 'armed_game_time', 'explosion_power', 'position'):
     assert chicken_before[key] == chicken_after[key], f'chicken {key} changed across recovery'
-assert 0 < chicken_after['fuse'] < chicken_before['fuse'] <= 1200, 'chicken Fuse was reset, lost, or expired across recovery'
+# 重启后的 export 与装载处在同一服务器 tick；这里必须精确保留非默认 Fuse，不能假定已发生实体 tick。
+assert chicken_before['fuse'] == 947, 'fixture must use the non-default recovery Fuse'
+assert chicken_after['fuse'] == chicken_before['fuse'], 'chicken Fuse was reset, lost, or changed across recovery'
 assert chicken_after['explosion_power'] == 8, 'default chicken power must persist as 8'
 assert len(before.get('p4_recovery_doors', [])) == len(after.get('p4_recovery_doors', [])) == 2, 'fixture must contain two P4 door block entities'
 assert before['p4_recovery_doors'] == after['p4_recovery_doors'], 'door UUID, partner link, or safety GlobalPos changed across recovery'
