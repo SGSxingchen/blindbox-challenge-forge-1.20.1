@@ -118,6 +118,11 @@ jobs:
           grep -q 'FailureStage { DNS, PINNED_CONNECT_IPV4, PINNED_CONNECT_IPV6, TLS_HANDSHAKE, HTTP_HEADERS, BODY, CACHE, DECODE, UNKNOWN }' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'throw new AudioFailureException(FailureStage.DNS, exception);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'private static FailureStage connectStage(InetAddress address)' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          # 固定连接不得把 IPv4 字面量交给默认双栈 socket；仍须保留 IPv6 回退、同一已校验地址和无代理边界。
+          grep -q 'Arrays.stream(addresses).sorted(Comparator.comparingInt(RemoteAudioDownload::addressFamilyRank))' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          grep -q 'private static Socket directSocketFor(InetAddress address)' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          grep -q 'SocketChannel.open(address instanceof Inet4Address ? StandardProtocolFamily.INET : StandardProtocolFamily.INET6).socket()' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          ! grep -q 'Proxy.NO_PROXY' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'throw new AudioFailureException(stage, exception);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'throw new AudioFailureException(FailureStage.BODY, exception);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'FailureStage.DECODE' src/main/java/cn/blindboxchallenge/client/audio/RemoteMusicSoundInstance.java

@@ -4,11 +4,13 @@ import cn.blindboxchallenge.service.AudioUrlPolicy;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.Proxy;
+import java.net.StandardProtocolFamily;
 import java.net.URI;
 import java.net.Socket;
+import java.nio.channels.SocketChannel;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -207,7 +209,7 @@ public final class RemoteAudioDownload {
     }
 
     private static DownloadResponse openPinnedAtAddress(URI uri, InetAddress address, long deadlineNanos) throws IOException {
-        Socket plain = new Socket(Proxy.NO_PROXY);
+        Socket plain = directSocketFor(address);
         SSLSocket tls = null;
         ScheduledFuture<?> closeAtDeadline = null;
         FailureStage stage = connectStage(address);
@@ -253,6 +255,14 @@ public final class RemoteAudioDownload {
     /** 只暴露已尝试目标的地址族，不输出地址、主机、端口或异常消息。 */
     private static FailureStage connectStage(InetAddress address) {
         return address.getAddress().length == 4 ? FailureStage.PINNED_CONNECT_IPV4 : FailureStage.PINNED_CONNECT_IPV6;
+    }
+
+    /**
+     * 对已经逐个通过公网策略的候选建立无代理、地址族精确的 TCP socket。不能让 JVM 的双栈默认选择
+     * 把 IPv4 字面量重新放进不可达 IPv6 路径；IPv6 候选仍在 IPv4 候选全部失败后原样回退。
+     */
+    private static Socket directSocketFor(InetAddress address) throws IOException {
+        return SocketChannel.open(address instanceof Inet4Address ? StandardProtocolFamily.INET : StandardProtocolFamily.INET6).socket();
     }
 
     private static void writeRequest(OutputStream output, URI uri) throws IOException {
@@ -396,7 +406,9 @@ public final class RemoteAudioDownload {
             if (addresses.length == 0 || Arrays.stream(addresses).anyMatch(address -> !AudioUrlPolicy.isPublicAddress(address))) {
                 throw new IOException("在线音频域名解析到非公网地址");
             }
-            return addresses;
+            // Hosted Runner 已证实存在无 IPv6 路由的环境；所有答案都已先完整通过公网校验，故只改变
+            // 连接尝试顺序：优先可达 IPv4，IPv4 全部失败时仍严格尝试每个已校验 IPv6 答案。
+            return Arrays.stream(addresses).sorted(Comparator.comparingInt(RemoteAudioDownload::addressFamilyRank)).toArray(InetAddress[]::new);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new IOException("在线音频 DNS 解析被中断", exception);
@@ -407,6 +419,8 @@ public final class RemoteAudioDownload {
             throw new IOException("在线音频 DNS 解析失败", exception.getCause());
         }
     }
+
+    private static int addressFamilyRank(InetAddress address) { return address instanceof Inet4Address ? 0 : 1; }
 
     /**
      * HTTP/1.1 的非分块响应一旦声明 Content-Length，就必须按它完成消息体定界；不能等连接 EOF，

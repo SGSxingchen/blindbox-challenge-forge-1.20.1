@@ -70,3 +70,5 @@
 `68d6753` 已真实通过文本、任意门恢复及其余四项前置门禁；八音盒重新取得 Alice 生产配置右键、普通播放右键、两端同一生产 S2C 与两端失败事件，首错稳定为 `PINNED_CONNECT/SocketException`，尚未进入 TLS、HTTP、body 或解码。下一轮只在 Hosted 多客户端脚本加一份**不参与任何 marker/断言**的直连预检：对同 SHA 自制 OGG 夹具用 `curl --noproxy '*' --ipv4 --http1.1`，只保存退出码、HTTP 状态/版本、实际公网 IP 与下载字节数，不保存 body、URL、响应头或错误文字；无论结果如何，两个真实 Forge 客户端仍必须跑完原生产固定 IP 链路并以 PCM marker 决定通过。预检绝不允许代理、认证或吞掉客户端失败。
 
 `a5185bc` 的直连预检已在无代理 IPv4 下得到 `206/HTTP 1.1`、1 字节及公网 IP 的成功证据，而两个生产客户端仍在 Java 固定连接阶段失败，故不能把问题归为 Hosted Runner 直连出口或改用代理。下一轮只把客户端失败阶段细分为 `PINNED_CONNECT_IPV4` 与 `PINNED_CONNECT_IPV6`，仍只记录阶段和异常简单类名，不记录 IP、主机、端口、URL 或消息；据此确定生产 socket 失败的地址族后再作最小连接器修复。
+
+`3e59353` 的真实双客户端 artifact 已确认两端最终失败均为 `PINNED_CONNECT_IPV6/SocketException`，而同场景无代理 IPv4 预检继续成功；末次 IPv6 不能单独证明 IPv4 未尝试，故不把预检伪装成客户端下载成功。本次只修复固定 socket 的地址族歧义：在逐项拒绝危险 DNS 答案后稳定优先 IPv4，IPv4 全失败才回退全部已校验 IPv6；每个候选以相同地址族的无代理 `SocketChannel` 建立 TCP，再向同一 `InetAddress` 固定连接。DNS 全回答校验、NAT64/映射拒绝、10 秒单一截止、TLS/SNI/主机名验证、手写无认证/Cookie HTTP 与 PCM marker 均不变，仍由 Hosted Runner 验证。
