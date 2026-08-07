@@ -122,6 +122,10 @@ public final class CiClientP5DecorObservation {
                 aimAt(player, new Vec3(target.getX() + 0.5D, target.getY() + 0.0625D, target.getZ() + 0.5D));
                 if (hits(minecraft, target)) breakingAimTicks[slot]++; else breakingAimTicks[slot] = 0;
                 if (breakingAimTicks[slot] >= AIM_STABLE_TICKS) {
+                    // 先向原版攻击键映射压入一次按下事件，再保持按键；低矮画板已证明单纯保持状态会
+                    // 命中却不开始新的 destroy 动作。这里不调用 gameMode、不构造 C2S，后续挖掘
+                    // 进度、开始/停止包和掉落仍全部由 Minecraft 正式输入循环处理。
+                    KeyMapping.click(minecraft.options.keyAttack.getKey());
                     minecraft.options.keyAttack.setDown(true);
                     attackInjected[slot] = true;
                     CiTestProbe.LOGGER.info("P5 装饰方块客户端已按住真实攻击映射：轮次={}，玩家={}", round.index(), role);

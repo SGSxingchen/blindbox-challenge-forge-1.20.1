@@ -32,6 +32,8 @@
 
 同一 `4e79779` 的双客户端 run `31168158859` 则给出与低画板瞄准无关的下一首错：第 1 轮已完成 `PLACE_READY`、`BREAK_READY`、`SERVER_DROP`，第 2 轮却在 `WAIT_FOR_INITIAL_PICKUP` 超时，尚未到放置旗标。服务器日志确认 P4 文本在此前已输出 `BlindBoxBob fell out of the world` 和 `P4_TEXT_SERVER=success`；这是死亡笔记的必要真实死亡，并被既有门禁锁定为“之后不复活”。第 2 轮旧设计仍把初始 `floor_art_panel` 掉落实体交给 Bob，失败时两端已经同步到各自 R2 站位，却没有证据表明死亡玩家可以完成原版拾取。下一提交只让仍存活的 Alice 完成第 2 轮真实 `ItemEntity` 拾取、`keyUse` 和 `keyAttack`；Bob 仍以原死亡状态的第二个真实 Forge 客户端观察每轮生产状态和同 UUID 掉落实体，服务端仍强制两份 marker、同服双客户端、原版掉落与碰撞回收。它不复活 Bob、不减少客户端组合、不降低超时，也不把观察 marker 当作操作或通过。
 
+`0be0b2b` 的独立单客户端 run `31168748820` 已真实证明低位瞄准修正生效：第 2 轮 `hit=72,289,64` 正是目标、`break_aim_ticks=8`、`attack_injected=true`，且服务端已输出 `R2_BREAK_READY`；但方块仍未消失，严格停在 `WAIT_FOR_BREAK`。这排除手持物、站位、准星目标和稳定等待，却证明旧探针只保持攻击键状态时没有开始新的原版 destroy 动作。下一提交仅在同一稳定命中门槛到达后，通过 `KeyMapping.click(keyAttack)` 压入一次**原版攻击键**事件，再继续 `keyAttack.setDown(true)` 保持挖掘；它不访问 `gameMode`、不构造/发送网络包、不直写目标格，也不改变服务端掉落、回收或超时断言。质量门禁同时禁止这些替代调用。
+
 ### P4 交接回归修复（待 Hosted Runner 验证）
 
 `5074e60` 的真实双客户端 artifact `31164591985` 在小黄鸡业务已成功后暴露 cleanup 首错：P3 强杀恢复保存的 Alice 高空坐标 `(0.5,128.0,0.5)` 周围没有符合只读自然地面规则的格子。现由**下一场景** `P4TextCiScenario` 在鸡 cleanup 前创建、完整保存并拥有 5×5×3 临时安全交接平台；鸡仅消费该已准备平台，不拥有或伪造它。平台一直保留到 P4 八音盒完成，避免其 cleanup 再把 Alice 送回已撤支撑；P5 cleanup 也先恢复到该平台。canonical 导出后才在同一结束流程归还所有原方块并 `save-all/stop`。这不改生产玩法、小黄鸡 Fuse/TNT、死亡笔记或音频断言。
