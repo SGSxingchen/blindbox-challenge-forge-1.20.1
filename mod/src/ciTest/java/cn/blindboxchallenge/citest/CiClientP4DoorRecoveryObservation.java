@@ -79,9 +79,10 @@ public final class CiClientP4DoorRecoveryObservation {
                 KeyMapping.set(minecraft.options.keyUp.getKey(), true);
                 walking = true;
             }
-            // 已由真实按键走进源门格后立即松开，不能把夹具的持续前进输入带进跨维同步首帧。
-            // walking 状态和服务端超时仍保留：若门没有真正传送，玩家会停在源门并明确失败。
-            if (walking && self.blockPosition().equals(source)) KeyMapping.set(minecraft.options.keyUp.getKey(), false);
+            // 夹具固定面朝北（yaw=180）。不能只因 blockPosition 变为门格就松键：中心刚浅入
+            // 门格时，ServerTick.END 可能尚未消费对应位置包。必须以真实按键深入门格，确保服务端
+            // 已有可供 AABB 重验的入门位置；到门格北侧深处才松开，避免输入带进跨维同步首帧。
+            if (walking && enteredFixtureDoorDeeply(self, source)) KeyMapping.set(minecraft.options.keyUp.getKey(), false);
             if (walking && ++walkingTicks > 100) {
                 throw new IllegalStateException("真实前进键未进入 P4 跨维门：client=" + ((Entity) self).position()
                         + ", source=" + source + ", ticks=" + walkingTicks);
@@ -127,6 +128,14 @@ public final class CiClientP4DoorRecoveryObservation {
     private static boolean isDoorWithSafety(Minecraft minecraft, BlockPos door) {
         return minecraft.level.getBlockState(door).is(ModBlocks.ANYWHERE_DOOR.get())
                 && minecraft.level.getBlockState(door.below()).is(ModBlocks.SAFETY_LANDING.get());
+    }
+
+    /** 仅 P4 固定朝北夹具：玩家中心到达门格北侧 0.2 格以内，碰撞盒仍明显与门格相交。 */
+    private static boolean enteredFixtureDoorDeeply(LocalPlayer player, BlockPos door) {
+        Vec3 position = ((Entity) player).position();
+        return Math.abs(position.x - (door.getX() + 0.5D)) < 0.2D
+                && Math.abs(position.y - door.getY()) < 0.2D
+                && position.z <= door.getZ() + 0.2D;
     }
 
     private static boolean isAlice(LocalPlayer player) { return "BlindBoxAlice".equals(player.getGameProfile().getName()); }

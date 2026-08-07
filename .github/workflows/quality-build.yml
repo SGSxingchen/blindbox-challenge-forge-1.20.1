@@ -74,6 +74,7 @@ jobs:
           grep -q 'if (alice.isChangingDimension()) return;' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q 'P4 跨维门抵达下界后回到源维度' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q 'SOURCE_START_DISTANCE = 1.5D' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
+          grep -q 'enteredFixtureDoorDeeply(self, source)' src/ciTest/java/cn/blindboxchallenge/citest/CiClientP4DoorRecoveryObservation.java
           grep -q '真实前进键未进入 P4 跨维门：client=' src/ciTest/java/cn/blindboxchallenge/citest/CiClientP4DoorRecoveryObservation.java
           grep -q 'player.setDeltaMovement(Vec3.ZERO);' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'player.hurtMarked = true;' src/main/java/cn/blindboxchallenge/service/DoorService.java
