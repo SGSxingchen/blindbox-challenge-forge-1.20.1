@@ -12,7 +12,7 @@
 
 ## 真实放置、破坏与回收探针（待 Hosted Runner 验证）
 
-已落盘独立的 `P5DecorCiScenario` 和仅在独立 `ciTest` Jar 内存在的 `CiClientP5DecorObservation`。三轮均由同一专服与两个真实 Forge 客户端完成：Alice 放置/破坏抽象白色小摆件和中性纪念奖杯，Bob 放置/破坏风格化地面画板。服务端只搭临时石质支撑，并把原方块状态逐格保存；三个目标格必须开始为空，场景源码不向目标格 `setBlock`，不直调 `BlockItem#useOn`、`removeBlock`、`destroyBlock` 或 `Block.dropResources`。
+已落盘独立的 `P5DecorCiScenario` 和仅在独立 `ciTest` Jar 内存在的 `CiClientP5DecorObservation`。三轮均由同一专服与两个真实 Forge 客户端完成：仍存活的 Alice 对三个方块完成拾取、放置、破坏和回收；Bob 不被复活，持续作为第二个真实 Forge 客户端同步观察同一方块状态与掉落实体 UUID。服务端只搭临时石质支撑，并把原方块状态逐格保存；三个目标格必须开始为空，场景源码不向目标格 `setBlock`，不直调 `BlockItem#useOn`、`removeBlock`、`destroyBlock` 或 `Block.dropResources`。
 
 初始 `BlockItem` 不直接写入玩家手中：临时 `ItemEntity` 必须先经原版碰撞拾取进入生存背包，服务端记录其 UUID 并要求热键栏中恰有一件。客户端仅在脚本于服务端 `PLACE_READY` 后创建的阶段旗标存在、已经同步到定位、正式手持物、石质支撑和精确 `BlockHitResult` 时，才以 `KeyMapping.click(keyUse)` 走生产 C2S 放置。服务端随后要求目标成为预期生产 `BlockState` 且手持物恰好扣为零。
 
@@ -29,6 +29,8 @@
 `15403a8` 的单客户端 run `31167577826` 已证明已持有槽同步生效：第 1、2 轮均完成真实右键放置，且第 2 轮服务端已到 `BREAK_READY`。新首错精确停在 `WAIT_FOR_BREAK`：客户端诊断显示目标仍为画板、命中目标、瞄准 8 tick、`keyAttack` 已按住，但未使方块消失。与第 1 轮高摆件不同，地面画板只有 2/16 格高；原破坏站位横距 4.35 格时，眼睛到其命中面约 4.60 格，超过生存破坏距离。现仅把破坏站位收至 3.75 格，仍保留掉落不即时碰撞的距离；不改按键、`gameMode`、网络包、掉落或超时。待下一 SHA Hosted Runner 验证正常原版破坏/掉落路径。
 
 `4e79779` 的独立单客户端 run `31168158886` 已证明收近站位使第 1 轮完整通过，但第 2 轮仍在 `WAIT_FOR_BREAK`。artifact 的真实诊断为：玩家已在 `(-55.500,289.000,3.750)` 的破坏站位，主手为空、目标仍为 `floor_art_panel`、支撑为石头，却持续命中 `(-56,289,-1)` 而非目标 `(-56,289,0)`，`break_aim_ticks=0`、`attack_injected=false`；因此没有发生攻击映射注入，不能归咎于掉落或服务端结算。根因是旧代码瞄准完整方块中心 `y=targetY+0.5`，该射线会越过仅 2/16 格高的画板。下一提交只把真实准星目标降到三种装饰共同拥有的底座内 `y=targetY+0.0625`；仍由 `keyAttack` 驱动原版破坏，服务端超时、BlockState、掉落实体、双端观察和原版碰撞回收断言均不变，并由质量门禁锁定该低位命中点。
+
+同一 `4e79779` 的双客户端 run `31168158859` 则给出与低画板瞄准无关的下一首错：第 1 轮已完成 `PLACE_READY`、`BREAK_READY`、`SERVER_DROP`，第 2 轮却在 `WAIT_FOR_INITIAL_PICKUP` 超时，尚未到放置旗标。服务器日志确认 P4 文本在此前已输出 `BlindBoxBob fell out of the world` 和 `P4_TEXT_SERVER=success`；这是死亡笔记的必要真实死亡，并被既有门禁锁定为“之后不复活”。第 2 轮旧设计仍把初始 `floor_art_panel` 掉落实体交给 Bob，失败时两端已经同步到各自 R2 站位，却没有证据表明死亡玩家可以完成原版拾取。下一提交只让仍存活的 Alice 完成第 2 轮真实 `ItemEntity` 拾取、`keyUse` 和 `keyAttack`；Bob 仍以原死亡状态的第二个真实 Forge 客户端观察每轮生产状态和同 UUID 掉落实体，服务端仍强制两份 marker、同服双客户端、原版掉落与碰撞回收。它不复活 Bob、不减少客户端组合、不降低超时，也不把观察 marker 当作操作或通过。
 
 ### P4 交接回归修复（待 Hosted Runner 验证）
 

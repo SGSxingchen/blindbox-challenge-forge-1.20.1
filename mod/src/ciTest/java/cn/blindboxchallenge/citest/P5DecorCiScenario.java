@@ -49,7 +49,9 @@ public final class P5DecorCiScenario {
 
     public static final List<DecorRound> ROUNDS = List.of(
             new DecorRound(1, "BlindBoxAlice", ModItems.ABSTRACT_WHITE_FIGURINE, ModBlocks.ABSTRACT_WHITE_FIGURINE),
-            new DecorRound(2, "BlindBoxBob", ModItems.FLOOR_ART_PANEL, ModBlocks.FLOOR_ART_PANEL),
+            // P4 已严格验证 Bob 的真实死亡屏，且之后不得复活。P5 仍保留他作为第二个真实 Forge
+            // 观察客户端，但不能要求死亡玩家拾取/操作；三轮均由仍存活的 Alice 走原版输入路径。
+            new DecorRound(2, "BlindBoxAlice", ModItems.FLOOR_ART_PANEL, ModBlocks.FLOOR_ART_PANEL),
             new DecorRound(3, "BlindBoxAlice", ModItems.NEUTRAL_TROPHY, ModBlocks.NEUTRAL_TROPHY));
 
     private P5DecorCiScenario() {
