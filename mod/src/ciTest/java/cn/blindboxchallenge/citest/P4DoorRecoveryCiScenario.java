@@ -203,7 +203,10 @@ public final class P4DoorRecoveryCiScenario {
                     throw new IllegalStateException("杀后进入任意门未抵达下界安全站立格：expected=" + expected
                             + ", actual=" + actual + ", distance_sqr=" + distanceSqr + ", velocity=" + alice.getDeltaMovement());
                 }
-                if (alice.getDeltaMovement().lengthSqr() > 1.0E-8D) throw new IllegalStateException("杀后进入任意门仍保留源门移动速度");
+                // changeDimension 的落点确认和首个原版物理 tick 可能同帧完成：落地前的重力增量不是
+                // 源门惯性。位置必须始终精确，且只有在真实落地、速度已归零后才能写成功结果。
+                // 若原版未在 800 tick 内稳定，保留超时失败，绝不以短暂位置或速度状态放宽验收。
+                if (!alice.onGround() || alice.getDeltaMovement().lengthSqr() > 1.0E-8D) return;
                 verifyPersistedLinks();
                 if (verifyAliceMarker() && verifyBobMarker()) {
                     phase = Phase.READY;
