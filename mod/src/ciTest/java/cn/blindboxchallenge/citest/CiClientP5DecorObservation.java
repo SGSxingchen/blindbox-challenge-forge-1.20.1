@@ -86,6 +86,9 @@ public final class CiClientP5DecorObservation {
 
     private static void driveRealInputs(Minecraft minecraft, LocalPlayer player, String role, Path stageDirectory) {
         boolean singleClient = Boolean.getBoolean("blindbox.ci.p5DecorSingle");
+        // keyAttack 是客户端唯一共享的按键映射。旧轮次的 break flag 会保留到整个场景结束，故不能在
+        // 它的方块变为空气后立即在循环内抬键；否则会在同一 tick 之后持续取消下一轮已经开始的真实破坏。
+        boolean attackHeldByActiveRound = false;
         for (P5DecorCiScenario.DecorRound round : P5DecorCiScenario.ROUNDS) {
             if (!round.actorName().equals(role) && !(singleClient && "BlindBoxAlice".equals(role))) continue;
             int slot = round.index() - 1;
@@ -111,10 +114,7 @@ public final class CiClientP5DecorObservation {
             }
             Path breakFlag = stageDirectory.resolve("p5-decor-break-" + round.index() + ".flag");
             if (!Files.isRegularFile(breakFlag)) continue;
-            if (minecraft.level.getBlockState(target).isAir()) {
-                if (attackInjected[slot]) minecraft.options.keyAttack.setDown(false);
-                continue;
-            }
+            if (minecraft.level.getBlockState(target).isAir()) continue;
             if (!attackInjected[slot] && at(player.position(), P5DecorCiScenario.breakingStance(minecraft.level, round.index()))
                     && minecraft.level.getBlockState(target).is(round.block().get())) {
                 // 地面画板只有 2/16 格高。瞄准方块几何中心会让射线从其选择轮廓上方穿过，
@@ -131,7 +131,9 @@ public final class CiClientP5DecorObservation {
                     CiTestProbe.LOGGER.info("P5 装饰方块客户端已按住真实攻击映射：轮次={}，玩家={}", round.index(), role);
                 }
             }
+            if (attackInjected[slot] && minecraft.level.getBlockState(target).is(round.block().get())) attackHeldByActiveRound = true;
         }
+        if (!attackHeldByActiveRound) minecraft.options.keyAttack.setDown(false);
     }
 
     private static boolean at(Vec3 actual, Vec3 expected) {
