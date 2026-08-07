@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -20,14 +21,17 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.portal.PortalInfo;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.common.util.ITeleporter;
 
 /** 同一 SIGKILL 会话的跨维门恢复探针：杀前持久关联，杀后只能由 Alice 真实行走穿门。 */
 @Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -171,11 +175,11 @@ public final class P4DoorRecoveryCiScenario {
             BlockPos targetDoor = NETHER_TARGET;
             // 先保存两名真实玩家的场景前位置；Bob 随后进入下界只为按正常玩家语义加载目标区块。
             ActiveScenario scenario = new ActiveScenario(server, overworld, nether, alice, bob, sourceDoor, targetDoor, markerDirectory());
-            // 夹具通过原版跨维 tp 让 Bob 的真实玩家加载目标区块；之后才读取 BE，绝不由门逻辑强加载。
+            // 夹具通过完整的 Forge 玩家跨维迁移让 Bob 加载目标区块；之后才读取 BE，绝不由门逻辑强加载。
             moveFixturePlayer(server, nether, bob, new Vec3(targetDoor.getX() + 2.5D, targetDoor.getY(), targetDoor.getZ() + 0.5D), 90.0F, 0.0F);
             scenario.verifyPersistedLinks();
             scenario.ensureNoOldMarkers();
-            // P3 强杀恢复后 Alice 在下界；同样使用原版跨维 tp 返回主世界源门，随后只能靠生产门逻辑跨维。
+            // P3 强杀恢复后 Alice 在下界；夹具完整迁移回主世界源门，随后只能靠生产门逻辑跨维。
             moveFixturePlayer(server, overworld, alice, new Vec3(sourceDoor.getX() + 0.5D, sourceDoor.getY(), sourceDoor.getZ() + 2.5D), 180.0F, 0.0F);
             // 原版跨维命令可能替换服务器侧玩家对象；夹具和后续断言都必须按 UUID 重新取当前在线对象。
             ServerPlayer movedAlice = scenario.alice();
@@ -303,19 +307,49 @@ public final class P4DoorRecoveryCiScenario {
         return player;
     }
 
-    /** 仅用于隔离夹具定位；必须走原版跨维命令，并在命令后严格核验世界、坐标和静止状态。 */
+    /** 仅用于隔离夹具定位；必须走完整玩家跨维迁移，并在结束后严格核验世界、坐标和静止状态。 */
     private static void moveFixturePlayer(MinecraftServer server, ServerLevel destinationLevel, ServerPlayer player,
                                           Vec3 destination, float yaw, float pitch) {
-        CommandSourceStack source = server.createCommandSourceStack().withPermission(4).withLevel(destinationLevel).withSuppressedOutput();
-        String command = "tp " + player.getGameProfile().getName() + " " + destination.x + " " + destination.y + " " + destination.z
-                + " " + yaw + " " + pitch;
-        if (server.getCommands().performPrefixedCommand(source, command) <= 0
-                || player.serverLevel() != destinationLevel || player.position().distanceToSqr(destination) > 1.0E-6D) {
-            throw new IllegalStateException("P4 跨维门夹具原版 tp 未抵达预期维度或坐标：" + player.getGameProfile().getName());
+        if (player.serverLevel().dimension().equals(destinationLevel.dimension())) {
+            player.teleportTo(destinationLevel, destination.x, destination.y, destination.z, yaw, pitch);
+        } else if (player.changeDimension(destinationLevel, new FixtureTeleporter(destination, yaw, pitch)) != player) {
+            throw new IllegalStateException("P4 跨维门夹具未迁移当前玩家对象：" + player.getGameProfile().getName());
+        }
+        if (player.serverLevel() != destinationLevel || player.position().distanceToSqr(destination) > 1.0E-6D) {
+            throw new IllegalStateException("P4 跨维门夹具未抵达预期维度或坐标：" + player.getGameProfile().getName());
         }
         player.setDeltaMovement(Vec3.ZERO);
         player.hurtMarked = true;
         player.resetFallDistance();
+    }
+
+    /** 夹具不创建门户，只复用原版玩家跨维握手把已知定位坐标写入目标维度包。 */
+    private static final class FixtureTeleporter implements ITeleporter {
+        private final Vec3 destination;
+        private final float yaw;
+        private final float pitch;
+
+        private FixtureTeleporter(Vec3 destination, float yaw, float pitch) {
+            this.destination = destination;
+            this.yaw = yaw;
+            this.pitch = pitch;
+        }
+
+        @Override
+        public PortalInfo getPortalInfo(Entity entity, ServerLevel destinationLevel, Function<ServerLevel, PortalInfo> defaultPortalInfo) {
+            return new PortalInfo(destination, Vec3.ZERO, yaw, pitch);
+        }
+
+        @Override
+        public Entity placeEntity(Entity entity, ServerLevel currentLevel, ServerLevel destinationLevel, float suggestedYaw,
+                                  Function<Boolean, Entity> repositionEntity) {
+            return repositionEntity.apply(false);
+        }
+
+        @Override
+        public boolean playTeleportSound(ServerPlayer player, ServerLevel sourceLevel, ServerLevel destinationLevel) {
+            return false;
+        }
     }
 
     private static Path markerDirectory() {
