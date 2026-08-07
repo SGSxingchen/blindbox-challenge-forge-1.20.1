@@ -139,8 +139,9 @@ for key in ('owner', 'armed_game_time', 'explosion_power', 'position'):
 elapsed_chicken_ticks = int(after['game_time']) - int(before['game_time'])
 assert chicken_before['fuse'] == 947, 'fixture must use the non-default recovery Fuse'
 assert elapsed_chicken_ticks > 0, 'recovery must advance server time'
-assert 0 < chicken_after['fuse'] < chicken_before['fuse'], 'chicken Fuse was reset, lost, or expired across recovery'
-assert chicken_after['fuse'] >= chicken_before['fuse'] - elapsed_chicken_ticks, 'chicken Fuse advanced faster than recovery ticks'
+# export 命令可能与实体 tick 同刻或相邻刻：允许 0..elapsed 的真实倒计时变化，但绝不允许重置、丢失或跳变。
+assert chicken_before['fuse'] - elapsed_chicken_ticks <= chicken_after['fuse'] <= chicken_before['fuse'], \
+    'chicken Fuse was reset, lost, or changed beyond recovery ticks'
 assert chicken_after['explosion_power'] == 8, 'default chicken power must persist as 8'
 assert len(before.get('p4_recovery_doors', [])) == len(after.get('p4_recovery_doors', [])) == 2, 'fixture must contain two P4 door block entities'
 assert before['p4_recovery_doors'] == after['p4_recovery_doors'], 'door UUID, partner link, or safety GlobalPos changed across recovery'
