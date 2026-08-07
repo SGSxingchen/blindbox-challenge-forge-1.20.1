@@ -45,7 +45,11 @@ import net.minecraft.client.Minecraft;
 /** 纯客户端 HTTPS 下载与缓存。每一跳都重新解析并把已校验公网 IP 固定到 TLS 连接，避免 DNS 重绑定。 */
 public final class RemoteAudioDownload {
     /** 仅客户端日志使用的失败阶段；不含 URL、响应头、路径或异常消息。 */
-    public enum FailureStage { DNS, PINNED_CONNECT_IPV4, PINNED_CONNECT_IPV6, TLS_HANDSHAKE, HTTP_HEADERS, BODY, CACHE, DECODE, UNKNOWN }
+    public enum FailureStage {
+        DNS, PINNED_CONNECT_IPV4, PINNED_CONNECT_IPV6,
+        TLS_SOCKET_WRAP, TLS_PARAMETERS, TLS_DEADLINE_ARM, TLS_HANDSHAKE, TLS_POST_HANDSHAKE_DEADLINE, TLS_HOSTNAME_VERIFY,
+        HTTP_HEADERS, BODY, CACHE, DECODE, UNKNOWN
+    }
 
     /** 保留实际 cause 供本地链路处理；对外诊断只允许读取无敏感数据的阶段枚举。 */
     public static final class AudioFailureException extends IOException {
@@ -231,18 +235,23 @@ public final class RemoteAudioDownload {
         try {
             plain.connect(new InetSocketAddress(address, 443), remainingMillis(deadlineNanos));
             plain.setSoTimeout(remainingMillis(deadlineNanos));
-            stage = FailureStage.TLS_HANDSHAKE;
+            stage = FailureStage.TLS_SOCKET_WRAP;
             tls = (SSLSocket) TLS_FACTORY.createSocket(plain, uri.getHost(), 443, true);
+            stage = FailureStage.TLS_PARAMETERS;
             SSLParameters parameters = tls.getSSLParameters();
             parameters.setEndpointIdentificationAlgorithm("HTTPS");
             parameters.setServerNames(java.util.List.of(new SNIHostName(uri.getHost())));
             tls.setSSLParameters(parameters);
+            stage = FailureStage.TLS_DEADLINE_ARM;
             long closeDelay = remainingNanos(deadlineNanos);
             SSLSocket pinnedSocket = tls;
             closeAtDeadline = DEADLINE_ENFORCER.schedule(() -> closeQuietly(pinnedSocket), closeDelay, TimeUnit.NANOSECONDS);
             tls.setSoTimeout(remainingMillis(deadlineNanos));
+            stage = FailureStage.TLS_HANDSHAKE;
             tls.startHandshake();
+            stage = FailureStage.TLS_POST_HANDSHAKE_DEADLINE;
             ensureBeforeDeadline(deadlineNanos);
+            stage = FailureStage.TLS_HOSTNAME_VERIFY;
             if (!HttpsURLConnection.getDefaultHostnameVerifier().verify(uri.getHost(), tls.getSession())) {
                 throw new IOException("在线音频 TLS 证书主机名不匹配");
             }

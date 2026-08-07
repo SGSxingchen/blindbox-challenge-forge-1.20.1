@@ -74,3 +74,5 @@
 `3e59353` 的真实双客户端 artifact 已确认两端最终失败均为 `PINNED_CONNECT_IPV6/SocketException`，而同场景无代理 IPv4 预检继续成功；末次 IPv6 不能单独证明 IPv4 未尝试，故不把预检伪装成客户端下载成功。本次只修复固定 socket 的地址族歧义：在逐项拒绝危险 DNS 答案后稳定优先 IPv4，IPv4 全失败才回退全部已校验 IPv6；每个候选以相同地址族的无代理 `SocketChannel` 建立 TCP，再向同一 `InetAddress` 固定连接。DNS 全回答校验、NAT64/映射拒绝、10 秒单一截止、TLS/SNI/主机名验证、手写无认证/Cookie HTTP 与 PCM marker 均不变，仍由 Hosted Runner 验证。
 
 `98c0aca` 的双客户端仍在同一首错失败，说明地址族精确 socket 本身尚未使 Hosted Forge 客户端进入 TLS；两端最终阶段仍为 IPv6，不能据此断言 IPv4 的实际异常类型。下一轮只让既有**单条客户端本地失败日志**附带每个已尝试失败阶段的最内层异常简单类名（例如 `PINNED_CONNECT_IPV4/SocketException`），不含地址、URL、端口、异常消息、响应头、Cookie、令牌或完整栈，也不回传服务端；它不改变连接、下载、时限、TLS 或任何 PCM marker。
+
+`f92ee0d` 的同 SHA 双客户端运行 `31155161783` 已使前四项核心门禁成功，却在两端一致得到 `TLS_HANDSHAKE/IOException` 后才回退到不可达 IPv6；服务端仍严格停在 `WAIT_OGG_FIRST`，两次都是生产失败事件而非成功。该粗阶段同时覆盖 TLS socket 包装、SSL 参数/SNI、截止任务与读超时、实际握手、握手后总截止复核和二次主机名验证，不能把泛型 `IOException` 猜成其中任一步。下一轮只把已有脱敏日志细分为这些内部阶段并继续只输出阶段与最内层异常简单类名；不输出主机、地址、端口、URL、响应、消息或栈，不改变连接、代理、TLS/主机名校验、时限、缓存或 PCM marker。待 Hosted Runner 给出精确阶段后才作最小生产修复。
