@@ -8,12 +8,21 @@ MC_VERSION="1.20.1"
 SERVER_DIR="build/ci-lifecycle-server"
 EVIDENCE_DIR="build/ci-lifecycle-evidence"
 INSTALLER="forge-${MC_VERSION}-${FORGE_VERSION}-installer.jar"
-FORMAL_JAR="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*-all.jar' -print)"
-CITEST_JAR="build/libs/blindboxchallenge-0.1.0-p1-citest.jar"
+single_jar() {
+  local pattern="$1"
+  local -a matches=()
+  mapfile -t matches < <(find build/libs -maxdepth 1 -type f -name "${pattern}" -print)
+  if [ "${#matches[@]}" -ne 1 ]; then
+    printf '期望唯一的构建产物 %s，实际找到 %s 项\n' "${pattern}" "${#matches[@]}" >&2
+    exit 1
+  fi
+  printf '%s' "${matches[0]}"
+}
+FORMAL_JAR="$(single_jar 'blindboxchallenge-*-all.jar')"
+CITEST_JAR="$(single_jar 'blindboxchallenge-*-citest.jar')"
 
 test -n "${GITHUB_ACTIONS:-}"
-test -n "${FORMAL_JAR}" && test -f "${FORMAL_JAR}"
-test -f "${CITEST_JAR}"
+test -f "${FORMAL_JAR}" && test -f "${CITEST_JAR}"
 PRODUCT_SHA256="$(sha256sum "${FORMAL_JAR}" | awk '{print $1}')"
 export BLINDBOX_PRODUCT_SHA256="${PRODUCT_SHA256}"
 

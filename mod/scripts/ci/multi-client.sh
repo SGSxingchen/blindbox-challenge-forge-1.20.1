@@ -6,13 +6,23 @@ SERVER_DIR="build/ci-multi-server"
 CLIENT_TEMPLATE="build/ci-multi-client-template"
 EVIDENCE="build/ci-multi-evidence"
 INSTALLER="forge-${MC_VERSION}-${FORGE_VERSION}-installer.jar"
-FORMAL="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*-all.jar' -print)"
-CITEST="build/libs/blindboxchallenge-0.1.0-p1-citest.jar"
+single_jar() {
+  local pattern="$1"
+  local -a matches=()
+  mapfile -t matches < <(find build/libs -maxdepth 1 -type f -name "${pattern}" -print)
+  if [ "${#matches[@]}" -ne 1 ]; then
+    printf '期望唯一的构建产物 %s，实际找到 %s 项\n' "${pattern}" "${#matches[@]}" >&2
+    exit 1
+  fi
+  printf '%s' "${matches[0]}"
+}
+FORMAL="$(single_jar 'blindboxchallenge-*-all.jar')"
+CITEST="$(single_jar 'blindboxchallenge-*-citest.jar')"
 test -n "${GITHUB_ACTIONS:-}"
 : "${GITHUB_REPOSITORY:?真实在线音频 CI 缺少 GitHub 仓库名}"
 : "${GITHUB_SHA:?真实在线音频 CI 缺少提交 SHA}"
 export BLINDBOX_CITEST_P4_AUDIO_BASE_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/mod/src/ciTest/resources/ci-audio"
-test -n "${FORMAL}" && test -f "${FORMAL}" && test -f "${CITEST}"
+test -f "${FORMAL}" && test -f "${CITEST}"
 rm -rf "${SERVER_DIR}" "${CLIENT_TEMPLATE}" "${EVIDENCE}" build/ci-client-1 build/ci-client-2
 mkdir -p "${SERVER_DIR}" "${EVIDENCE}"
 EVIDENCE_ABS="$(cd "${EVIDENCE}" && pwd)"

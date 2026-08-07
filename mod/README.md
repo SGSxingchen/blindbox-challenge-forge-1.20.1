@@ -1,7 +1,7 @@
 # 盲盒挑战生存 Forge 模组
 
-目标运行环境：Java 17、Minecraft 1.20.1、Forge 47.4.22。P1—P5 的技术范围已在 GitHub Hosted Runner 完成同 SHA 六门禁验收；证据、候选 Jar SHA-256 和真实边界见仓库根目录的 [P5 验收矩阵](../docs/P5_ACCEPTANCE.md)。
+目标版本为 **1.0.0**，运行环境为 Java 17、Minecraft 1.20.1、Forge 47.4.22。客户端和专用服务器均只安装发布页提供的 `blindboxchallenge-1.0.0-all.jar`；下载后使用同页 SHA-256 文件执行 `sha256sum -c blindboxchallenge-1.0.0-all.jar.sha256`。
 
-本机禁止运行 Gradle、Forge 或 Minecraft 动态验证；构建、专服及真实客户端验证只在 GitHub Hosted Runner 执行。`src/ciTest` 与 `*-citest.jar` 是 CI 专用探针/夹具，绝不能作为正式模组安装或分发。
+`src/ciTest` 与 `*-citest.jar` 是 GitHub Hosted Runner 专用探针和受控音频夹具，绝不能安装、分发或混入正式包。本机不运行 Gradle、Forge 或 Minecraft 动态验证；构建、专服和真实客户端验证只在 Hosted Runner 执行。
 
-当前尚未发布正式版。P5 的 68 张正式 PNG 已完成项目内原创重绘，原版图片仅作需求输入且不进入 Release；其余项目资产由项目方提供，许可本项目使用、修改与发行，不外推对项目外第三方的再授权。详见 [资源审计清单](../docs/ASSET_MANIFEST.md)。
+八音盒只接受 HTTPS URL，并仅对触发当时在线的玩家一次播放；缓存压力只证明受控 URL 和单进程缓存语义。68 张正式 PNG 为项目内原创重绘，原版图片不进入 Release；其余资产由项目方许可本项目使用、修改与发行，不外推对项目外第三方的授权。完整安装说明、验收和真实边界见仓库根目录 [README](../README.md) 与 [P5 验收矩阵](../docs/P5_ACCEPTANCE.md)。

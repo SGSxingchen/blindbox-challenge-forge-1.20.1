@@ -25,7 +25,7 @@
 ## 八音盒压力与发行证据
 
 * 在 Hosted Runner 增加受控的多 URL 真实 GUI → 下载 → PCM 场景，验证 64 MiB LRU 驱逐、被驱逐后重新下载、同 URL 单飞、损坏缓存删除与重试。测试音频只放独立 `ciTest` Jar，不能用预写 marker 或生产内置音频替代。
-* 统一正式语义版本，移除当前 `0.1.0-p1` 的开发标记；更新根 README 与 `mod/README.md` 的安装、专服、客户端、八音盒 HTTPS/一次播放限制、JLayer LGPL 和真实边界说明。
+* 已统一正式语义版本为 `1.0.0`，并更新根 README 与 `mod/README.md` 的安装、专服、客户端、八音盒 HTTPS/一次播放限制、JLayer LGPL 和真实边界说明；该版本仍须以自身 SHA 取得六项门禁后发布。
 * 只有最终同 SHA 六门禁全绿后，才生成正式 Jar/SHA-256、创建不可变 Git tag 和 GitHub Release，并发布中文使用说明、完整资产/许可证记录与未覆盖边界。
 
 ## 必须人工或外部裁决的边界

@@ -37,10 +37,12 @@ jobs:
           python scripts/ci/install-client.py build/ci-client
           mkdir -p build/ci-client/mods build/ci-client/config
           # 单客户端必须安装 JarJar 的发行候选，不能误取不含 JLayer 的普通 reobf jar。
-          formal="$(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*-all.jar' -print)"
-          test -n "$formal" && test -f "$formal"
-          cp "$formal" build/ci-client/mods/
-          cp build/libs/blindboxchallenge-0.1.0-p1-citest.jar build/ci-client/mods/
+          mapfile -t formal_jars < <(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*-all.jar' -print)
+          test "${#formal_jars[@]}" -eq 1
+          cp "${formal_jars[0]}" build/ci-client/mods/
+          mapfile -t citest_jars < <(find build/libs -maxdepth 1 -type f -name 'blindboxchallenge-*-citest.jar' -print)
+          test "${#citest_jars[@]}" -eq 1
+          cp "${citest_jars[0]}" build/ci-client/mods/
           printf 'earlyWindowControl=false\n' > build/ci-client/config/fml.toml
       - name: Xvfb 启动真实 Forge 客户端并稳定进入主菜单
         run: python scripts/ci/run-client-smoke.py build/ci-client

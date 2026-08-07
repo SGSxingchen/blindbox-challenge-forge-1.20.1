@@ -193,7 +193,7 @@
 |`mod/src/main/resources/data/blindboxchallenge/loot_tables/blocks/neutral_trophy.json`|`b7296f69534d64e730efa67a3e83a6521819074cc9ea1bcbf96cd549d80ee4fb`|项目方提供|许可本项目使用、修改与发行；不外推第三方再授权|项目方提供；许可本项目使用、修改与发行|2026-08-07|
 |`mod/src/main/resources/data/blindboxchallenge/loot_tables/blocks/safety_landing.json`|`db4b236020a813f8586029ed8fd848dc6e10b27ceb10c4cc2dfd3ef1248ebc98`|项目方提供|许可本项目使用、修改与发行；不外推第三方再授权|项目方提供；许可本项目使用、修改与发行|2026-08-07|
 |`mod/src/main/resources/data/blindboxchallenge/loot_tables/blocks/stone_pillow.json`|`d23f0e40cc344e97b0bcdf875364a57d13f8139b5f2e919af583d2be9125e296`|项目方提供|许可本项目使用、修改与发行；不外推第三方再授权|项目方提供；许可本项目使用、修改与发行|2026-08-07|
-|`mod/src/main/resources/pack.mcmeta`|`42cd5aa26fabac495ede0b61d34be22f00879c314893e7931297765089eafded`|项目方提供|许可本项目使用、修改与发行；不外推第三方再授权|项目方提供；许可本项目使用、修改与发行|2026-08-07|
+|`mod/src/main/resources/pack.mcmeta`|`288be2d56b11e12a28e02657e0ac3324b3e86c86ab1549ad3b190bf19d8a9104`|项目方提供|许可本项目使用、修改与发行；不外推第三方再授权|项目方提供；许可本项目使用、修改与发行|2026-08-07|
 
 ## 维护规则
 
