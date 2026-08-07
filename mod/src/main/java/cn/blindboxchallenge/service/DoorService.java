@@ -33,7 +33,8 @@ public final class DoorService {
     private static final Map<UUID, GlobalPos> ARRIVAL_DOOR_IMMUNITIES = new HashMap<>();
     /**
      * 门不能在 entityInside / 玩家移动包调用栈内直接传送：原版会继续消费同一位置包。这里只保存
-     * 已通过入口可信检查的源门，ServerTick.END 会按 UUID、碰撞盒与门格重新验全量事实。
+     * 已通过入口可信检查且由原版实际 entityInside 调用捕获的源门，ServerTick.END 会按 UUID
+     * 与全量门事实重新验；不能在该时点再要求碰撞盒留在门格，服务器追帧会先消费多个移动包。
      */
     private static final Map<UUID, GlobalPos> PENDING_TELEPORTS = new HashMap<>();
 
@@ -103,7 +104,7 @@ public final class DoorService {
         PENDING_TELEPORTS.putIfAbsent(player.getUUID(), sourceGlobal);
     }
 
-    /** ServerTick.END 在原始移动包已经返回后消费请求；拒绝离开门格、死亡或状态变化的请求。 */
+    /** ServerTick.END 在原始移动包已经返回后消费真实入门请求；拒绝死亡、换维或状态变化的请求。 */
     public static void processPendingTeleports(MinecraftServer server) {
         if (PENDING_TELEPORTS.isEmpty()) return;
         Map<UUID, GlobalPos> pending = new HashMap<>(PENDING_TELEPORTS);
@@ -112,8 +113,10 @@ public final class DoorService {
             ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
             GlobalPos source = entry.getValue();
             if (player == null || !player.isAlive() || player.isPassenger() || !player.mayBuild()
-                    || player.isChangingDimension() || !source.dimension().equals(player.serverLevel().dimension())
-                    || !insideDoorCell(player, source.pos())) continue;
+                    || player.isChangingDimension() || !source.dimension().equals(player.serverLevel().dimension())) continue;
+            // PENDING 只能由本服务器 tick 的 Block#entityInside 写入。追帧时同一 tick 可先消费多个
+            // 合法移动包，玩家的最终 AABB 已越过门格；以末态 AABB 拒绝会吞掉已经发生的真实入门。
+            // 下方 execute 仍对源门、权限、冷却、反链、安全点、区块和出口做完整当前态重验。
             executeVerifiedTeleport(player, player.serverLevel(), source.pos());
         }
     }
