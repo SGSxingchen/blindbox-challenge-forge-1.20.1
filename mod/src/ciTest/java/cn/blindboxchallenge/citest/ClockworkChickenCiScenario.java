@@ -268,8 +268,8 @@ public final class ClockworkChickenCiScenario {
             // P3 的强杀恢复故意保留 Alice 的高空持久位置；它是恢复证据，不是后续场景可站立的
             // 世界格。若按原坐标还原，下一场景输入前便会被原版坠落伤害杀死。这里仅为 ciTest
             // 交接搜索临近已存在的安全站立格，找不到即严格失败，绝不在危险原点放置永久垫块。
-            moveFixturePlayer(alice, safeHandoffDestination(aliceOriginalPosition), aliceYaw, alicePitch);
-            moveFixturePlayer(bob, safeHandoffDestination(bobOriginalPosition), bobYaw, bobPitch);
+            moveFixturePlayer(alice, safeHandoffDestination(alice, aliceOriginalPosition), aliceYaw, alicePitch);
+            moveFixturePlayer(bob, safeHandoffDestination(bob, bobOriginalPosition), bobYaw, bobPitch);
             alice.containerMenu.broadcastChanges();
         }
 
@@ -305,8 +305,13 @@ public final class ClockworkChickenCiScenario {
             }
         }
 
-        /** 查找靠近原定位的已存在可站立地面；只读世界状态，不能以临时方块或伤害豁免掩盖失败。 */
-        private Vec3 safeHandoffDestination(Vec3 requested) {
+        /**
+         * 下一场景若已显式保存其交接平台，就优先交给该平台；否则仍只读搜索已有可站立地面。
+         * 小黄鸡自身既不创建、也不拥有该平台，不能把它误当作本场景成功或恢复证据。
+         */
+        private Vec3 safeHandoffDestination(ServerPlayer player, Vec3 requested) {
+            Vec3 prepared = P4TextCiScenario.preparedHandoffDestination(player.getGameProfile().getName());
+            if (prepared != null) return prepared;
             BlockPos center = BlockPos.containing(requested);
             for (int radius = 0; radius <= 16; radius++) {
                 for (int x = center.getX() - radius; x <= center.getX() + radius; x++) {

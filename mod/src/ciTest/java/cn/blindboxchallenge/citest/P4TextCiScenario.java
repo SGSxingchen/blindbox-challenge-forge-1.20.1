@@ -9,14 +9,21 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -29,8 +36,52 @@ import net.minecraftforge.fml.common.Mod;
 public final class P4TextCiScenario {
     public static final String LETTER_BODY = "P4 letter";
     private static ActiveScenario active;
+    /**
+     * P3 强杀恢复保留的高空坐标不能直接交给小黄鸡 cleanup。由下一场景预先拥有并保存的短期平台
+     * 接手二人，直至 P4 八音盒结束后显式归还；它不是 P4 文本成功 marker，也不改变死亡笔记语义。
+     */
+    private static HandoffFixture handoffFixture;
 
     private P4TextCiScenario() {}
+
+    public static int prepareHandoff(CommandSourceStack source) {
+        if (active != null || handoffFixture != null) {
+            source.sendFailure(Component.literal("P4 文本安全交接夹具已存在或场景正在运行"));
+            return 0;
+        }
+        try {
+            handoffFixture = HandoffFixture.create(source.getServer());
+            source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P4_TEXT_HANDOFF_PREPARED=success"), false);
+            return 1;
+        } catch (Exception exception) {
+            handoffFixture = null;
+            CiTestProbe.LOGGER.error("Cannot prepare P4 text handoff fixture", exception);
+            source.sendFailure(Component.literal("CI P4 文本安全交接夹具失败：" + exception.getClass().getSimpleName()));
+            return 0;
+        }
+    }
+
+    /** 仅供下一场景由小黄鸡 cleanup 调用；返回 null 表示此前没有按流程准备交接平台。 */
+    static Vec3 preparedHandoffDestination(String playerName) {
+        return handoffFixture == null ? null : handoffFixture.destination(playerName);
+    }
+
+    public static int releaseHandoff(CommandSourceStack source) {
+        if (active != null || handoffFixture == null) {
+            source.sendFailure(Component.literal("没有可归还的 P4 文本安全交接夹具"));
+            return 0;
+        }
+        try {
+            handoffFixture.restore();
+            handoffFixture = null;
+            source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P4_TEXT_HANDOFF_RELEASED=success"), false);
+            return 1;
+        } catch (Exception exception) {
+            CiTestProbe.LOGGER.error("Cannot release P4 text handoff fixture", exception);
+            source.sendFailure(Component.literal("CI P4 文本安全交接夹具归还失败：" + exception.getClass().getSimpleName()));
+            return 0;
+        }
+    }
 
     public static int start(CommandSourceStack source) {
         if (active != null) {
@@ -38,6 +89,7 @@ public final class P4TextCiScenario {
             return 0;
         }
         try {
+            if (handoffFixture == null) throw new IllegalStateException("P4 文本场景缺少已保存的安全交接平台");
             active = ActiveScenario.create(source.getServer());
             source.sendSuccess(() -> Component.literal("BLINDBOX_CITEST_P4_TEXT_STARTED=success"), false);
             return 1;
@@ -284,6 +336,60 @@ public final class P4TextCiScenario {
             String configured = System.getenv("BLINDBOX_CITEST_P4_MARKER_DIR");
             if (configured == null || configured.isBlank()) throw new IllegalStateException("缺少 BLINDBOX_CITEST_P4_MARKER_DIR");
             return Path.of(configured).toAbsolutePath();
+        }
+    }
+
+    /**
+     * P4 文本拥有的阶段交接平台。位置紧邻后续 P4 八音盒夹具，保证两名真实客户端仍在其跟踪半径；
+     * 其所有方块状态均在 release 时原样恢复，绝不把安全垫留入存档。
+     */
+    private static final class HandoffFixture {
+        private final ServerLevel level;
+        private final Map<BlockPos, BlockState> before;
+        private final Vec3 aliceDestination;
+        private final Vec3 bobDestination;
+
+        private HandoffFixture(ServerLevel level, Map<BlockPos, BlockState> before, Vec3 aliceDestination, Vec3 bobDestination) {
+            this.level = level;
+            this.before = before;
+            this.aliceDestination = aliceDestination;
+            this.bobDestination = bobDestination;
+        }
+
+        private static HandoffFixture create(MinecraftServer server) {
+            ServerLevel level = server.overworld();
+            BlockPos center = level.getSharedSpawnPos().offset(24, 158, 24);
+            Map<BlockPos, BlockState> before = new LinkedHashMap<>();
+            for (int x = -2; x <= 2; x++) {
+                for (int z = -2; z <= 2; z++) {
+                    BlockPos support = center.offset(x, 0, z);
+                    for (BlockPos position : java.util.List.of(support, support.above(), support.above(2))) {
+                        BlockState state = level.getBlockState(position);
+                        if (!state.isAir()) {
+                            throw new IllegalStateException("P4 文本安全交接夹具位置不是空气：" + position);
+                        }
+                        before.put(position, state);
+                    }
+                }
+            }
+            for (int x = -2; x <= 2; x++) {
+                for (int z = -2; z <= 2; z++) {
+                    level.setBlock(center.offset(x, 0, z), Blocks.OBSIDIAN.defaultBlockState(), 3);
+                }
+            }
+            return new HandoffFixture(level, before,
+                    new Vec3(center.getX() - 0.5D, center.getY() + 1.0D, center.getZ() + 0.5D),
+                    new Vec3(center.getX() + 1.5D, center.getY() + 1.0D, center.getZ() + 0.5D));
+        }
+
+        private Vec3 destination(String playerName) {
+            if ("BlindBoxAlice".equals(playerName)) return aliceDestination;
+            if ("BlindBoxBob".equals(playerName)) return bobDestination;
+            throw new IllegalStateException("P4 文本安全交接夹具不接受未知玩家：" + playerName);
+        }
+
+        private void restore() {
+            before.forEach((position, state) -> level.setBlock(position, state, 3));
         }
     }
 }

@@ -1,0 +1,189 @@
+package cn.blindboxchallenge.citest;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.UUID;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+
+/**
+ * 仅随 ciTest Jar 安装的 P5 客户端观察与输入器。
+ *
+ * <p>它只在脚本创建的阶段旗标存在、自己已经收到了服务端定位/手持物/支撑方块后，才使用真实
+ * KeyMapping 输入原版右键和攻击路径。marker 不由脚本预写，且只在本客户端实际收到三项生产
+ * BlockState 与三枚正常 ItemEntity 后写入；服务端仍按 UUID、物品和坐标反查。</p>
+ */
+@Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
+public final class CiClientP5DecorObservation {
+    private static final int AIM_STABLE_TICKS = 8;
+    private static final boolean[] placedObserved = new boolean[P5DecorCiScenario.ROUNDS.size()];
+    private static final UUID[] dropObserved = new UUID[P5DecorCiScenario.ROUNDS.size()];
+    private static final boolean[] useInjected = new boolean[P5DecorCiScenario.ROUNDS.size()];
+    private static final boolean[] attackInjected = new boolean[P5DecorCiScenario.ROUNDS.size()];
+    private static final int[] placementAimTicks = new int[P5DecorCiScenario.ROUNDS.size()];
+    private static final int[] breakingAimTicks = new int[P5DecorCiScenario.ROUNDS.size()];
+    private static boolean markerWritten;
+
+    private CiClientP5DecorObservation() {
+    }
+
+    // 在正式 Minecraft 输入处理之前注入 use click；攻击则保持 keyAttack down，仍由正式客户端每 tick
+    // 计算 HitResult、发送 start/stop destroy C2S 与结算破坏，探针不直接发送网络包。
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        String role = role();
+        Path stageDirectory = stageDirectory();
+        if (role == null || stageDirectory == null || !Files.isRegularFile(stageDirectory.resolve("p5-decor-enabled.flag"))) return;
+        Minecraft minecraft = Minecraft.getInstance();
+        LocalPlayer player = minecraft.player;
+        if (minecraft.level == null || player == null || minecraft.getConnection() == null) return;
+
+        observeProductionState(minecraft, player);
+        driveRealInputs(minecraft, player, role, stageDirectory);
+        if (!markerWritten && allObserved()) {
+            writeMarker(Path.of(required("blindbox.ci.p5DecorMarker")).toAbsolutePath(), player);
+            markerWritten = true;
+        }
+    }
+
+    private static void observeProductionState(Minecraft minecraft, LocalPlayer observer) {
+        for (P5DecorCiScenario.DecorRound round : P5DecorCiScenario.ROUNDS) {
+            int slot = round.index() - 1;
+            BlockPos target = P5DecorCiScenario.target(minecraft.level, round.index());
+            if (minecraft.level.getBlockState(target).is(round.block().get())) placedObserved[slot] = true;
+            if (!placedObserved[slot] || dropObserved[slot] != null) continue;
+            for (ItemEntity entity : minecraft.level.getEntitiesOfClass(ItemEntity.class, new AABB(target).inflate(1.75D))) {
+                if (entity.isAlive() && entity.getItem().is(round.item().get()) && entity.getItem().getCount() == 1) {
+                    dropObserved[slot] = entity.getUUID();
+                    break;
+                }
+            }
+        }
+    }
+
+    private static void driveRealInputs(Minecraft minecraft, LocalPlayer player, String role, Path stageDirectory) {
+        for (P5DecorCiScenario.DecorRound round : P5DecorCiScenario.ROUNDS) {
+            if (!round.actorName().equals(role)) continue;
+            int slot = round.index() - 1;
+            BlockPos target = P5DecorCiScenario.target(minecraft.level, round.index());
+            BlockPos support = target.below();
+            if (!useInjected[slot] && Files.isRegularFile(stageDirectory.resolve("p5-decor-place-" + round.index() + ".flag"))
+                    && player.getMainHandItem().is(round.item().get()) && minecraft.level.getBlockState(target).isAir()
+                    && minecraft.level.getBlockState(support).is(Blocks.STONE)
+                    && at(player.position(), P5DecorCiScenario.placementStance(minecraft.level, round.index()))) {
+                aimAt(player, new Vec3(support.getX() + 0.5D, target.getY(), support.getZ() + 0.5D));
+                if (hits(minecraft, support)) placementAimTicks[slot]++; else placementAimTicks[slot] = 0;
+                if (placementAimTicks[slot] >= AIM_STABLE_TICKS) {
+                    KeyMapping.click(minecraft.options.keyUse.getKey());
+                    useInjected[slot] = true;
+                    CiTestProbe.LOGGER.info("P5 装饰方块客户端已注入真实右键映射：轮次={}，玩家={}", round.index(), role);
+                }
+            }
+            Path breakFlag = stageDirectory.resolve("p5-decor-break-" + round.index() + ".flag");
+            if (!Files.isRegularFile(breakFlag)) continue;
+            if (minecraft.level.getBlockState(target).isAir()) {
+                if (attackInjected[slot]) minecraft.options.keyAttack.setDown(false);
+                continue;
+            }
+            if (!attackInjected[slot] && at(player.position(), P5DecorCiScenario.breakingStance(minecraft.level, round.index()))
+                    && minecraft.level.getBlockState(target).is(round.block().get())) {
+                aimAt(player, Vec3.atCenterOf(target));
+                if (hits(minecraft, target)) breakingAimTicks[slot]++; else breakingAimTicks[slot] = 0;
+                if (breakingAimTicks[slot] >= AIM_STABLE_TICKS) {
+                    minecraft.options.keyAttack.setDown(true);
+                    attackInjected[slot] = true;
+                    CiTestProbe.LOGGER.info("P5 装饰方块客户端已按住真实攻击映射：轮次={}，玩家={}", round.index(), role);
+                }
+            }
+        }
+    }
+
+    private static boolean at(Vec3 actual, Vec3 expected) {
+        return actual.distanceToSqr(expected) <= 0.36D;
+    }
+
+    private static boolean hits(Minecraft minecraft, BlockPos expected) {
+        HitResult hit = minecraft.hitResult;
+        return hit instanceof BlockHitResult blockHit && blockHit.getBlockPos().equals(expected);
+    }
+
+    private static void aimAt(LocalPlayer player, Vec3 target) {
+        Vec3 eye = player.getEyePosition();
+        double dx = target.x - eye.x;
+        double dy = target.y - eye.y;
+        double dz = target.z - eye.z;
+        double horizontal = Math.sqrt(dx * dx + dz * dz);
+        float yaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0D);
+        float pitch = (float) -Math.toDegrees(Math.atan2(dy, horizontal));
+        player.setYRot(yaw);
+        player.setXRot(pitch);
+        player.setYHeadRot(yaw);
+        player.setYBodyRot(yaw);
+    }
+
+    private static boolean allObserved() {
+        for (int index = 0; index < P5DecorCiScenario.ROUNDS.size(); index++) {
+            if (!placedObserved[index] || dropObserved[index] == null) return false;
+        }
+        return true;
+    }
+
+    private static String role() {
+        String configured = System.getProperty("blindbox.ci.p5DecorRole");
+        if ("BlindBoxAlice".equals(configured) || "BlindBoxBob".equals(configured)) return configured;
+        return null;
+    }
+
+    private static Path stageDirectory() {
+        String configured = System.getProperty("blindbox.ci.p5DecorStageDir");
+        return configured == null || configured.isBlank() ? null : Path.of(configured).toAbsolutePath();
+    }
+
+    private static String required(String property) {
+        String value = System.getProperty(property);
+        if (value == null || value.isBlank()) throw new IllegalStateException("缺少 " + property);
+        return value;
+    }
+
+    private static void writeMarker(Path marker, LocalPlayer observer) {
+        try {
+            Path parent = marker.getParent();
+            if (parent == null) throw new IllegalStateException("P5 marker 缺少父目录：" + marker);
+            Files.createDirectories(parent);
+            StringBuilder value = new StringBuilder("schema=1\nobserver_uuid=").append(observer.getUUID()).append('\n');
+            for (P5DecorCiScenario.DecorRound round : P5DecorCiScenario.ROUNDS) {
+                int slot = round.index() - 1;
+                String prefix = "round" + round.index() + "_";
+                value.append(prefix).append("block=").append(P5DecorCiScenario.position(P5DecorCiScenario.target(observer.level(), round.index()))).append('\n');
+                value.append(prefix).append("state=").append(round.blockId()).append('\n');
+                value.append(prefix).append("drop=").append(dropObserved[slot]).append('\n');
+                value.append(prefix).append("item=").append(round.itemId()).append('\n');
+            }
+            // 脚本只能把 marker 的存在当作“可以请求服务端逐字段核验”，不能读到半写文件。
+            // 临时文件与目标在同一受控目录，ATOMIC_MOVE 成功前目标从未出现。
+            Path temporary = marker.resolveSibling(marker.getFileName() + ".tmp");
+            Files.writeString(temporary, value, StandardCharsets.UTF_8);
+            Files.move(temporary, marker, StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException exception) {
+            throw new IllegalStateException("无法写入 P5 装饰方块真实观察 marker：" + marker, exception);
+        }
+    }
+}

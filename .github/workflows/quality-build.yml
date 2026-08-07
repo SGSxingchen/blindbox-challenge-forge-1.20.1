@@ -130,8 +130,13 @@ jobs:
           # 交给下一场景，必须只读搜索已有可站立地面，找不到严格失败而非放置永久垫块。
           grep -q 'rememberAndSet(support.above(), Blocks.AIR.defaultBlockState());' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
           grep -q 'rememberAndSet(support.above(2), Blocks.AIR.defaultBlockState());' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
-          grep -q 'safeHandoffDestination(aliceOriginalPosition)' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
-          grep -q 'safeHandoffDestination(bobOriginalPosition)' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          grep -q 'safeHandoffDestination(alice, aliceOriginalPosition)' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          grep -q 'safeHandoffDestination(bob, bobOriginalPosition)' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          grep -q 'P4TextCiScenario.preparedHandoffDestination' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          grep -q 'BLINDBOX_CITEST_P4_TEXT_HANDOFF_PREPARED=success' src/ciTest/java/cn/blindboxchallenge/citest/P4TextCiScenario.java
+          grep -q 'BLINDBOX_CITEST_P4_TEXT_HANDOFF_RELEASED=success' src/ciTest/java/cn/blindboxchallenge/citest/P4TextCiScenario.java
+          grep -q 'private static final class HandoffFixture' src/ciTest/java/cn/blindboxchallenge/citest/P4TextCiScenario.java
+          grep -q 'before.forEach((position, state) -> level.setBlock(position, state, 3));' src/ciTest/java/cn/blindboxchallenge/citest/P4TextCiScenario.java
           grep -q 'Heightmap.Types.MOTION_BLOCKING_NO_LEAVES' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
           grep -q 'supportState.getFluidState().isEmpty()' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
           grep -q 'supportState.isFaceSturdy(level, support, Direction.UP)' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
@@ -250,6 +255,92 @@ jobs:
           grep -q 'public boolean cacheHit()' src/main/java/cn/blindboxchallenge/client/audio/RemoteMusicSoundInstance.java
           grep -q 'public net.minecraft.core.BlockPos source()' src/main/java/cn/blindboxchallenge/client/audio/RemoteMusicSoundInstance.java
           ! grep -RInE 'net\.minecraft\.client|javazoom\.' src/main/java/cn/blindboxchallenge/{block,blockentity,item,service,network,registry,menu,event,data,config}
+      - name: 校验 P5 装饰方块资源闭合与真实客户端探针门闩
+        run: |
+          python3 - <<'PY'
+          import json
+          import struct
+          from pathlib import Path
+
+          root = Path('.')
+          asset_root = root / 'src/main/resources/assets/blindboxchallenge'
+          data_root = root / 'src/main/resources/data/blindboxchallenge'
+          ids = ('abstract_white_figurine', 'floor_art_panel', 'neutral_trophy')
+          expected_boxes = {
+              'abstract_white_figurine': {(4, 0, 4, 12, 9, 12), (5, 9, 5, 11, 14, 11)},
+              'floor_art_panel': {(0, 0, 0, 16, 2, 16)},
+              'neutral_trophy': {(4, 0, 4, 12, 3, 12), (7, 3, 7, 9, 7, 9), (5, 7, 5, 11, 12, 11)},
+          }
+          block_source = (root / 'src/main/java/cn/blindboxchallenge/registry/ModBlocks.java').read_text(encoding='utf-8')
+          item_source = (root / 'src/main/java/cn/blindboxchallenge/registry/ModItems.java').read_text(encoding='utf-8')
+          for identifier in ids:
+              assert f'BLOCKS.register("{identifier}"' in block_source, identifier
+              assert f'ITEMS.register("{identifier}"' in item_source, identifier
+              assert f'ModBlocks.{identifier.upper()}.get()' in item_source, identifier
+              state = json.loads((asset_root / 'blockstates' / f'{identifier}.json').read_text(encoding='utf-8'))
+              assert state['variants']['']['model'] == f'blindboxchallenge:block/{identifier}'
+              item_model = json.loads((asset_root / 'models/item' / f'{identifier}.json').read_text(encoding='utf-8'))
+              assert item_model['parent'] == f'blindboxchallenge:block/{identifier}'
+              model = json.loads((asset_root / 'models/block' / f'{identifier}.json').read_text(encoding='utf-8'))
+              actual_boxes = {tuple(element['from'] + element['to']) for element in model['elements']}
+              assert actual_boxes == expected_boxes[identifier], (identifier, actual_boxes)
+              for box in expected_boxes[identifier]:
+                  values = ', '.join(f'{value}.0D' for value in box)
+                  assert f'Block.box({values})' in block_source, (identifier, box)
+              assert (data_root / 'loot_tables/blocks' / f'{identifier}.json').is_file()
+              png = (asset_root / 'textures/block' / f'{identifier}.png').read_bytes()
+              assert png[:8] == b'\x89PNG\r\n\x1a\n', identifier
+              chunks, offset = [], 8
+              while offset < len(png):
+                  length = struct.unpack('>I', png[offset:offset + 4])[0]
+                  kind = png[offset + 4:offset + 8]
+                  payload = png[offset + 8:offset + 8 + length]
+                  chunks.append((kind, payload))
+                  offset += 12 + length
+              assert offset == len(png) and chunks[0][0] == b'IHDR' and chunks[-1][0] == b'IEND', identifier
+              assert all(kind in {b'IHDR', b'IDAT', b'IEND'} for kind, _ in chunks), identifier
+              width, height, bit_depth, color_type, compression, filter_method, interlace = struct.unpack('>IIBBBBB', chunks[0][1])
+              assert (width, height, bit_depth, color_type, compression, filter_method, interlace) == (16, 16, 8, 6, 0, 0, 0), identifier
+          for language in ('en_us', 'zh_cn'):
+              values = json.loads((asset_root / 'lang' / f'{language}.json').read_text(encoding='utf-8'))
+              for identifier in ids:
+                  assert values[f'block.blindboxchallenge.{identifier}']
+                  assert values[f'item.blindboxchallenge.{identifier}']
+          forbidden = {'.jpg', '.jpeg', '.webp', '.psd', '.zip', '.mp3', '.ogg', '.wav'}
+          assert not [path for path in asset_root.rglob('*') if path.is_file() and path.suffix.lower() in forbidden]
+
+          scenario = (root / 'src/ciTest/java/cn/blindboxchallenge/citest/P5DecorCiScenario.java').read_text(encoding='utf-8')
+          client = (root / 'src/ciTest/java/cn/blindboxchallenge/citest/CiClientP5DecorObservation.java').read_text(encoding='utf-8')
+          commands = (root / 'src/ciTest/java/cn/blindboxchallenge/citest/CiTestCommands.java').read_text(encoding='utf-8')
+          runner = (root / 'scripts/ci/run-multi-client.py').read_text(encoding='utf-8')
+          script = (root / 'scripts/ci/multi-client.sh').read_text(encoding='utf-8')
+          assert 'WAIT_FOR_INITIAL_PICKUP' in scenario and 'WAIT_FOR_RECOVERY_PICKUP' in scenario
+          assert 'new ItemEntity' in scenario and 'initial.setPickUpDelay(0);' in scenario
+          assert 'countInventory(actor, round.item().get()) != 1' in scenario
+          assert 'level.setBlock(support, Blocks.STONE.defaultBlockState(), 3);' in scenario
+          for forbidden_call in ('setBlock(target', '.removeBlock(', '.destroyBlock(', '.useOn(', 'Block.dropResources', 'setItemInHand('):
+              assert forbidden_call not in scenario, forbidden_call
+          assert 'ensureMarkersAbsent' in scenario and 'client-1-p5-decor-observed.marker' in scenario
+          assert 'ItemEntity.class' in scenario and 'entity.getItem().getCount() == 1' in scenario
+          assert 'KeyMapping.click(minecraft.options.keyUse.getKey())' in client
+          assert 'minecraft.options.keyAttack.setDown(true)' in client
+          assert 'BlockHitResult' in client and 'dropObserved' in client and 'observer_uuid' in client
+          assert '@Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, value = Dist.CLIENT' in client
+          assert 'start_p5_decor_clients' in commands and 'verify_p5_decor_clients' in commands and 'cleanup_p5_decor_clients' in commands
+          assert '-Dblindbox.ci.p5DecorMarker=' in runner and '-Dblindbox.ci.p5DecorStageDir=' in runner
+          assert 'BLINDBOX_CITEST_P5_MARKER_DIR=' in script
+          for marker in ('p5-decor-enabled.flag', 'p5-decor-place-${ROUND}.flag', 'p5-decor-break-${ROUND}.flag',
+                         'BLINDBOX_CITEST_P5_DECOR_CLIENTS=success', 'BLINDBOX_CITEST_P5_DECOR_CLEANUP=success'):
+              assert marker in script, marker
+          start = script.index("printf 'blindboxcitest start_p5_decor_clients\\n' >&3")
+          export = script.index("printf 'blindboxcitest export\\n' >&3")
+          assert start < export
+          handoff_prepare = script.index("printf 'blindboxcitest prepare_p4_text_handoff\\n' >&3")
+          chicken_cleanup = script.index("printf 'blindboxcitest cleanup_p4_chicken\\n' >&3")
+          handoff_release = script.index("printf 'blindboxcitest release_p4_text_handoff\\n' >&3")
+          assert handoff_prepare < chicken_cleanup < start < export < handoff_release
+          assert 'continue-on-error' not in script and 'continue-on-error' not in runner
+          PY
       - name: 生成 Jar 校验和
         run: |
           find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-sources.jar' -print0 | sort -z | xargs -0 sha256sum > build/libs/SHA256SUMS

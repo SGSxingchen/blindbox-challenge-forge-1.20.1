@@ -32,7 +32,7 @@ curl --fail --location --retry 3 --connect-timeout 20 -o "${SERVER_DIR}/${INSTAL
  mkdir -p mods
  cp "../../${FORMAL}" "../../${CITEST}" mods/
  mkfifo server.stdin
- BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_SCISSORS_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_PIG_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_AUDIO_BASE_URL="${BLINDBOX_CITEST_P4_AUDIO_BASE_URL}" \
+ BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_SCISSORS_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_PIG_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P5_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_AUDIO_BASE_URL="${BLINDBOX_CITEST_P4_AUDIO_BASE_URL}" \
    setsid ./run.sh nogui < server.stdin > server.log 2>&1 & echo $! > server.pid
 )
 SERVER_PID="$(cat "${SERVER_DIR}/server.pid")"
@@ -246,7 +246,7 @@ wait "${SERVER_PID}" 2>/dev/null || true
  cd "${SERVER_DIR}"
  rm -f server.stdin
  mkfifo server.stdin
- BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_SCISSORS_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_PIG_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_AUDIO_BASE_URL="${BLINDBOX_CITEST_P4_AUDIO_BASE_URL}" \
+ BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_SCISSORS_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_PIG_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P5_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_AUDIO_BASE_URL="${BLINDBOX_CITEST_P4_AUDIO_BASE_URL}" \
    setsid ./run.sh nogui < server.stdin > server.log 2>&1 & echo $! > server.pid
 )
 SERVER_PID="$(cat "${SERVER_DIR}/server.pid")"
@@ -377,6 +377,14 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_CHICKEN=success' "${SERVER_DIR}/server.log"
+# P3 强杀恢复保留的是高空持久坐标，不能在鸡 cleanup 时依赖随机出生区地形。下一场景 P4 文本
+# 先显式保存并拥有一个短期交接平台；它只提供真实可站立面，不能作为小黄鸡/文本成功 marker。
+printf 'blindboxcitest prepare_p4_text_handoff\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P4_TEXT_HANDOFF_PREPARED=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_TEXT_HANDOFF_PREPARED=success' "${SERVER_DIR}/server.log"
 printf 'blindboxcitest cleanup_p4_chicken\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_P4_CHICKEN_CLEANUP=success' "${SERVER_DIR}/server.log" && break
@@ -526,6 +534,70 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_MUSIC_CLEANUP=success' "${SERVER_DIR}/server.log"
+# P5 三项装饰方块均必须由仍在线的真实 Forge 客户端经 BlockItem 右键与攻击输入完成。阶段旗标
+# 仅放行客户端输入；它们不是结果 marker。服务端在每轮分别反查方块状态、扣除、掉落实体 UUID
+# 和最终正常拾取，两份客户端 marker 也必须观察同一方块状态与同一掉落实体后才能通过。
+printf 'blindboxcitest start_p5_decor_clients\n' >&3
+for _ in $(seq 1 90); do
+  if grep -q 'BLINDBOX_CITEST_P5_DECOR=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P5_DECOR_STARTED=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P5_DECOR_STARTED=success' "${SERVER_DIR}/server.log"
+touch "${EVIDENCE}/p5-decor-enabled.flag"
+for ROUND in 1 2 3; do
+  for _ in $(seq 1 90); do
+    if grep -q 'BLINDBOX_CITEST_P5_DECOR=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+    grep -q "BLINDBOX_CITEST_P5_DECOR_ROUND_${ROUND}_PLACE_READY=success" "${SERVER_DIR}/server.log" && break
+    kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+    sleep 1
+  done
+  grep -q "BLINDBOX_CITEST_P5_DECOR_ROUND_${ROUND}_PLACE_READY=success" "${SERVER_DIR}/server.log"
+  touch "${EVIDENCE}/p5-decor-place-${ROUND}.flag"
+  for _ in $(seq 1 90); do
+    if grep -q 'BLINDBOX_CITEST_P5_DECOR=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+    grep -q "BLINDBOX_CITEST_P5_DECOR_ROUND_${ROUND}_BREAK_READY=success" "${SERVER_DIR}/server.log" && break
+    kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+    sleep 1
+  done
+  grep -q "BLINDBOX_CITEST_P5_DECOR_ROUND_${ROUND}_BREAK_READY=success" "${SERVER_DIR}/server.log"
+  touch "${EVIDENCE}/p5-decor-break-${ROUND}.flag"
+  for _ in $(seq 1 90); do
+    if grep -q 'BLINDBOX_CITEST_P5_DECOR=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+    grep -q "BLINDBOX_CITEST_P5_DECOR_ROUND_${ROUND}_SERVER_DROP=success" "${SERVER_DIR}/server.log" && break
+    kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+    sleep 1
+  done
+  grep -q "BLINDBOX_CITEST_P5_DECOR_ROUND_${ROUND}_SERVER_DROP=success" "${SERVER_DIR}/server.log"
+done
+for _ in $(seq 1 120); do
+  if grep -q 'BLINDBOX_CITEST_P5_DECOR=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P5_DECOR_SERVER=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P5_DECOR_SERVER=success' "${SERVER_DIR}/server.log"
+for _ in $(seq 1 120); do
+  [ -f "${EVIDENCE}/client-1-p5-decor-observed.marker" ] && [ -f "${EVIDENCE}/client-2-p5-decor-observed.marker" ] && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+test -f "${EVIDENCE}/client-1-p5-decor-observed.marker"
+test -f "${EVIDENCE}/client-2-p5-decor-observed.marker"
+printf 'blindboxcitest verify_p5_decor_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P5_DECOR_CLIENTS=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P5_DECOR_CLIENTS=success' "${SERVER_DIR}/server.log"
+printf 'blindboxcitest cleanup_p5_decor_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P5_DECOR_CLEANUP=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P5_DECOR_CLEANUP=success' "${SERVER_DIR}/server.log"
+rm -f "${EVIDENCE}/p5-decor-enabled.flag" "${EVIDENCE}"/p5-decor-place-*.flag "${EVIDENCE}"/p5-decor-break-*.flag
 printf 'blindboxcitest export\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_EXPORT=' "${SERVER_DIR}/server.log" && break
@@ -556,6 +628,14 @@ assert sum(slot['stack']['count'] for slot in alice['main'] if marker in slot['s
 assert sum(slot['stack']['count'] for slot in bob['main'] if marker in slot['stack']['canonical_nbt'])==0
 assert sum(slot['stack']['count'] for slot in bob['main'] if 'blindboxchallenge:blind_box' in slot['stack']['canonical_nbt'])==1
 PY
+# P5 cleanup 已把两个玩家恢复到 P4 文本持有的安全交接平台；只有 canonical 导出已完成、且下一步
+# 就是 save-all/stop 时才归还该平台。若在 P5 snapshot 前撤台会把 cleanup 玩家送回无支撑高空。
+printf 'blindboxcitest release_p4_text_handoff\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P4_TEXT_HANDOFF_RELEASED=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_TEXT_HANDOFF_RELEASED=success' "${SERVER_DIR}/server.log"
 touch "${EVIDENCE}/release-clients.marker"
 wait "${CLIENT_PID}"
 printf 'list\nsave-all flush\nstop\n' >&3
