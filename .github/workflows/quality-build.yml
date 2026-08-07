@@ -115,8 +115,9 @@ jobs:
           grep -q '在线音频下载或解码失败（仅客户端）' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
           grep -q 'failureSummary(exception)' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
           ! grep -q 'getMessage()' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
-          grep -q 'FailureStage { DNS, PINNED_CONNECT, TLS_HANDSHAKE, HTTP_HEADERS, BODY, CACHE, DECODE, UNKNOWN }' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          grep -q 'FailureStage { DNS, PINNED_CONNECT_IPV4, PINNED_CONNECT_IPV6, TLS_HANDSHAKE, HTTP_HEADERS, BODY, CACHE, DECODE, UNKNOWN }' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'throw new AudioFailureException(FailureStage.DNS, exception);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          grep -q 'private static FailureStage connectStage(InetAddress address)' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'throw new AudioFailureException(stage, exception);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'throw new AudioFailureException(FailureStage.BODY, exception);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'FailureStage.DECODE' src/main/java/cn/blindboxchallenge/client/audio/RemoteMusicSoundInstance.java

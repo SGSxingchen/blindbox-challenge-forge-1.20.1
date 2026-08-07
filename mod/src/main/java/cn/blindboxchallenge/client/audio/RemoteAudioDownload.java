@@ -42,7 +42,7 @@ import net.minecraft.client.Minecraft;
 /** 纯客户端 HTTPS 下载与缓存。每一跳都重新解析并把已校验公网 IP 固定到 TLS 连接，避免 DNS 重绑定。 */
 public final class RemoteAudioDownload {
     /** 仅客户端日志使用的失败阶段；不含 URL、响应头、路径或异常消息。 */
-    public enum FailureStage { DNS, PINNED_CONNECT, TLS_HANDSHAKE, HTTP_HEADERS, BODY, CACHE, DECODE, UNKNOWN }
+    public enum FailureStage { DNS, PINNED_CONNECT_IPV4, PINNED_CONNECT_IPV6, TLS_HANDSHAKE, HTTP_HEADERS, BODY, CACHE, DECODE, UNKNOWN }
 
     /** 保留实际 cause 供本地链路处理；对外诊断只允许读取无敏感数据的阶段枚举。 */
     public static final class AudioFailureException extends IOException {
@@ -193,24 +193,24 @@ public final class RemoteAudioDownload {
                 return openPinnedAtAddress(uri, address, deadlineNanos);
             } catch (IOException exception) {
                 failure = exception instanceof AudioFailureException ? exception
-                        : new AudioFailureException(FailureStage.PINNED_CONNECT, exception);
+                        : new AudioFailureException(connectStage(address), exception);
                 try {
                     ensureBeforeDeadline(deadlineNanos);
                 } catch (IOException deadlineException) {
                     if (failure instanceof AudioFailureException staged) throw staged;
-                    throw new AudioFailureException(FailureStage.PINNED_CONNECT, deadlineException);
+                    throw new AudioFailureException(connectStage(address), deadlineException);
                 }
             }
         }
         if (failure instanceof AudioFailureException staged) throw staged;
-        throw new AudioFailureException(FailureStage.PINNED_CONNECT, failure);
+        throw new AudioFailureException(FailureStage.UNKNOWN, failure);
     }
 
     private static DownloadResponse openPinnedAtAddress(URI uri, InetAddress address, long deadlineNanos) throws IOException {
         Socket plain = new Socket(Proxy.NO_PROXY);
         SSLSocket tls = null;
         ScheduledFuture<?> closeAtDeadline = null;
-        FailureStage stage = FailureStage.PINNED_CONNECT;
+        FailureStage stage = connectStage(address);
         try {
             plain.connect(new InetSocketAddress(address, 443), remainingMillis(deadlineNanos));
             plain.setSoTimeout(remainingMillis(deadlineNanos));
@@ -248,6 +248,11 @@ public final class RemoteAudioDownload {
             if (exception instanceof AudioFailureException staged) throw staged;
             throw new AudioFailureException(stage, exception);
         }
+    }
+
+    /** 只暴露已尝试目标的地址族，不输出地址、主机、端口或异常消息。 */
+    private static FailureStage connectStage(InetAddress address) {
+        return address.getAddress().length == 4 ? FailureStage.PINNED_CONNECT_IPV4 : FailureStage.PINNED_CONNECT_IPV6;
     }
 
     private static void writeRequest(OutputStream output, URI uri) throws IOException {
