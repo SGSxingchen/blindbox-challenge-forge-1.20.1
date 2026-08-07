@@ -18,15 +18,17 @@ public final class RemoteMusicSoundInstance extends AbstractSoundInstance {
     private final UUID eventId;
     private final RemoteAudioDownload.Kind kind;
     private final boolean cacheHit;
+    private final boolean singleFlightFollower;
     private final net.minecraft.core.BlockPos source;
 
     private RemoteMusicSoundInstance(BufferedAudioStream audio, net.minecraft.core.BlockPos source, UUID eventId,
-                                     RemoteAudioDownload.Kind kind, boolean cacheHit) {
+                                     RemoteAudioDownload.Kind kind, boolean cacheHit, boolean singleFlightFollower) {
         super(SoundEvents.MUSIC_DISC_13, SoundSource.RECORDS, SoundInstance.createUnseededRandom());
         this.audio = audio;
         this.eventId = eventId;
         this.kind = kind;
         this.cacheHit = cacheHit;
+        this.singleFlightFollower = singleFlightFollower;
         this.source = source.immutable();
         x = source.getX() + 0.5D;
         y = source.getY() + 0.5D;
@@ -41,12 +43,14 @@ public final class RemoteMusicSoundInstance extends AbstractSoundInstance {
     /** 下载、文件读取和 OGG/MP3 解码均在 AUDIO_EXECUTOR 完成；此后音频线程只消费 PCM 内存。 */
     static RemoteMusicSoundInstance prepare(RemoteAudioDownload.CachedAudio cached, net.minecraft.core.BlockPos source, UUID eventId,
                                             Runnable closeCallback) {
-        try (var input = Files.newInputStream(cached.path())) {
+        // CachedAudio 的租约在完整解码结束前保持，防止另一个 URL 的 LRU 清理在此文件刚被打开前
+        // 删除它；PCM 已进入内存后立即释放，不能把整个播放时长钉在磁盘缓存上。
+        try (cached; var input = Files.newInputStream(cached.path())) {
             BufferedAudioStream audio = cached.kind() == RemoteAudioDownload.Kind.OGG
                     ? BufferedAudioStream.decodeOgg(input)
                     : new Mp3AudioStream(input);
             audio.setCloseCallback(closeCallback);
-            return new RemoteMusicSoundInstance(audio, source, eventId, cached.kind(), cached.cacheHit());
+            return new RemoteMusicSoundInstance(audio, source, eventId, cached.kind(), cached.cacheHit(), cached.singleFlightFollower());
         } catch (IOException | RuntimeException exception) {
             throw new IllegalStateException("无法在客户端工作线程解码在线音频",
                     new RemoteAudioDownload.AudioFailureException(RemoteAudioDownload.FailureStage.DECODE, exception));
@@ -62,6 +66,8 @@ public final class RemoteMusicSoundInstance extends AbstractSoundInstance {
     public UUID eventId() { return eventId; }
     public RemoteAudioDownload.Kind kind() { return kind; }
     public boolean cacheHit() { return cacheHit; }
+    /** 当前真实下载是否等待了本 JVM 的同 URL 在途 future；缓存命中仍由 {@link #cacheHit()} 独立说明。 */
+    public boolean singleFlightFollower() { return singleFlightFollower; }
     public net.minecraft.core.BlockPos source() { return source; }
     void discard() { audio.close(); }
 }

@@ -36,7 +36,7 @@ def stop(process):
 def launch(directory: Path, username: str, uuid: str, marker: Path, pillow_marker: Path, scissors_marker: Path, pig_marker: Path, release: Path, reconnect_marker: Path,
            ability_role: str, ability_self_sync_marker: Path, ability_key_marker: Path, ability_tracking_marker: Path, ability_lifecycle_marker: Path,
            ability_recovery_marker: Path, server_recovery_marker: Path, p4_text_marker: Path, p4_death_marker: Path, chicken_marker: Path,
-           p4_music_marker_directory: Path, p4_door_marker_directory: Path, p4_audio_base: str,
+           p4_music_marker_directory: Path, p4_door_marker_directory: Path, p4_audio_base: str, p5_music_cache_marker_directory: Path,
            p5_decor_marker: Path, p5_decor_diagnostic: Path, p5_decor_stage_directory: Path):
     options = minecraft_launcher_lib.utils.generate_test_options()
     jvm_arguments = ["-Xms768M", "-Xmx2G", "-Dblindbox.ci.multiplayerSmoke=true", "-Dsun.net.inetaddr.ttl=0",
@@ -50,6 +50,7 @@ def launch(directory: Path, username: str, uuid: str, marker: Path, pillow_marke
                      f"-Dblindbox.ci.p4TextStageDir={p4_music_marker_directory}",
                      f"-Dblindbox.ci.p4DoorMarkerDir={p4_door_marker_directory}",
                      f"-Dblindbox.ci.p4AudioBase={p4_audio_base}",
+                     f"-Dblindbox.ci.p5MusicCacheMarkerDir={p5_music_cache_marker_directory}",
                      f"-Dblindbox.ci.p5DecorMarker={p5_decor_marker}",
                      f"-Dblindbox.ci.p5DecorDiagnostic={p5_decor_diagnostic}",
                      f"-Dblindbox.ci.p5DecorStageDir={p5_decor_stage_directory}",
@@ -132,12 +133,18 @@ def main():
         stale.unlink()
     for stale in evidence.glob("client-*-p5-decor-diagnostic.marker"):
         stale.unlink()
+    for stale in evidence.glob("client-*-p5-music-cache-*.marker"):
+        stale.unlink()
     for stage_flag in (evidence / "p4-text-enabled.flag", evidence / "p4-music-cache-enabled.flag", evidence / "p4-music-network-restored.flag",
-                       evidence / "p4-door-recovery-enabled.flag", evidence / "p5-decor-enabled.flag"):
+                       evidence / "p4-door-recovery-enabled.flag", evidence / "p5-decor-enabled.flag", evidence / "p5-music-cache-enabled.flag",
+                       evidence / "p5-music-cache-eviction-reload.flag", evidence / "p5-music-cache-singleflight.flag",
+                       evidence / "p5-music-cache-corrupt-retry.flag"):
         stage_flag.unlink(missing_ok=True)
     for round_index in (1, 2, 3):
         (evidence / f"p5-decor-place-{round_index}.flag").unlink(missing_ok=True)
         (evidence / f"p5-decor-break-{round_index}.flag").unlink(missing_ok=True)
+    for round_index in range(1, 6):
+        (evidence / f"p5-music-cache-fill-{round_index}.flag").unlink(missing_ok=True)
     release = evidence / "release-clients.marker"
     release.unlink(missing_ok=True)
     clients = []
@@ -158,6 +165,7 @@ def main():
             chicken_marker = evidence / f"client-{index}-p4-chicken-observed.marker"
             p4_music_marker_directory = evidence
             p4_door_marker_directory = evidence
+            p5_music_cache_marker_directory = evidence
             p5_decor_marker = evidence / f"client-{index}-p5-decor-observed.marker"
             p5_decor_diagnostic = evidence / f"client-{index}-p5-decor-diagnostic.marker"
             ability_self_sync_marker = evidence / "client-1-p3-ability-self-sync.marker" if username == "BlindBoxAlice" else None
@@ -185,7 +193,7 @@ def main():
                                     "alice" if username == "BlindBoxAlice" else "bob", ability_self_sync_marker, ability_key_marker,
                                     ability_tracking_marker, ability_lifecycle_marker, ability_recovery_marker,
                                     recovery_connection_marker, p4_text_marker, p4_death_marker, chicken_marker,
-                                    p4_music_marker_directory, p4_door_marker_directory, p4_audio_base,
+                                    p4_music_marker_directory, p4_door_marker_directory, p4_audio_base, p5_music_cache_marker_directory,
                                     p5_decor_marker, p5_decor_diagnostic, evidence), marker, pillow_marker, scissors_marker, pig_marker, username, uuid, directory,
                             recovery_connection_marker))
             # 先由 Alice 完成真实握手和稳定联机，再启动 Bob，规避专服登录层的瞬时并发错误。

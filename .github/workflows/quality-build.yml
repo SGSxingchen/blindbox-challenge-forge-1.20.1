@@ -256,6 +256,72 @@ jobs:
           grep -q 'public boolean cacheHit()' src/main/java/cn/blindboxchallenge/client/audio/RemoteMusicSoundInstance.java
           grep -q 'public net.minecraft.core.BlockPos source()' src/main/java/cn/blindboxchallenge/client/audio/RemoteMusicSoundInstance.java
           ! grep -RInE 'net\.minecraft\.client|javazoom\.' src/main/java/cn/blindboxchallenge/{block,blockentity,item,service,network,registry,menu,event,data,config}
+      - name: 校验 P5 八音盒缓存压力真实链路门闩
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+
+          root = Path('.').resolve()
+          pressure = root / 'src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg'
+          data = pressure.read_bytes()
+          assert data[:4] == b'OggS'
+          assert 13 * 1024 * 1024 < len(data) <= 16 * 1024 * 1024, len(data)
+          assert hashlib.sha256(data).hexdigest() == 'c4e3576180201d041d37d9337b29ef8709664e78ee2f1116a261148589e7b3bd'
+          # 最小 Ogg/Vorbis 结构复验：三个头包、一个 ASCII 注释负载、音频页 EOS 和有效粒度均不可缺。
+          packets, offset, current, last_granule, eos = [], 0, bytearray(), -1, False
+          while offset < len(data):
+              assert data[offset:offset + 4] == b'OggS'
+              header_type = data[offset + 5]
+              granule = int.from_bytes(data[offset + 6:offset + 14], 'little', signed=True)
+              segments = data[offset + 27:offset + 27 + data[offset + 26]]
+              body_start = offset + 27 + len(segments)
+              body_end = body_start + sum(segments)
+              assert body_end <= len(data)
+              body, body_offset = data[body_start:body_end], 0
+              for size in segments:
+                  current.extend(body[body_offset:body_offset + size]); body_offset += size
+                  if size < 255: packets.append(bytes(current)); current.clear()
+              if header_type & 4: eos, last_granule = True, granule
+              offset = body_end
+          assert offset == len(data) and not current and eos and last_granule > 0
+          assert packets[0].startswith(b'\x01vorbis') and packets[1].startswith(b'\x03vorbis') and packets[2].startswith(b'\x05vorbis')
+          comment = packets[1]; cursor = 7
+          vendor_size = int.from_bytes(comment[cursor:cursor + 4], 'little'); cursor += 4 + vendor_size
+          assert int.from_bytes(comment[cursor:cursor + 4], 'little') == 1; cursor += 4
+          comment_size = int.from_bytes(comment[cursor:cursor + 4], 'little'); cursor += 4
+          assert comment[cursor:cursor + 26] == b'P5-CACHE-PRESSURE-PADDING='
+          assert comment_size > 13 * 1024 * 1024 and comment[cursor + comment_size:cursor + comment_size + 1] == b'\x01'
+
+          cache = (root / 'src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java').read_text(encoding='utf-8')
+          sound = (root / 'src/main/java/cn/blindboxchallenge/client/audio/RemoteMusicSoundInstance.java').read_text(encoding='utf-8')
+          server = (root / 'src/ciTest/java/cn/blindboxchallenge/citest/P5MusicCacheCiScenario.java').read_text(encoding='utf-8')
+          client = (root / 'src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientP5MusicCacheObservation.java').read_text(encoding='utf-8')
+          script = (root / 'scripts/ci/multi-client.sh').read_text(encoding='utf-8')
+          runner = (root / 'scripts/ci/run-multi-client.py').read_text(encoding='utf-8')
+          assert 'MAX_CACHE_BYTES = 64 * 1024 * 1024' in cache
+          assert 'IN_FLIGHT.putIfAbsent(urlHash, ownDownload)' in cache and 'waitForDownload(activeDownload, deadlineNanos)' in cache
+          assert 'CACHE_REFERENCES' in cache and 'trimCacheLocked(cache)' in cache and 'if (CACHE_REFERENCES.containsKey(entry)) continue;' in cache
+          assert 'touchCacheEntryLocked(cached);' in cache and 'thenComparing(path -> path.getFileName().toString())' in cache
+          assert 'public boolean singleFlightFollower()' in cache and 'cached.singleFlightFollower()' in sound
+          assert 'try (cached; var input = Files.newInputStream(cached.path()))' in sound
+          assert 'PRESSURE_ROUNDS = 5' in server and 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CLIENTS=success' in server
+          assert 'twoSharedSingleFlightReads' in server and 'oneSharedRead(fillUrl(1), false)' in server
+          assert 'corruptionInjected(aliceId, "client-1")' in server and 'corruptionInjected(bobId, "client-2")' in server
+          assert 'KeyMapping.click(minecraft.options.keyUse.getKey())' in client and 'screen.charTyped(character, 0)' in client
+          assert 'delegate.read(requestedBytes)' in client and 'single_flight_follower=' in client and 'channel.truncate(64L)' in client
+          forbidden = ('RemoteAudioDownload.fetch(', 'ClientMusicService.play', 'MusicBoxService.play', 'PlayMusicBoxPacket',
+                       'getSoundManager().play', 'RemoteMusicSoundInstance.prepare')
+          assert not [needle for needle in forbidden if needle in server or needle in client]
+          assert script.index('BLINDBOX_CITEST_P4_MUSIC_CLIENTS=success') < script.index('start_p5_music_cache_clients') < script.index('cleanup_p5_music_cache_clients') < script.index('cleanup_p4_music_clients')
+          for needle in ('p5-music-cache-enabled.flag', 'p5-music-cache-eviction-reload.flag', 'p5-music-cache-singleflight.flag',
+                         'p5-music-cache-corrupt-retry.flag', 'BLINDBOX_CITEST_P5_MUSIC_CACHE_SINGLE_FLIGHT=success'):
+              assert needle in script
+          assert 'range(1, 6)' in runner and 'p5MusicCacheMarkerDir' in runner
+          assert 'continue-on-error' not in script and 'continue-on-error' not in runner
+          PY
+          CITEST_JAR="build/libs/blindboxchallenge-0.1.0-p1-citest.jar"
+          jar tf "$CITEST_JAR" | grep -qx 'ci-audio/blindbox-ci-cache-pressure.ogg'
       - name: 校验 P5 装饰方块资源闭合与真实客户端探针门闩
         run: |
           python3 - <<'PY'

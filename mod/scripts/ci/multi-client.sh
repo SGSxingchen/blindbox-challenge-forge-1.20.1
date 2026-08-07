@@ -13,6 +13,8 @@ test -n "${GITHUB_ACTIONS:-}"
 : "${GITHUB_SHA:?真实在线音频 CI 缺少提交 SHA}"
 export BLINDBOX_CITEST_P4_AUDIO_BASE_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/mod/src/ciTest/resources/ci-audio"
 test -n "${FORMAL}" && test -f "${FORMAL}" && test -f "${CITEST}"
+# P5 大 OGG 必须随独立 ciTest Jar 到两个真实客户端目录；正式 Jar 仍由质量门禁严格排除 ci-audio。
+jar tf "${CITEST}" | grep -qx 'ci-audio/blindbox-ci-cache-pressure.ogg'
 rm -rf "${SERVER_DIR}" "${CLIENT_TEMPLATE}" "${EVIDENCE}" build/ci-client-1 build/ci-client-2
 mkdir -p "${SERVER_DIR}" "${EVIDENCE}"
 EVIDENCE_ABS="$(cd "${EVIDENCE}" && pwd)"
@@ -592,6 +594,63 @@ for _ in $(seq 1 120); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_MUSIC_CLIENTS=success' "${SERVER_DIR}/server.log"
+# P5 缓存压力复用两台已完成 P4 不补播验证的真实 Forge 客户端，但使用另一生产八音盒和完全独立 marker。
+# Alice 仍只能经 MusicBoxScreen 与原版 use 配置/播放；服务器只回读 SoundEngine PCM 事实。
+printf 'blindboxcitest start_p5_music_cache_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_STARTED=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_STARTED=success' "${SERVER_DIR}/server.log"
+touch "${EVIDENCE}/p5-music-cache-enabled.flag"
+for round in $(seq 1 5); do
+  for _ in $(seq 1 240); do
+    if grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+    grep -q "BLINDBOX_CITEST_P5_MUSIC_CACHE_FILL_${round}=success" "${SERVER_DIR}/server.log" && break
+    kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+    sleep 1
+  done
+  grep -q "BLINDBOX_CITEST_P5_MUSIC_CACHE_FILL_${round}=success" "${SERVER_DIR}/server.log"
+  if [ "${round}" -lt 5 ]; then touch "${EVIDENCE}/p5-music-cache-fill-$((round + 1)).flag"; fi
+done
+touch "${EVIDENCE}/p5-music-cache-eviction-reload.flag"
+for _ in $(seq 1 240); do
+  if grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_EVICTION_REDOWNLOAD=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_EVICTION_REDOWNLOAD=success' "${SERVER_DIR}/server.log"
+touch "${EVIDENCE}/p5-music-cache-singleflight.flag"
+for _ in $(seq 1 240); do
+  if grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_SINGLE_FLIGHT=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_SINGLE_FLIGHT=success' "${SERVER_DIR}/server.log"
+for _ in $(seq 1 120); do
+  if grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CORRUPTION=ready' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CORRUPTION=ready' "${SERVER_DIR}/server.log"
+touch "${EVIDENCE}/p5-music-cache-corrupt-retry.flag"
+for _ in $(seq 1 240); do
+  if grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CLIENTS=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CLIENTS=success' "${SERVER_DIR}/server.log"
+printf 'blindboxcitest cleanup_p5_music_cache_clients\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CLEANUP=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CLEANUP=success' "${SERVER_DIR}/server.log"
+rm -f "${EVIDENCE}"/p5-music-cache-*.flag
 printf 'blindboxcitest cleanup_p4_music_clients\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_P4_MUSIC_CLEANUP=success' "${SERVER_DIR}/server.log" && break

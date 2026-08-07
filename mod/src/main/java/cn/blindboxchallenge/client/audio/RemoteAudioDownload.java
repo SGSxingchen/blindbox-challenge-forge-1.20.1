@@ -21,6 +21,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -76,7 +77,17 @@ public final class RemoteAudioDownload {
     private static final int MAX_REDIRECTS = 3;
     private static final int MAX_HEADER_BYTES = 32 * 1024;
     private static final long STALE_PART_MILLIS = Duration.ofMinutes(1).toMillis();
-    private static final ConcurrentHashMap<String, CompletableFuture<CachedAudio>> IN_FLIGHT = new ConcurrentHashMap<>();
+    /**
+     * 同 URL 的单飞结果只保存不可变的缓存条目；每个等待者都必须取得自己的短租约，不能共享一个
+     * 可关闭的 {@link CachedAudio}。否则第一个完成解码的播放会错误释放另一个等待者仍在读取的文件。
+     */
+    private static final ConcurrentHashMap<String, CompletableFuture<StoredAudio>> IN_FLIGHT = new ConcurrentHashMap<>();
+    /** 只串行缓存复验、落盘提交和 LRU；网络传输与音频解码绝不持有此锁。 */
+    private static final Object CACHE_LOCK = new Object();
+    /** 在 decode 打开缓存文件前暂时钉住它，LRU 不得删除仍被异步工作线程读取的文件。 */
+    private static final Map<Path, Integer> CACHE_REFERENCES = new HashMap<>();
+    /** 文件系统时间精度可能低于连续请求速度；此值令持久 mtime 仍保持严格的本进程 LRU 顺序。 */
+    private static long lastCacheAccessMillis;
     /** 原生 DNS 无可用连接超时参数；单个 daemon 解析器超时后失效关闭，避免任意 URL 堆积请求线程。 */
     private static final ExecutorService DNS_RESOLVER = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "blindboxchallenge-audio-dns");
@@ -98,22 +109,25 @@ public final class RemoteAudioDownload {
         try { Files.createDirectories(cache); }
         catch (IOException exception) { throw new AudioFailureException(FailureStage.CACHE, exception); }
         String urlHash = sha256(normalized.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        CachedAudio cached;
+        StoredAudio cached;
         try { cached = findCached(cache, urlHash); }
         catch (IOException exception) { throw new AudioFailureException(FailureStage.CACHE, exception); }
-        if (cached != null) return cached;
+        if (cached != null) return leaseOrCancel(cached);
 
         long deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(TIMEOUT_MILLIS);
-        CompletableFuture<CachedAudio> ownDownload = new CompletableFuture<>();
-        CompletableFuture<CachedAudio> activeDownload = IN_FLIGHT.putIfAbsent(urlHash, ownDownload);
-        if (activeDownload != null) return waitForDownload(activeDownload, deadlineNanos);
+        CompletableFuture<StoredAudio> ownDownload = new CompletableFuture<>();
+        CompletableFuture<StoredAudio> activeDownload = IN_FLIGHT.putIfAbsent(urlHash, ownDownload);
+        if (activeDownload != null) return lease(waitForDownload(activeDownload, deadlineNanos), false, true);
         try {
             cleanupStaleParts(cache);
             // 进入单飞区后再次复检，避免刚完成的同 URL 下载仍被当成未命中。
             cached = findCached(cache, urlHash);
-            CachedAudio result = cached != null ? cached : fetchUncached(normalized, cache, urlHash, deadlineNanos);
+            StoredAudio result = cached != null ? cached : fetchUncached(normalized, cache, urlHash, deadlineNanos);
+            // 新文件已由 saveResponse 在 CACHE_LOCK 内预留；先把预留转交给本调用者的租约，再唤醒
+            // 其它同 URL 等待者，保证提交→解码打开之间没有可被另一个 URL 的 LRU 删除的窗口。
+            CachedAudio leased = leaseOrCancel(result);
             ownDownload.complete(result);
-            return result;
+            return leased;
         } catch (AudioFailureException exception) {
             ownDownload.completeExceptionally(exception);
             throw exception;
@@ -129,7 +143,7 @@ public final class RemoteAudioDownload {
         }
     }
 
-    private static CachedAudio fetchUncached(String normalized, Path cache, String urlHash, long deadlineNanos) throws IOException {
+    private static StoredAudio fetchUncached(String normalized, Path cache, String urlHash, long deadlineNanos) throws IOException {
         URI current = URI.create(normalized);
         for (int redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
             ensureBeforeDeadline(deadlineNanos);
@@ -177,7 +191,7 @@ public final class RemoteAudioDownload {
         throw new IOException("在线音频重定向流程异常");
     }
 
-    private static CachedAudio waitForDownload(CompletableFuture<CachedAudio> activeDownload, long deadlineNanos) throws IOException {
+    private static StoredAudio waitForDownload(CompletableFuture<StoredAudio> activeDownload, long deadlineNanos) throws IOException {
         try {
             return activeDownload.get(remainingMillis(deadlineNanos), TimeUnit.MILLISECONDS);
         } catch (InterruptedException exception) {
@@ -457,7 +471,7 @@ public final class RemoteAudioDownload {
      * HTTP/1.1 的非分块响应一旦声明 Content-Length，就必须按它完成消息体定界；不能等连接 EOF，
      * 因为合法保活响应会在完整音频后继续保持 TLS socket 打开。未声明长度的响应才读到 EOF。
      */
-    private static CachedAudio saveResponse(InputStream input, Path cache, String urlHash, long deadlineNanos,
+    private static StoredAudio saveResponse(InputStream input, Path cache, String urlHash, long deadlineNanos,
                                             long declaredContentLength) throws IOException {
         final Path temporary;
         try { temporary = Files.createTempFile(cache, urlHash + "-", ".part"); }
@@ -505,21 +519,34 @@ public final class RemoteAudioDownload {
         String contentHash = hex(digest.digest());
         Path target = cache.resolve(urlHash + "-" + contentHash + kind.extension);
         try {
-            moveNewFile(temporary, target);
-        } catch (java.nio.file.FileAlreadyExistsException exception) {
-            Files.deleteIfExists(temporary);
-            final CachedAudio existing;
-            try { existing = findCached(cache, urlHash); }
-            catch (IOException cacheException) { throw new AudioFailureException(FailureStage.CACHE, cacheException); }
-            if (existing != null) return existing;
-            throw new AudioFailureException(FailureStage.CACHE, exception);
+            // 不同 URL 可并行下载；只有提交和随后的 LRU 必须原子化，才不会共同越过 64 MiB 上限。
+            synchronized (CACHE_LOCK) {
+                try {
+                    moveNewFile(temporary, target);
+                } catch (java.nio.file.FileAlreadyExistsException exception) {
+                    Files.deleteIfExists(temporary);
+                    StoredAudio existing = findCachedLocked(cache, urlHash);
+                    if (existing != null) return existing;
+                    throw new AudioFailureException(FailureStage.CACHE, exception);
+                }
+                // 新条目在本调用者把租约交给解码器前不能被并发 LRU 淘汰；否则 Windows 等平台会在
+                // Files.newInputStream 前删掉刚下载的文件。预留会在 fetch 的 lease(...) 中原子转交。
+                touchCacheEntryLocked(target);
+                retainCacheReferenceLocked(target);
+                try {
+                    trimCacheLocked(cache);
+                } catch (IOException exception) {
+                    releaseCacheReferenceLocked(target);
+                    throw exception;
+                }
+            }
+        } catch (AudioFailureException exception) {
+            throw exception;
         } catch (IOException exception) {
             Files.deleteIfExists(temporary);
             throw new AudioFailureException(FailureStage.CACHE, exception);
         }
-        try { trimCache(cache); }
-        catch (IOException exception) { throw new AudioFailureException(FailureStage.CACHE, exception); }
-        return new CachedAudio(target, kind, contentHash, false);
+        return new StoredAudio(target, kind, contentHash, false, true);
     }
 
     private static void moveNewFile(Path temporary, Path target) throws IOException {
@@ -530,18 +557,30 @@ public final class RemoteAudioDownload {
         }
     }
 
-    private static CachedAudio findCached(Path cache, String urlHash) throws IOException {
+    private static StoredAudio findCached(Path cache, String urlHash) throws IOException {
+        synchronized (CACHE_LOCK) {
+            return findCachedLocked(cache, urlHash);
+        }
+    }
+
+    /** 调用方必须持有 {@link #CACHE_LOCK}，避免复验删坏文件时与 LRU 淘汰并发。 */
+    private static StoredAudio findCachedLocked(Path cache, String urlHash) throws IOException {
         try (var files = Files.list(cache)) {
             for (Path cached : files.filter(path -> isCacheFileName(path.getFileName().toString(), urlHash))
                     .sorted(Comparator.comparingLong(RemoteAudioDownload::lastModified).reversed()).toList()) {
-                CachedAudio verified = verifyCached(cache, cached, urlHash);
-                if (verified != null) return verified;
+                StoredAudio verified = verifyCached(cache, cached, urlHash);
+                if (verified != null) {
+                    // findCached 的锁释放到 lease 再次取得锁之间也不能让新提交的 LRU 删除命中项。
+                    // 这份预留和 saveResponse 的新文件预留走同一条原子转交流程。
+                    retainCacheReferenceLocked(verified.path());
+                    return new StoredAudio(verified.path(), verified.kind(), verified.contentHash(), verified.cacheHit(), true);
+                }
             }
         }
         return null;
     }
 
-    private static CachedAudio verifyCached(Path cache, Path cached, String urlHash) throws IOException {
+    private static StoredAudio verifyCached(Path cache, Path cached, String urlHash) throws IOException {
         if (!Files.isRegularFile(cached, LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(cached)) {
             Files.deleteIfExists(cached);
             return null;
@@ -577,8 +616,8 @@ public final class RemoteAudioDownload {
             Files.deleteIfExists(cached);
             return null;
         }
-        Files.setLastModifiedTime(cached, java.nio.file.attribute.FileTime.fromMillis(System.currentTimeMillis()));
-        return new CachedAudio(cached, kind, namedHash, true);
+        touchCacheEntryLocked(cached);
+        return new StoredAudio(cached, kind, namedHash, true, false);
     }
 
     private static boolean isCacheFileName(String name, String urlHash) {
@@ -590,22 +629,122 @@ public final class RemoteAudioDownload {
 
     private static int kindExtensionLength(String name) { return name.endsWith(Kind.OGG.extension) ? Kind.OGG.extension.length() : Kind.MP3.extension.length(); }
 
-    private static void trimCache(Path cache) throws IOException {
+    /** 调用方必须持有 {@link #CACHE_LOCK}；仍有 fetch→decode 租约的文件绝不允许被删除。 */
+    private static void trimCacheLocked(Path cache) throws IOException {
         cleanupStaleParts(cache);
         try (var files = Files.list(cache)) {
             var entries = files.filter(path -> path.toString().endsWith(Kind.OGG.extension) || path.toString().endsWith(Kind.MP3.extension))
                     .filter(path -> Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS) && !Files.isSymbolicLink(path))
-                    .sorted(Comparator.comparingLong(RemoteAudioDownload::lastModified)).toList();
+                    .sorted(Comparator.comparingLong(RemoteAudioDownload::lastModified)
+                            .thenComparing(path -> path.getFileName().toString())).toList();
             long total = 0L;
             for (Path entry : entries) total += Files.size(entry);
             for (Path entry : entries) {
                 if (total <= MAX_CACHE_BYTES) break;
+                if (CACHE_REFERENCES.containsKey(entry)) continue;
                 long size = Files.size(entry);
                 Files.deleteIfExists(entry);
                 total -= size;
             }
         }
     }
+
+    /** 为调用者分配独立租约；同 URL 单飞的每个 future 等待者都要各自持有一次。 */
+    private static CachedAudio lease(StoredAudio stored, boolean transferReservation, boolean singleFlightFollower) throws IOException {
+        synchronized (CACHE_LOCK) {
+            if (!Files.isRegularFile(stored.path(), LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(stored.path())) {
+                throw new AudioFailureException(FailureStage.CACHE, new IOException("在线音频缓存条目在租约前消失"));
+            }
+            retainCacheReferenceLocked(stored.path());
+            if (transferReservation) {
+                if (!stored.reserved()) {
+                    releaseCacheReferenceLocked(stored.path());
+                    throw new AudioFailureException(FailureStage.CACHE, new IOException("在线音频缓存预留状态不一致"));
+                }
+                releaseCacheReferenceLocked(stored.path());
+            }
+            return new CachedAudio(stored.path(), stored.kind(), stored.contentHash(), stored.cacheHit(), singleFlightFollower);
+        }
+    }
+
+    private static CachedAudio leaseOrCancel(StoredAudio stored) throws IOException {
+        try {
+            return lease(stored, stored.reserved(), false);
+        } catch (IOException | RuntimeException exception) {
+            if (stored.reserved()) cancelReservation(stored.path());
+            throw exception;
+        }
+    }
+
+    private static void retainCacheReferenceLocked(Path path) {
+        CACHE_REFERENCES.merge(path, 1, Integer::sum);
+    }
+
+    private static void cancelReservation(Path path) {
+        synchronized (CACHE_LOCK) {
+            releaseCacheReferenceLocked(path);
+        }
+    }
+
+    private static void releaseCacheReferenceLocked(Path path) {
+        Integer references = CACHE_REFERENCES.get(path);
+        if (references == null || references <= 0) throw new IllegalStateException("在线音频缓存租约计数非法");
+        if (references == 1) CACHE_REFERENCES.remove(path);
+        else CACHE_REFERENCES.put(path, references - 1);
+    }
+
+    /** mtime 是跨重启保留的 LRU 账本；同一毫秒内也必须严格递增，不能依赖 Files.list 的任意顺序。 */
+    private static void touchCacheEntryLocked(Path path) throws IOException {
+        long existing = lastModified(path);
+        long now = System.currentTimeMillis();
+        long next = Math.max(now, Math.max(existing + 1L, lastCacheAccessMillis + 1L));
+        lastCacheAccessMillis = next;
+        Files.setLastModifiedTime(path, java.nio.file.attribute.FileTime.fromMillis(next));
+    }
+
+    /**
+     * 解码只在客户端工作线程内发生；该租约只覆盖 fetch 返回至 {@code prepare} 打开并读完文件的短窗口，
+     * 不会把网络、完整 PCM 解码或 SoundEngine 播放串行到 {@link #CACHE_LOCK}。
+     */
+    public static final class CachedAudio implements AutoCloseable {
+        private final Path path;
+        private final Kind kind;
+        private final String contentHash;
+        private final boolean cacheHit;
+        /** 仅表示本次真实 fetch 等待了同 JVM 内已有下载，不代表缓存命中或 PCM 成功。 */
+        private final boolean singleFlightFollower;
+        private boolean closed;
+
+        private CachedAudio(Path path, Kind kind, String contentHash, boolean cacheHit, boolean singleFlightFollower) {
+            this.path = path;
+            this.kind = kind;
+            this.contentHash = contentHash;
+            this.cacheHit = cacheHit;
+            this.singleFlightFollower = singleFlightFollower;
+        }
+
+        public Path path() { return path; }
+        public Kind kind() { return kind; }
+        public String contentHash() { return contentHash; }
+        public boolean cacheHit() { return cacheHit; }
+        public boolean singleFlightFollower() { return singleFlightFollower; }
+
+        @Override
+        public void close() throws IOException {
+            synchronized (CACHE_LOCK) {
+                if (closed) return;
+                closed = true;
+                releaseCacheReferenceLocked(path);
+                // 并发 decode 完成后立即收敛临时超过上限的缓存；若文件系统拒绝该维护，不能静默
+                // 当成成功，prepare 会把 IOException 明确归入 CACHE/DECODE 失败链。
+                Path parent = path.getParent();
+                if (parent != null && Files.isDirectory(parent)) trimCacheLocked(parent);
+            }
+        }
+    }
+
+    /** 内部单飞值没有可关闭状态；只有每位调用者得到的 {@link CachedAudio} 才拥有租约。 */
+    private record StoredAudio(Path path, Kind kind, String contentHash, boolean cacheHit, boolean reserved) {}
 
     private static void cleanupStaleParts(Path cache) throws IOException {
         long cutoff = System.currentTimeMillis() - STALE_PART_MILLIS;
@@ -648,5 +787,4 @@ public final class RemoteAudioDownload {
     private static String hex(byte[] bytes) { return java.util.HexFormat.of().formatHex(bytes); }
 
     public enum Kind { OGG(".ogg"), MP3(".mp3"); private final String extension; Kind(String extension) { this.extension = extension; } }
-    public record CachedAudio(Path path, Kind kind, String contentHash, boolean cacheHit) {}
 }

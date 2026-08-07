@@ -12,6 +12,16 @@
 
 P5 未验收前不得创建 Release，也不得把受控测试推广为第三方音频可用性、授权或长期压力承诺。
 
+## 缓存压力实现已落盘，尚待 Hosted Runner
+
+本批新增与 P4 短音频场景隔离的 `P5MusicCacheCiScenario` 和 `CiClientP5MusicCacheObservation`。P5 段只在 P4 的 PCM、失败、Bob 真实重连且不补播断言均已成功后、P4 cleanup 前启动另一枚生产八音盒；这保证它既不重排 P4 语义，也继续使用同一专服与两个真实 Forge 客户端。
+
+Alice 对每个 URL 都必须经过生产 `MusicBoxScreen` 的潜行右键、真实输入框清空/键入、一次性服务端提交和普通右键；服务端不直接调用下载、播放服务或 S2C。五个 `?ci=p5-fill-N` URL 必须各自在两端完成生产 S2C 与 SoundEngine 非空 PCM，并以严格 `cache_hit=false` 逐 UUID 回查；第一个 URL 再次配置后仍须两端非命中 PCM，才算 LRU 驱逐后的真实重下。随后 Alice 连续两次真实普通右键同一未缓存 URL；两端各自两枚 PCM marker 必须恰有一条 owner 与一条 `single_flight_follower=true`，以生产 `IN_FLIGHT` future 的真实等待事实证明每个 JVM 的单飞，而不是用另一个客户端进程冒充。
+
+最后，两端只能在自己的两条单飞事件都已真实读取 PCM 后，截断各自实际存在的 fill-5 缓存到 64 字节并写非成功操作事实；服务端回读两个截断事实后，Alice 仍须从 GUI 重配 fill-5，两个客户端均以新的事件 UUID、非命中与 PCM 证明摘要校验删除坏文件并真实重试。脚本只写阶段旗标，严格等待服务端成功日志后放行下一步；成功 marker 一律由客户端 SoundEngine read 写入。P5 大 OGG 仅位于 `src/ciTest/resources/ci-audio/`、严格大于 13 MiB 且不超过生产 16 MiB，GitHub raw HTTPS 才能从同 SHA 提供真实公网下载；正式 Jar 与正式资源清单继续排除它。
+
+生产缓存同时补齐短租约与确定性 LRU：同 URL 等待者不共享可关闭值；从 fetch 返回到完整解码打开文件前，仍在租约中的条目不得被并发 LRU 删除；缓存命中/新提交的 mtime 在同毫秒仍单调递增。这些是实现和静态门闩，不是动态验收结果。当前 P5 总体仍未通过，#5 继续 OPEN。
+
 ## 当前待验证实现
 
 `P5DecorCiScenario`、`CiClientP5DecorObservation`、双客户端启动参数、阶段旗标、旧 marker 拒绝和服务端逐 UUID 反查均已落盘；同一场景的显式单客户端命令以及 Hosted-only 一服一客户端脚本也已接入 `single-client.yml`，但两者均尚未产生本阶段 Hosted Runner 成功证据；本表仍为 **0/6**。全资源清单、64 MiB 音频缓存压力、发行说明和正式版本仍未完成，不能用已有主菜单 smoke 或 P4 旧证据替代。

@@ -75,6 +75,9 @@ public final class CiClientMusicBoxObservation {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void receivedPlayback(MusicBoxPlaybackEvent event) {
+        // P5 压力八音盒拥有独立的输入器和 PCM marker；P4 观察器不能抢占其生产声音包装，
+        // 更不能把后来事件算进 P4 断线重连的历史集合。
+        if (!isP4Url(event.url())) return;
         RECEIVED_EVENTS.add(event.eventId());
         EVENT_URLS.put(event.eventId(), event.url());
         // 仅证明收到生产 S2C，绝不代表下载、解码或 PCM read 成功。
@@ -103,6 +106,7 @@ public final class CiClientMusicBoxObservation {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void failedPlayback(MusicBoxPlaybackFailedEvent event) {
+        if (!isP4Url(event.url())) return;
         Path directory = markerDirectory();
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
@@ -340,6 +344,7 @@ public final class CiClientMusicBoxObservation {
     private static String oggUrl() { return audioBase() + "blindbox-ci-tone.ogg"; }
     private static String mp3Url() { return audioBase() + "blindbox-ci-tone.mp3"; }
     private static String brokenUrl() { return audioBase() + "blindbox-ci-broken.ogg"; }
+    private static boolean isP4Url(String url) { return oggUrl().equals(url) || mp3Url().equals(url) || brokenUrl().equals(url); }
     private static boolean isAlice(LocalPlayer player) { return "BlindBoxAlice".equals(player.getGameProfile().getName()); }
     private static String markerPrefix(LocalPlayer player) { return isAlice(player) ? "client-1-p4-music-" : "client-2-p4-music-"; }
     private static String position(BlockPos pos) { return pos.getX() + "," + pos.getY() + "," + pos.getZ(); }

@@ -45,3 +45,9 @@
 `5074e60` 的真实双客户端 artifact `31164591985` 在小黄鸡业务已成功后暴露 cleanup 首错：P3 强杀恢复保存的 Alice 高空坐标 `(0.5,128.0,0.5)` 周围没有符合只读自然地面规则的格子。现由**下一场景** `P4TextCiScenario` 在鸡 cleanup 前创建、完整保存并拥有 5×5×3 临时安全交接平台；鸡仅消费该已准备平台，不拥有或伪造它。平台一直保留到 P4 八音盒完成，避免其 cleanup 再把 Alice 送回已撤支撑；P5 cleanup 也先恢复到该平台。canonical 导出后才在同一结束流程归还所有原方块并 `save-all/stop`。这不改生产玩法、小黄鸡 Fuse/TNT、死亡笔记或音频断言。
 
 本批仍待 Hosted Runner 的 P5 双客户端、独立单客户端、资源全量清单、音频缓存压力、版本与发行说明；不得因为注册、静态门禁或探针已落盘而宣称 P5 或 Release 已完成。
+
+## P5 缓存并发与 LRU 加固（待 Hosted Runner）
+
+为使下一批受控多 URL 压力可以验证真实缓存边界，生产 `RemoteAudioDownload` 已将缓存复验、原子落盘和 LRU 淘汰串行化，但 DNS、HTTPS 下载、临时文件写入、完整解码与播放均保持并行。每个 `fetch` 调用现在领取独立短租约；同 URL 在途 future 不再共享可关闭的缓存对象，租约会防止另一 URL 的淘汰在异步解码打开文件前删除它，并在解码后的 PCM 已入内存时立即释放。mtime 在同毫秒也单调递增，避免快节奏五 URL 压力依赖 `Files.list` 的不确定同值顺序。
+
+这只是生产一致性加固，不是音频压力通过：受控 URL、两次同 URL 的真实普通右键、五个 query 缓存键、LRU 驱逐重下、破坏摘要后的重试及两端 SoundEngine PCM 仍须由 Hosted Runner 实证。精确流程、仅 ciTest 的原创夹具边界和单进程范围见 [P5_AUDIO_PRESSURE.md](P5_AUDIO_PRESSURE.md)。
