@@ -52,6 +52,12 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class CiClientP5MusicCacheObservation {
     private static final int RELEASE_SHIFT_TICKS = 4;
+    /**
+     * P5 压力场景的阶段旗标只安排输入，不能替代客户端已经同步到生产方块、实际打开 GUI 或得到 PCM。
+     * 当真实输入前置长期不能满足时，只落一份非成功诊断，避免脚本在自己的 240 秒等待结束前只留下
+     * 一个无上下文的 grep 失败。
+     */
+    private static final int INPUT_STALL_DIAGNOSTIC_TICKS = 100;
     private static final Map<UUID, String> RECEIVED_EVENTS = new ConcurrentHashMap<>();
     private static final Set<UUID> WRITTEN_EVENTS = ConcurrentHashMap.newKeySet();
     private enum State { WAIT_ENABLED, CONFIGURE_SNEAK, CONFIGURE_SCREEN, PLAY, SINGLE_SECOND_USE, WAIT_PCM, WAIT_NEXT, WAIT_CORRUPTION, COMPLETE }
@@ -59,8 +65,10 @@ public final class CiClientP5MusicCacheObservation {
     private static volatile int request;
     private static int shiftTicks;
     private static int releaseTicks;
+    private static int inputStallTicks;
     private static final AtomicInteger SINGLE_FLIGHT_READS = new AtomicInteger();
     private static boolean corruptionWritten;
+    private static boolean inputStallWritten;
 
     private CiClientP5MusicCacheObservation() {}
 
@@ -92,16 +100,24 @@ public final class CiClientP5MusicCacheObservation {
     private static void driveAlice(Minecraft minecraft, LocalPlayer player) {
         switch (state) {
             case WAIT_ENABLED -> {
-                if (stage("p5-music-cache-enabled.flag")) beginConfigure(1, minecraft);
+                if (!stage("p5-music-cache-enabled.flag")) return;
+                if (observesMusicBox(minecraft)) beginConfigure(1, minecraft);
+                else recordInputStall(minecraft, player);
             }
             case CONFIGURE_SNEAK -> {
                 if (++shiftTicks < RELEASE_SHIFT_TICKS) return;
                 KeyMapping.click(minecraft.options.keyUse.getKey());
                 state = State.CONFIGURE_SCREEN;
             }
-            case CONFIGURE_SCREEN -> submitUrl(minecraft.screen, currentUrl(), minecraft);
+            case CONFIGURE_SCREEN -> {
+                if (minecraft.screen instanceof MusicBoxScreen) submitUrl(minecraft.screen, currentUrl(), minecraft);
+                else recordInputStall(minecraft, player);
+            }
             case PLAY -> {
-                if (!canUseMusicBox(minecraft, player)) return;
+                if (!canUseMusicBox(minecraft, player)) {
+                    recordInputStall(minecraft, player);
+                    return;
+                }
                 KeyMapping.set(minecraft.options.keyShift.getKey(), false);
                 if (++releaseTicks < RELEASE_SHIFT_TICKS) return;
                 KeyMapping.click(minecraft.options.keyUse.getKey());
@@ -136,6 +152,7 @@ public final class CiClientP5MusicCacheObservation {
         if (!observesMusicBox(minecraft)) return;
         request = nextRequest;
         SINGLE_FLIGHT_READS.set(0);
+        inputStallTicks = 0;
         KeyMapping.set(minecraft.options.keyShift.getKey(), true);
         shiftTicks = 0;
         releaseTicks = 0;
@@ -237,6 +254,30 @@ public final class CiClientP5MusicCacheObservation {
     private static Path markerDirectory() {
         String value = System.getProperty("blindbox.ci.p5MusicCacheMarkerDir");
         return value == null || value.isBlank() ? null : Path.of(value).toAbsolutePath();
+    }
+
+    /**
+     * 这不是成功 marker，也不参与服务端通过判断。它只记录真实客户端在输入阶段看到的无敏感事实，
+     * 使“方块同步、GUI 打开或普通 use 未发生”能与下载、解码及 PCM 问题严格区分。
+     */
+    private static void recordInputStall(Minecraft minecraft, LocalPlayer player) {
+        if (++inputStallTicks < INPUT_STALL_DIAGNOSTIC_TICKS || inputStallWritten) return;
+        Path directory = markerDirectory();
+        if (directory == null) return;
+        BlockPos target = target(minecraft);
+        String screen = minecraft.screen == null ? "none" : minecraft.screen.getClass().getSimpleName();
+        writeNewMarker(directory.resolve(markerPrefix(player) + "input-stalled.marker"), "schema=1\n"
+                + "state=" + state + "\n"
+                + "request=" + request + "\n"
+                + "screen=" + screen + "\n"
+                + "target=" + position(target) + "\n"
+                + "music_box_observed=" + observesMusicBox(minecraft) + "\n"
+                + "standing=" + position(player.blockPosition()) + "\n"
+                + "main_hand_empty=" + player.getItemInHand(InteractionHand.MAIN_HAND).isEmpty() + "\n"
+                + "pitch=" + player.getXRot() + "\n"
+                + "can_use_music_box=" + canUseMusicBox(minecraft, player) + "\n"
+                + "input_precondition_stalled=true\n");
+        inputStallWritten = true;
     }
 
     private static void writeNewMarker(Path marker, String value) {

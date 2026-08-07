@@ -604,6 +604,19 @@ for _ in $(seq 1 60); do
 done
 grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_STARTED=success' "${SERVER_DIR}/server.log"
 touch "${EVIDENCE}/p5-music-cache-enabled.flag"
+p5_music_cache_failure() {
+  # 成功 marker 只能由两个真实客户端经 SoundEngine PCM read 写入；这里仅在既有严格等待
+  # 已超时后把非成功诊断和服务器状态输出到 Actions，绝不补写、放宽或替代任何业务结果。
+  printf '%s\n' 'P5 八音盒缓存压力未达到当前严格阶段；以下仅为非成功诊断：' >&2
+  for diagnostic in "${EVIDENCE}"/client-*-p5-music-cache-input-stalled.marker; do
+    [ -f "${diagnostic}" ] || continue
+    printf '%s\n' "--- ${diagnostic} ---" >&2
+    cat "${diagnostic}" >&2
+  done
+  printf '%s\n' '--- P5 服务器日志尾部 ---' >&2
+  tail -n 240 "${SERVER_DIR}/server.log" >&2
+  exit 1
+}
 for round in $(seq 1 5); do
   for _ in $(seq 1 240); do
     if grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
@@ -611,7 +624,7 @@ for round in $(seq 1 5); do
     kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
     sleep 1
   done
-  grep -q "BLINDBOX_CITEST_P5_MUSIC_CACHE_FILL_${round}=success" "${SERVER_DIR}/server.log"
+  grep -q "BLINDBOX_CITEST_P5_MUSIC_CACHE_FILL_${round}=success" "${SERVER_DIR}/server.log" || p5_music_cache_failure
   if [ "${round}" -lt 5 ]; then touch "${EVIDENCE}/p5-music-cache-fill-$((round + 1)).flag"; fi
 done
 touch "${EVIDENCE}/p5-music-cache-eviction-reload.flag"
@@ -621,7 +634,7 @@ for _ in $(seq 1 240); do
   kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
   sleep 1
 done
-grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_EVICTION_REDOWNLOAD=success' "${SERVER_DIR}/server.log"
+grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_EVICTION_REDOWNLOAD=success' "${SERVER_DIR}/server.log" || p5_music_cache_failure
 touch "${EVIDENCE}/p5-music-cache-singleflight.flag"
 for _ in $(seq 1 240); do
   if grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
@@ -629,14 +642,14 @@ for _ in $(seq 1 240); do
   kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
   sleep 1
 done
-grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_SINGLE_FLIGHT=success' "${SERVER_DIR}/server.log"
+grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_SINGLE_FLIGHT=success' "${SERVER_DIR}/server.log" || p5_music_cache_failure
 for _ in $(seq 1 120); do
   if grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
   grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CORRUPTION=ready' "${SERVER_DIR}/server.log" && break
   kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
   sleep 1
 done
-grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CORRUPTION=ready' "${SERVER_DIR}/server.log"
+grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CORRUPTION=ready' "${SERVER_DIR}/server.log" || p5_music_cache_failure
 touch "${EVIDENCE}/p5-music-cache-corrupt-retry.flag"
 for _ in $(seq 1 240); do
   if grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
@@ -644,7 +657,7 @@ for _ in $(seq 1 240); do
   kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
   sleep 1
 done
-grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CLIENTS=success' "${SERVER_DIR}/server.log"
+grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CLIENTS=success' "${SERVER_DIR}/server.log" || p5_music_cache_failure
 printf 'blindboxcitest cleanup_p5_music_cache_clients\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CLEANUP=success' "${SERVER_DIR}/server.log" && break

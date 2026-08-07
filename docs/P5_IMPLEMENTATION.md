@@ -51,3 +51,5 @@
 为使下一批受控多 URL 压力可以验证真实缓存边界，生产 `RemoteAudioDownload` 已将缓存复验、原子落盘和 LRU 淘汰串行化，但 DNS、HTTPS 下载、临时文件写入、完整解码与播放均保持并行。每个 `fetch` 调用现在领取独立短租约；同 URL 在途 future 不再共享可关闭的缓存对象，租约会防止另一 URL 的淘汰在异步解码打开文件前删除它，并在解码后的 PCM 已入内存时立即释放。mtime 在同毫秒也单调递增，避免快节奏五 URL 压力依赖 `Files.list` 的不确定同值顺序。
 
 这只是生产一致性加固，不是音频压力通过：受控 URL、两次同 URL 的真实普通右键、五个 query 缓存键、LRU 驱逐重下、破坏摘要后的重试及两端 SoundEngine PCM 仍须由 Hosted Runner 实证。精确流程、仅 ciTest 的原创夹具边界和单进程范围见 [P5_AUDIO_PRESSURE.md](P5_AUDIO_PRESSURE.md)。
+
+`e0c6201` 的质量、专服、强杀恢复和单客户端均已成功，双客户端 [31175170146](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31175170146) 先完整通过 P4 门/小黄鸡、P5 装饰、文本及 P4 音频，却在 P5 压力首轮的 240 秒严格等待后没有 `FILL_1`。服务端只到 `P5_MUSIC_CACHE_STARTED`，artifact 既没有 P5 的生产 S2C、下载失败、PCM 或成功 marker，故不能猜测为下载/解码/LRU 问题，也不能用延长等待或成功旗标绕过。下一轮仅在 P5 客户端启用、GUI 等待和普通 use 等输入前置连续 100 tick 未满足时原子落一份**非成功**事实诊断；脚本只在原有严格阶段等待失败后显式打印该诊断和服务器尾部。它不写通过、不开下载/播放捷径、不改业务时限或两真实客户端组合，仍须据 Hosted Runner 的新首错继续修复。
