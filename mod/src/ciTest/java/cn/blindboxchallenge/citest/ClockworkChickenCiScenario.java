@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.UUID;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -20,6 +21,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
@@ -263,8 +265,11 @@ public final class ClockworkChickenCiScenario {
             }
             originalBlocks.forEach((pos, state) -> level.setBlock(pos, state, 3));
             alice.setItemInHand(InteractionHand.MAIN_HAND, aliceOriginalHand.copy());
-            moveFixturePlayer(alice, aliceOriginalPosition, aliceYaw, alicePitch);
-            moveFixturePlayer(bob, bobOriginalPosition, bobYaw, bobPitch);
+            // P3 的强杀恢复故意保留 Alice 的高空持久位置；它是恢复证据，不是后续场景可站立的
+            // 世界格。若按原坐标还原，下一场景输入前便会被原版坠落伤害杀死。这里仅为 ciTest
+            // 交接搜索临近已存在的安全站立格，找不到即严格失败，绝不在危险原点放置永久垫块。
+            moveFixturePlayer(alice, safeHandoffDestination(aliceOriginalPosition), aliceYaw, alicePitch);
+            moveFixturePlayer(bob, safeHandoffDestination(bobOriginalPosition), bobYaw, bobPitch);
             alice.containerMenu.broadcastChanges();
         }
 
@@ -289,8 +294,41 @@ public final class ClockworkChickenCiScenario {
 
         private void preparePlatform(BlockPos platform) {
             for (int x = -2; x <= 2; x++) {
-                for (int z = -2; z <= 2; z++) rememberAndSet(platform.offset(x, 0, z), Blocks.OBSIDIAN.defaultBlockState());
+                for (int z = -2; z <= 2; z++) {
+                    BlockPos support = platform.offset(x, 0, z);
+                    // 平台除了提供脚下支撑，还必须清出两格身体/头顶空间；随机地形的水体或方块
+                    // 不能让等待 1200 tick 的真实 TNT 观察变成溺水或窒息夹具。
+                    rememberAndSet(support, Blocks.OBSIDIAN.defaultBlockState());
+                    rememberAndSet(support.above(), Blocks.AIR.defaultBlockState());
+                    rememberAndSet(support.above(2), Blocks.AIR.defaultBlockState());
+                }
             }
+        }
+
+        /** 查找靠近原定位的已存在可站立地面；只读世界状态，不能以临时方块或伤害豁免掩盖失败。 */
+        private Vec3 safeHandoffDestination(Vec3 requested) {
+            BlockPos center = BlockPos.containing(requested);
+            for (int radius = 0; radius <= 16; radius++) {
+                for (int x = center.getX() - radius; x <= center.getX() + radius; x++) {
+                    for (int z = center.getZ() - radius; z <= center.getZ() + radius; z++) {
+                        if (Math.max(Math.abs(x - center.getX()), Math.abs(z - center.getZ())) != radius) continue;
+                        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                        // 强杀前 P3 的临时高空台可能已被保存；交接不能把它当作“恢复后的原位”，
+                        // 否则仍会把下一场景交还到 128 高度附近的瞬态空间。
+                        if (requested.y - y < 4.0D) continue;
+                        BlockPos feet = new BlockPos(x, y, z);
+                        BlockPos support = feet.below();
+                        BlockState supportState = level.getBlockState(support);
+                        if (supportState.getFluidState().isEmpty()
+                                && supportState.isFaceSturdy(level, support, Direction.UP)
+                                && level.getBlockState(feet).isAir()
+                                && level.getBlockState(feet.above()).isAir()) {
+                            return new Vec3(x + 0.5D, y, z + 0.5D);
+                        }
+                    }
+                }
+            }
+            throw new IllegalStateException("P4 小黄鸡夹具找不到真实安全交接地面：" + requested);
         }
 
         private void fail(Exception exception) {

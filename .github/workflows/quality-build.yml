@@ -126,6 +126,15 @@ jobs:
           grep -q 'player.setDeltaMovement(Vec3.ZERO);' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
           grep -q 'player.hurtMarked = true;' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
           grep -q 'player.resetFallDistance();' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          # 安全平台还必须清出真实身体和头顶空间；强杀后保存的高空原坐标不能在 cleanup 时再次
+          # 交给下一场景，必须只读搜索已有可站立地面，找不到严格失败而非放置永久垫块。
+          grep -q 'rememberAndSet(support.above(), Blocks.AIR.defaultBlockState());' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          grep -q 'rememberAndSet(support.above(2), Blocks.AIR.defaultBlockState());' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          grep -q 'safeHandoffDestination(aliceOriginalPosition)' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          grep -q 'safeHandoffDestination(bobOriginalPosition)' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          grep -q 'Heightmap.Types.MOTION_BLOCKING_NO_LEAVES' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          grep -q 'supportState.getFluidState().isEmpty()' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
+          grep -q 'supportState.isFaceSturdy(level, support, Direction.UP)' src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java
           python3 - <<'PY'
           from pathlib import Path
           source = Path('src/ciTest/java/cn/blindboxchallenge/citest/ClockworkChickenCiScenario.java').read_text(encoding='utf-8')
@@ -133,6 +142,10 @@ jobs:
               raise SystemExit('P4 小黄鸡三组夹具定位未全部走统一状态清理方法')
           if 'alice.teleportTo(level' in source or 'bob.teleportTo(level' in source:
               raise SystemExit('P4 小黄鸡仍存在绕过状态清理的玩家定位')
+          handoff = source[source.index('private Vec3 safeHandoffDestination'):source.index('private void fail(Exception exception)')]
+          if ('Blocks.' in handoff or 'setBlock(' in handoff or 'getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES' not in handoff
+                  or 'supportState.getFluidState().isEmpty()' not in handoff):
+              raise SystemExit('P4 小黄鸡交接不得放置垫块，且必须只接受非流体的已有安全地面')
           PY
           python3 - <<'PY'
           from pathlib import Path
