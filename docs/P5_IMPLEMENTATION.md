@@ -38,6 +38,8 @@
 
 `6737f52` 的单客户端 run `31170034072` 已使三轮完整真实拾取、放置、破坏、生产掉落、PCM 无关的 marker 反查与 cleanup 全部成功。该 SHA 的双客户端 run `31170034066` 则证明三轮服务器链和 Alice marker 同样全成功，却缺少 Bob marker：P4 文本已让 Bob 死亡，P4 八音盒随后为不补播专项断线重连 Bob；P5 在重连后数秒即开始，死亡后的客户端没有形成三轮方块/掉落实体观察。根因不是放置、破坏、marker 复验或资源：把 P5 放在“Bob 必须死亡且不复活”的文本/音频之后，与两名存活玩家互相操作和观察冲突。现仅重排 ciTest 脚本到 P4 文本前的安全交接窗口，并恢复 Bob 的第二轮真实操作；P4 文本死亡、音频重连不补播、交接平台持有至 canonical 导出及所有服务端生产逻辑不变。
 
+`895692c` 已在同一 SHA 获得装饰方块子范围的质量、专服、强杀恢复、真实单客户端、真实双客户端与汇总六项成功（完整链接见 [P5 验收矩阵](P5_ACCEPTANCE.md)）。双端 artifact 中 Alice 与 Bob 分别写出的三轮 marker 对 `BlockState`、坐标、物品和掉落实体 UUID 全部一致；服务器依次输出 R1 Alice 摆件、R2 Bob 画板、R3 Alice 奖杯的 `PLACE_READY`、`BREAK_READY`、`SERVER_DROP`，再输出 `SERVER`、`CLIENTS`、`CLEANUP` 成功。P5 cleanup 后，P4 文本真实死亡、八音盒 PCM/不补播、canonical export 与交接平台归还也保持成功。这是装饰子范围的真实基线，不代替后续音频缓存压力或发行验收。
+
 ### P4 交接回归修复（待 Hosted Runner 验证）
 
 `5074e60` 的真实双客户端 artifact `31164591985` 在小黄鸡业务已成功后暴露 cleanup 首错：P3 强杀恢复保存的 Alice 高空坐标 `(0.5,128.0,0.5)` 周围没有符合只读自然地面规则的格子。现由**下一场景** `P4TextCiScenario` 在鸡 cleanup 前创建、完整保存并拥有 5×5×3 临时安全交接平台；鸡仅消费该已准备平台，不拥有或伪造它。平台一直保留到 P4 八音盒完成，避免其 cleanup 再把 Alice 送回已撤支撑；P5 cleanup 也先恢复到该平台。canonical 导出后才在同一结束流程归还所有原方块并 `save-all/stop`。这不改生产玩法、小黄鸡 Fuse/TNT、死亡笔记或音频断言。

@@ -1,6 +1,6 @@
 # P5 中性原创装饰方块与发布准备验收矩阵
 
-> 阶段工单：[Issue #5](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/5)。当前 0/6 阶段门禁；所有动态 Forge/Minecraft 结论仅以 GitHub Hosted Runner 为准。
+> 阶段工单：[Issue #5](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/5)。三个装饰方块子范围已取得同 SHA 六门禁；P5 整体仍待音频缓存压力、发行资料与资产法律边界完成，故工单保持 OPEN、不得 Release。所有动态 Forge/Minecraft 结论仅以 GitHub Hosted Runner 为准。
 
 |范围|必须真实验收|
 |---|---|
@@ -23,3 +23,18 @@ P5 未验收前不得创建 Release，也不得把受控测试推广为第三方
 `7e8a533` 的单客户端 run `31169408832` 表明 attack click 后 R2 仍严格停在 `WAIT_FOR_BREAK`，但客户端命中和攻击注入均为真；源码复核已定位为旧 R1 的持久阶段旗标在每 tick 取消全局攻击键，覆盖 R2 的 held attack。后续只将抬键时机移至完整轮次循环之后，并以仍存在的当前生产方块决定保持；不改真实输入、服务端掉落/回收、双端 marker、时限或任何生产玩法。P5 仍为 **0/6**。
 
 `6737f52` 的单客户端 run `31170034072` 已完整通过三轮真实放置—破坏—掉落—拾取和 cleanup。双客户端 run `31170034066` 的三轮服务端链与 Alice marker也完整成功，但 Bob 已在 P4 文本真实死亡且八音盒不补播重连后才进入 P5，未形成其三轮观察 marker；这不能用单端或 Alice marker 冒充双端通过。后续固定将 P5 段移动到交接平台已准备/小黄鸡 cleanup 后、`run_p4_text_negative` 前，并恢复 Bob 的 R2 原版操作；质量门禁锁定此顺序，P5 仍为 **0/6**。
+
+## `895692c` 装饰方块子范围基线：6/6
+
+`895692cde1bb8de2d3ddc413fcb5a9dd7b3ea6d3` 的同 SHA Hosted Runner 已将本子范围六项门禁全部跑绿：
+
+|门禁|真实结果|
+|---|---|
+|质量与构建|[success 31171119943](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31171119943)：正式 Jar/ciTest 隔离、资源闭合、角色与执行顺序、禁止替代路径静态门禁通过|
+|专用服务器|[success 31171119944](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31171119944)|
+|强杀恢复|[success 31171120835](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31171120835)|
+|真实单客户端|[success 31171121065](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31171121065)：Alice 三轮均由原版 ItemEntity 拾取、keyUse、keyAttack、count=1 掉落和原版回收完成，再由服务端/marker反查并 cleanup|
+|真实双客户端|[success 31171119931](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31171119931)：R1 Alice 摆件、R2 Bob 画板、R3 Alice 奖杯均完成；两份 marker 对三轮 BlockState/掉落实体 UUID 逐字段一致，随后 `SERVER`、`CLIENTS`、`CLEANUP` 成功；P4 文本、音频、导出和交接平台归还也在其后成功|
+|强制回归汇总|[success 31171667037](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31171667037)：同 SHA 与五项 canonical 运行匹配|
+
+这只验收三个原创中性装饰方块及其真实单/双端路径；**不是 P5 整体验收或 Release 结论**。64 MiB 音频缓存的 LRU/驱逐重下/单飞/损坏删除重试、中文发行说明、正式版本与对历史资源授权的可验证处理仍未完成，Issue #5 不关闭。
