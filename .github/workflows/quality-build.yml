@@ -131,7 +131,7 @@ jobs:
           grep -q 'throw new AudioFailureException(stage, exception);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'throw new AudioFailureException(FailureStage.BODY, exception);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'FailureStage.DECODE' src/main/java/cn/blindboxchallenge/client/audio/RemoteMusicSoundInstance.java
-          grep -q 'return stage + "/" + root.getClass().getSimpleName();' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
+          grep -q 'connectionAttempts.isEmpty() ? "" : "/attempts=" + connectionAttempts' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
           # Hosted 直连预检只留脱敏网络事实，明确禁用代理，且不能替代生产客户端实际 PCM 断言。
           grep -q -- "curl --noproxy '\*' --ipv4 --http1.1" scripts/ci/multi-client.sh
           grep -q 'p4-audio-direct-preflight.txt' scripts/ci/multi-client.sh
