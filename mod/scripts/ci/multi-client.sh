@@ -606,9 +606,14 @@ grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_STARTED=success' "${SERVER_DIR}/server.l
 touch "${EVIDENCE}/p5-music-cache-enabled.flag"
 p5_music_cache_failure() {
   # 成功 marker 只能由两个真实客户端经 SoundEngine PCM read 写入；这里仅在既有严格等待
-  # 已超时后把非成功诊断和服务器状态输出到 Actions，绝不补写、放宽或替代任何业务结果。
+  # 已超时后请求一份非成功客户端快照，再输出诊断和服务器状态；绝不补写、放宽或替代任何业务结果。
+  touch "${EVIDENCE}/p5-music-cache-diagnostic-request.flag"
+  for _ in $(seq 1 20); do
+    [ -f "${EVIDENCE}/client-1-p5-audio-postfailure.diagnostic" ] && break
+    sleep 1
+  done
   printf '%s\n' 'P5 八音盒缓存压力未达到当前严格阶段；以下仅为非成功诊断：' >&2
-  for diagnostic in "${EVIDENCE}"/client-*-p5-music-cache-input-stalled.marker; do
+  for diagnostic in "${EVIDENCE}"/client-*-p5-music-cache-input-stalled.marker "${EVIDENCE}"/client-*-p5-audio-*.diagnostic; do
     [ -f "${diagnostic}" ] || continue
     printf '%s\n' "--- ${diagnostic} ---" >&2
     cat "${diagnostic}" >&2

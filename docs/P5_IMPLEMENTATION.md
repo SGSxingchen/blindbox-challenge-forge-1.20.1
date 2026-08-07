@@ -53,3 +53,5 @@
 这只是生产一致性加固，不是音频压力通过：受控 URL、两次同 URL 的真实普通右键、五个 query 缓存键、LRU 驱逐重下、破坏摘要后的重试及两端 SoundEngine PCM 仍须由 Hosted Runner 实证。精确流程、仅 ciTest 的原创夹具边界和单进程范围见 [P5_AUDIO_PRESSURE.md](P5_AUDIO_PRESSURE.md)。
 
 `e0c6201` 的质量、专服、强杀恢复和单客户端均已成功，双客户端 [31175170146](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31175170146) 先完整通过 P4 门/小黄鸡、P5 装饰、文本及 P4 音频，却在 P5 压力首轮的 240 秒严格等待后没有 `FILL_1`。服务端只到 `P5_MUSIC_CACHE_STARTED`，artifact 既没有 P5 的生产 S2C、下载失败、PCM 或成功 marker，故不能猜测为下载/解码/LRU 问题，也不能用延长等待或成功旗标绕过。下一轮仅在 P5 客户端启用、GUI 等待和普通 use 等输入前置连续 100 tick 未满足时原子落一份**非成功**事实诊断；脚本只在原有严格阶段等待失败后显式打印该诊断和服务器尾部。它不写通过、不开下载/播放捷径、不改业务时限或两真实客户端组合，仍须据 Hosted Runner 的新首错继续修复。
+
+`e2857bb` 的双客户端 [31176243299](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31176243299) 再次在同一 `FILL_1` 严格等待失败，且新增的输入停滞文件也不存在；质量 artifact 已确认 ciTest Jar 含该观察器字节码，客户端 debug 日志也确认 Forge 自动订阅。因此不能把先前“位置同步竞态”当作已经证实的根因：当前更早的真实分界是观察器在输入停滞记录前返回，可能是客户端 tick、Alice 身份、P5 marker 属性或启用旗标可见性之一。下一轮只在**原有失败已经发生后**由脚本请求一份一次性非成功快照，记录状态、启用旗标、目标方块、站位、手持、俯仰、屏幕和可用性；若 marker 目录缺失，仅在真实 Alice 联机时写一条不含路径/URL 的客户端警告。该 20 秒证据收集发生在失败判定之后，不延长任何业务或成功等待，服务端从不读取该文件。

@@ -135,10 +135,12 @@ def main():
         stale.unlink()
     for stale in evidence.glob("client-*-p5-music-cache-*.marker"):
         stale.unlink()
+    for stale in evidence.glob("client-*-p5-audio-*.diagnostic"):
+        stale.unlink()
     for stage_flag in (evidence / "p4-text-enabled.flag", evidence / "p4-music-cache-enabled.flag", evidence / "p4-music-network-restored.flag",
                        evidence / "p4-door-recovery-enabled.flag", evidence / "p5-decor-enabled.flag", evidence / "p5-music-cache-enabled.flag",
                        evidence / "p5-music-cache-eviction-reload.flag", evidence / "p5-music-cache-singleflight.flag",
-                       evidence / "p5-music-cache-corrupt-retry.flag"):
+                       evidence / "p5-music-cache-corrupt-retry.flag", evidence / "p5-music-cache-diagnostic-request.flag"):
         stage_flag.unlink(missing_ok=True)
     for round_index in (1, 2, 3):
         (evidence / f"p5-decor-place-{round_index}.flag").unlink(missing_ok=True)

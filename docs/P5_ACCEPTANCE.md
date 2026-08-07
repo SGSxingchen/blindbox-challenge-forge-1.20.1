@@ -52,3 +52,5 @@ Alice 对每个 URL 都必须经过生产 `MusicBoxScreen` 的潜行右键、真
 `e32035e` 的质量、专服、强杀恢复和单客户端已 success，但双客户端 [31174221178](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31174221178) 在 P5 段前失败。artifact 的首个业务错误为 P4 小黄鸡“两个真实客户端未在观察窗口内同步小黄鸡实体”：跨维门 cleanup 把 Bob 交回 P3 强杀恢复的无支撑/嵌墙原位，日志记录其真实窒息，两个 chicken marker 均缺失。当前仅将文本场景拥有的双人安全交接平台提前至 door cleanup 前并由该 cleanup 真实交接；不复活、跳过、延长窗口或伪造 marker。必须先以新 SHA 回归此首错，P5 音频压力尚未开始，不能评价其结果。
 
 `e0c6201` 已使上述 P4 门 cleanup 交接、P4 小黄鸡、P5 装饰、文本和既有音频链全部成功；但真实双客户端 [31175170146](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31175170146) 在 P5 压力 `FILL_1` 的既有 240 秒严格等待后退出。服务端仅有 `P5_MUSIC_CACHE_STARTED`，两端没有 P5 生产 S2C、客户端失败事件、PCM 或成功 marker，不能将其伪称为缓存、下载或解码结论。下一批仅添加输入前置的非成功诊断及失败时日志打印；不延长观察/业务时限、不写成功 marker、不直调下载或播放服务，Issue #5 保持 OPEN。
+
+`e2857bb` 的双客户端 [31176243299](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31176243299) 仍止于同一首轮，新增输入停滞诊断也不存在。质量 artifact 和客户端 debug 分别证明观察器已被打包、Forge 已自动订阅，但这尚不能断言它已经进入输入状态；下一批仅在严格失败**之后**请求一次非成功客户端快照，以区分 marker 属性/旗标、身份、方块同步和输入阶段。该额外最多 20 秒只用于收集已经失败的证据，绝不改变原 240 秒成功等待、服务端断言或任何通过 marker；Issue #5 继续 OPEN。

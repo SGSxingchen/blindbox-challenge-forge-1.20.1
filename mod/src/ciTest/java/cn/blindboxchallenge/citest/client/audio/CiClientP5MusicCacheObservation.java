@@ -69,6 +69,8 @@ public final class CiClientP5MusicCacheObservation {
     private static final AtomicInteger SINGLE_FLIGHT_READS = new AtomicInteger();
     private static boolean corruptionWritten;
     private static boolean inputStallWritten;
+    private static boolean postFailureDiagnosticWritten;
+    private static boolean markerDirectoryMissingLogged;
 
     private CiClientP5MusicCacheObservation() {}
 
@@ -93,7 +95,21 @@ public final class CiClientP5MusicCacheObservation {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
-        if (player == null || !isAlice(player) || markerDirectory() == null) return;
+        if (player == null || !isAlice(player)) return;
+        Path directory = markerDirectory();
+        if (directory == null) {
+            // 只在真实 Alice 已联机时记录一次配置缺失，不暴露本地路径、URL 或任何成功状态。
+            if (!markerDirectoryMissingLogged) {
+                CiTestProbe.LOGGER.warn("P5 八音盒缓存客户端探针缺少 marker 目录配置");
+                markerDirectoryMissingLogged = true;
+            }
+            return;
+        }
+        // 仅当脚本已经按原有严格阶段判定失败后才请求这一份快照；它绝不参与服务端通过条件，
+        // 也不会在正常场景开始前写入任何 p5-music-cache marker。
+        if (Files.isRegularFile(directory.resolve("p5-music-cache-diagnostic-request.flag"))) {
+            writePostFailureDiagnostic(minecraft, player, directory);
+        }
         driveAlice(minecraft, player);
     }
 
@@ -278,6 +294,29 @@ public final class CiClientP5MusicCacheObservation {
                 + "can_use_music_box=" + canUseMusicBox(minecraft, player) + "\n"
                 + "input_precondition_stalled=true\n");
         inputStallWritten = true;
+    }
+
+    /**
+     * 严格阶段已经失败后才由脚本请求的一次性快照。它专门区分“客户端 tick/属性/阶段旗标不可见”
+     * 与已经进入输入、GUI、下载或 PCM 阶段；不是成功 marker，服务端从不读取它。
+     */
+    private static void writePostFailureDiagnostic(Minecraft minecraft, LocalPlayer player, Path directory) {
+        if (postFailureDiagnosticWritten) return;
+        BlockPos target = target(minecraft);
+        String screen = minecraft.screen == null ? "none" : minecraft.screen.getClass().getSimpleName();
+        writeNewMarker(directory.resolve(markerPrefix(player) + "audio-postfailure.diagnostic"), "schema=1\n"
+                + "state=" + state + "\n"
+                + "request=" + request + "\n"
+                + "enabled_flag_seen=" + Files.isRegularFile(directory.resolve("p5-music-cache-enabled.flag")) + "\n"
+                + "target=" + position(target) + "\n"
+                + "music_box_observed=" + observesMusicBox(minecraft) + "\n"
+                + "standing=" + position(player.blockPosition()) + "\n"
+                + "main_hand_empty=" + player.getItemInHand(InteractionHand.MAIN_HAND).isEmpty() + "\n"
+                + "pitch=" + player.getXRot() + "\n"
+                + "screen=" + screen + "\n"
+                + "can_use_music_box=" + canUseMusicBox(minecraft, player) + "\n"
+                + "post_failure_diagnostic=true\n");
+        postFailureDiagnosticWritten = true;
     }
 
     private static void writeNewMarker(Path marker, String value) {
