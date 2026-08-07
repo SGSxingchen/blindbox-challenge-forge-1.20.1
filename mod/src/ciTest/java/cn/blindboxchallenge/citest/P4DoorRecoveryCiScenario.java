@@ -124,7 +124,7 @@ public final class P4DoorRecoveryCiScenario {
         }
     }
 
-    private enum Phase { WAIT_FOR_CROSSING, READY, FAILED }
+    private enum Phase { WAIT_FOR_FIXTURE_SYNC, WAIT_FOR_CROSSING, READY, FAILED }
 
     private static final class ActiveScenario {
         private final MinecraftServer server;
@@ -143,7 +143,7 @@ public final class P4DoorRecoveryCiScenario {
         private final Vec3 originalBobPosition;
         private final ResourceKey<Level> originalBobDimension;
         private final long startedAt;
-        private Phase phase = Phase.WAIT_FOR_CROSSING;
+        private Phase phase = Phase.WAIT_FOR_FIXTURE_SYNC;
 
         private ActiveScenario(MinecraftServer server, ServerLevel overworld, ServerLevel nether, ServerPlayer alice, ServerPlayer bob, BlockPos sourceDoor,
                                BlockPos targetDoor, Path markerDirectory) {
@@ -192,6 +192,24 @@ public final class P4DoorRecoveryCiScenario {
             if (phase == Phase.READY || phase == Phase.FAILED) return;
             if (overworld.getGameTime() - startedAt > 800L) throw new IllegalStateException("P4 跨维门恢复场景超时");
             ServerPlayer alice = alice();
+            if (phase == Phase.WAIT_FOR_FIXTURE_SYNC) {
+                ServerPlayer bob = bob();
+                // 夹具跨维同样需要客户端确认 teleport id。确认前客户端仍可能发旧维度位置包；
+                // 此时绝不放行前进键，也不把服务端夹具位置误算为生产门的进入结果。
+                if (alice.isChangingDimension() || bob.isChangingDimension()) return;
+                Vec3 expectedAlice = new Vec3(sourceDoor.getX() + 0.5D, sourceDoor.getY(), sourceDoor.getZ() + 2.5D);
+                Vec3 expectedBob = new Vec3(targetDoor.getX() + 2.5D, targetDoor.getY(), targetDoor.getZ() + 0.5D);
+                if (!alice.serverLevel().dimension().equals(overworld.dimension()) || alice.position().distanceToSqr(expectedAlice) > 0.08D
+                        || !bob.serverLevel().dimension().equals(nether.dimension()) || bob.position().distanceToSqr(expectedBob) > 0.08D) {
+                    throw new IllegalStateException("P4 跨维门夹具确认后玩家未处于预期站立格：Alice=" + alice.position()
+                            + ", Bob=" + bob.position());
+                }
+                if (!alice.onGround() || alice.getDeltaMovement().lengthSqr() > 1.0E-8D
+                        || !bob.onGround() || bob.getDeltaMovement().lengthSqr() > 1.0E-8D) return;
+                phase = Phase.WAIT_FOR_CROSSING;
+                CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P4_DOOR_RECOVERY_FIXTURE_SYNCED=success");
+                return;
+            }
             if (alice.serverLevel().dimension().equals(nether.dimension())) {
                 // 触发门的移动包会在 changeDimension 返回后继续执行；原版仅在客户端确认 teleport id 后
                 // 才以 awaiting 目标坐标完成服务端落点。确认前既不写 marker 也不放宽结果，只继续等待超时。

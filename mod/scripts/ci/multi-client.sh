@@ -287,6 +287,15 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_STARTED=success' "${SERVER_DIR}/server.log"
+# 夹具本身的跨维 teleport id 也必须由两名真实客户端确认，且服务端复验双方已回到精确静止站立格后，
+# 才允许 Alice 按前进键。该日志仅证明夹具同步完成，不是门传送成功 marker。
+for _ in $(seq 1 120); do
+  if grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_FIXTURE_SYNCED=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_FIXTURE_SYNCED=success' "${SERVER_DIR}/server.log"
 # 这只是允许杀后客户端开始观察的阶段旗标，不是成功 marker；真正结果只能由两客户端事实写入
 # 并由服务端读取后输出 CLIENTS=success。
 touch "${EVIDENCE}/p4-door-recovery-enabled.flag"
