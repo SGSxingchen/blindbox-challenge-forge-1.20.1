@@ -1,6 +1,6 @@
 # P5 八音盒缓存压力实施与验收设计
 
-> 阶段工单：[Issue #5](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/5)。本文件是已落盘生产缓存加固与下一轮 Hosted Runner 验收的边界记录；在同 SHA 真实六门禁成功前，不能把它写成通过证据。
+> 阶段工单：[Issue #5](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/5)。本文件记录生产缓存加固、验收边界及 `d9c0aea` 的 Hosted Runner 技术证据；技术成功不等同于音频或资源的发行授权。
 
 ## 已落盘的生产缓存加固
 
@@ -16,7 +16,7 @@ P4 的短音频继续从同一提交的 `raw.githubusercontent.com` 读取。P5 
 
 ## 受控真实场景
 
-压力夹具是本仓库提交的原创合法 OGG，且只打入独立 `ciTest` Jar：不复用任何 `source-package/` 原始音频、照片、压缩包或第三方成品音频。之所以提交到 `src/ciTest` 而不是 Hosted Runner 临时生成，是因为真实客户端必须从本 SHA 的 GitHub raw HTTPS 重新下载；ciTest Jar 内的本地文件不能伪装公网下载。夹具单文件严格大于 13 MiB 且不超过生产 16 MiB 响应上限；五个只差 query 的 HTTPS URL 因规范化后的 URL hash 不同而形成五个独立缓存键。夹具的 PCM 在首次 SoundEngine read 后由测试声音自然关闭，避免测试长音频占用两条生产播放槽；关闭发生在已经得到真实 PCM 之后，不能替代下载、解码或播放。
+压力夹具是本仓库提交的原创测试 OGG，且只打入独立 `ciTest` Jar：不复用任何 `source-package/` 原始音频、照片、压缩包或第三方成品音频。之所以提交到 `src/ciTest` 而不是 Hosted Runner 临时生成，是因为真实客户端必须从当前 SHA 的只读 HTTPS 映射重新下载；P5 使用 jsDelivr 映射以取得严格要求的 `audio/ogg` 响应头，ciTest Jar 内的本地文件不能伪装公网下载。夹具单文件严格大于 13 MiB 且不超过生产 16 MiB 响应上限；五个只差 query 的 HTTPS URL 因规范化后的 URL hash 不同而形成五个独立缓存键。夹具的 PCM 在首次 SoundEngine read 后由测试声音自然关闭，避免测试长音频占用两条生产播放槽；关闭发生在已经得到真实 PCM 之后，不能替代下载、解码或播放。
 
 每一步都由 Alice 的生产方块右键、`MusicBoxScreen`、真实编辑控件输入、服务端一次性会话校验和生产 S2C 广播触发；服务端与探针均不直调下载器、`MusicBoxService.play`、业务包或 SoundEngine read。两台真实 Forge 客户端都必须收到同一生产事件并交叉提供 PCM marker。
 
@@ -32,3 +32,10 @@ P4 的短音频继续从同一提交的 `raw.githubusercontent.com` 读取。P5 
 ## 未覆盖边界
 
 该场景只验证受控 GitHub HTTPS 夹具与单进程缓存语义，不承诺任意第三方音频的可用性、带宽、版权、长期地址稳定性，也不替代历史正式资源的作者/许可证追溯。历史资源授权仍是正式 Release 阻塞项。
+
+
+## `d9c0aea` Hosted Runner 技术证据
+
+真实双客户端 run [31179637632](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31179637632) 已完成本文件所列链路：两端五个 fill URL 均由生产 GUI、服务端一次性提交、S2C、下载、解码和 SoundEngine PCM 依次形成事实；fill-1 在五个大条目超过 64 MiB 后以非命中 PCM 重新下载；每个 JVM 对单飞 URL 各有且仅有一条 owner 和一条 follower；两端在真实 PCM 后将实际 fill-5 文件从 14,064,854 字节截断为 64 字节，并经摘要校验删除、GUI、S2C 和非命中 PCM 重试。汇总 run [31180269209](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31180269209) 同 SHA 成功。
+
+这只证明受控夹具、单进程缓存和本次 Runner 网络条件下的技术链路；不证明第三方 URL 可用性、长期 CDN 可用性或音频内容权利。
