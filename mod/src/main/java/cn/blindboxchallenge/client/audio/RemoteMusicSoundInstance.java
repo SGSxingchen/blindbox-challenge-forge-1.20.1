@@ -47,8 +47,9 @@ public final class RemoteMusicSoundInstance extends AbstractSoundInstance {
                     : new Mp3AudioStream(input);
             audio.setCloseCallback(closeCallback);
             return new RemoteMusicSoundInstance(audio, source, eventId, cached.kind(), cached.cacheHit());
-        } catch (IOException exception) {
-            throw new IllegalStateException("无法在客户端工作线程解码在线音频", exception);
+        } catch (IOException | RuntimeException exception) {
+            throw new IllegalStateException("无法在客户端工作线程解码在线音频",
+                    new RemoteAudioDownload.AudioFailureException(RemoteAudioDownload.FailureStage.DECODE, exception));
         }
     }
 

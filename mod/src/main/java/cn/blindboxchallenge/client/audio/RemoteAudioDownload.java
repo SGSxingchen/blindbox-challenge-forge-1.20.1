@@ -41,6 +41,21 @@ import net.minecraft.client.Minecraft;
 
 /** 纯客户端 HTTPS 下载与缓存。每一跳都重新解析并把已校验公网 IP 固定到 TLS 连接，避免 DNS 重绑定。 */
 public final class RemoteAudioDownload {
+    /** 仅客户端日志使用的失败阶段；不含 URL、响应头、路径或异常消息。 */
+    public enum FailureStage { DNS, PINNED_CONNECT, TLS_HANDSHAKE, HTTP_HEADERS, BODY, CACHE, DECODE, UNKNOWN }
+
+    /** 保留实际 cause 供本地链路处理；对外诊断只允许读取无敏感数据的阶段枚举。 */
+    public static final class AudioFailureException extends IOException {
+        private final FailureStage stage;
+
+        public AudioFailureException(FailureStage stage, Throwable cause) {
+            super(cause);
+            this.stage = stage;
+        }
+
+        public FailureStage stage() { return stage; }
+    }
+
     public static final int MAX_DOWNLOAD_BYTES = 16 * 1024 * 1024;
     public static final int MAX_CACHE_BYTES = 64 * 1024 * 1024;
     private static final int TIMEOUT_MILLIS = (int) Duration.ofSeconds(10).toMillis();
@@ -66,9 +81,12 @@ public final class RemoteAudioDownload {
     public static CachedAudio fetch(String requestedUrl) throws IOException {
         String normalized = AudioUrlPolicy.normalizeHttpsUrl(requestedUrl);
         Path cache = Minecraft.getInstance().gameDirectory.toPath().resolve("blindboxchallenge-audio-cache");
-        Files.createDirectories(cache);
+        try { Files.createDirectories(cache); }
+        catch (IOException exception) { throw new AudioFailureException(FailureStage.CACHE, exception); }
         String urlHash = sha256(normalized.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        CachedAudio cached = findCached(cache, urlHash);
+        CachedAudio cached;
+        try { cached = findCached(cache, urlHash); }
+        catch (IOException exception) { throw new AudioFailureException(FailureStage.CACHE, exception); }
         if (cached != null) return cached;
 
         long deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(TIMEOUT_MILLIS);
@@ -82,9 +100,13 @@ public final class RemoteAudioDownload {
             CachedAudio result = cached != null ? cached : fetchUncached(normalized, cache, urlHash, deadlineNanos);
             ownDownload.complete(result);
             return result;
-        } catch (IOException exception) {
+        } catch (AudioFailureException exception) {
             ownDownload.completeExceptionally(exception);
             throw exception;
+        } catch (IOException exception) {
+            AudioFailureException staged = new AudioFailureException(FailureStage.CACHE, exception);
+            ownDownload.completeExceptionally(staged);
+            throw staged;
         } catch (RuntimeException exception) {
             ownDownload.completeExceptionally(exception);
             throw exception;
@@ -132,6 +154,10 @@ public final class RemoteAudioDownload {
                     }
                 }
                 return saveResponse(response.body(), cache, urlHash, deadlineNanos, declaredContentLength);
+            } catch (AudioFailureException exception) {
+                throw exception;
+            } catch (IOException exception) {
+                throw new AudioFailureException(FailureStage.HTTP_HEADERS, exception);
             }
         }
         throw new IOException("在线音频重定向流程异常");
@@ -158,26 +184,37 @@ public final class RemoteAudioDownload {
      * DNS 重绑定窗口，也绝不继承客户端其它网页会话的 Cookie、认证或代理配置。
      */
     private static DownloadResponse openPinned(URI uri, long deadlineNanos) throws IOException {
-        InetAddress[] addresses = resolvePublicAddresses(uri.getHost(), deadlineNanos);
+        InetAddress[] addresses;
+        try { addresses = resolvePublicAddresses(uri.getHost(), deadlineNanos); }
+        catch (IOException exception) { throw new AudioFailureException(FailureStage.DNS, exception); }
         IOException failure = null;
         for (InetAddress address : addresses) {
             try {
                 return openPinnedAtAddress(uri, address, deadlineNanos);
             } catch (IOException exception) {
-                failure = exception;
-                ensureBeforeDeadline(deadlineNanos);
+                failure = exception instanceof AudioFailureException ? exception
+                        : new AudioFailureException(FailureStage.PINNED_CONNECT, exception);
+                try {
+                    ensureBeforeDeadline(deadlineNanos);
+                } catch (IOException deadlineException) {
+                    if (failure instanceof AudioFailureException staged) throw staged;
+                    throw new AudioFailureException(FailureStage.PINNED_CONNECT, deadlineException);
+                }
             }
         }
-        throw new IOException("在线音频所有已验证公网地址均无法连接", failure);
+        if (failure instanceof AudioFailureException staged) throw staged;
+        throw new AudioFailureException(FailureStage.PINNED_CONNECT, failure);
     }
 
     private static DownloadResponse openPinnedAtAddress(URI uri, InetAddress address, long deadlineNanos) throws IOException {
         Socket plain = new Socket(Proxy.NO_PROXY);
         SSLSocket tls = null;
         ScheduledFuture<?> closeAtDeadline = null;
+        FailureStage stage = FailureStage.PINNED_CONNECT;
         try {
             plain.connect(new InetSocketAddress(address, 443), remainingMillis(deadlineNanos));
             plain.setSoTimeout(remainingMillis(deadlineNanos));
+            stage = FailureStage.TLS_HANDSHAKE;
             tls = (SSLSocket) TLS_FACTORY.createSocket(plain, uri.getHost(), 443, true);
             SSLParameters parameters = tls.getSSLParameters();
             parameters.setEndpointIdentificationAlgorithm("HTTPS");
@@ -192,6 +229,7 @@ public final class RemoteAudioDownload {
             if (!HttpsURLConnection.getDefaultHostnameVerifier().verify(uri.getHost(), tls.getSession())) {
                 throw new IOException("在线音频 TLS 证书主机名不匹配");
             }
+            stage = FailureStage.HTTP_HEADERS;
             writeRequest(tls.getOutputStream(), uri);
             InputStream input = tls.getInputStream();
             int status = readStatus(input, deadlineNanos);
@@ -207,7 +245,8 @@ public final class RemoteAudioDownload {
             if (closeAtDeadline != null) closeAtDeadline.cancel(false);
             if (tls != null) closeQuietly(tls);
             else closeQuietly(plain);
-            throw exception;
+            if (exception instanceof AudioFailureException staged) throw staged;
+            throw new AudioFailureException(stage, exception);
         }
     }
 
@@ -370,7 +409,9 @@ public final class RemoteAudioDownload {
      */
     private static CachedAudio saveResponse(InputStream input, Path cache, String urlHash, long deadlineNanos,
                                             long declaredContentLength) throws IOException {
-        Path temporary = Files.createTempFile(cache, urlHash + "-", ".part");
+        final Path temporary;
+        try { temporary = Files.createTempFile(cache, urlHash + "-", ".part"); }
+        catch (IOException exception) { throw new AudioFailureException(FailureStage.CACHE, exception); }
         MessageDigest digest = digest();
         byte[] first = new byte[10];
         int firstLength = 0;
@@ -401,15 +442,15 @@ public final class RemoteAudioDownload {
             }
         } catch (IOException exception) {
             Files.deleteIfExists(temporary);
-            throw exception;
+            throw new AudioFailureException(FailureStage.BODY, exception);
         } catch (RuntimeException exception) {
             Files.deleteIfExists(temporary);
-            throw new IOException("在线音频下载失败", exception);
+            throw new AudioFailureException(FailureStage.BODY, exception);
         }
         Kind kind = detect(first, firstLength);
         if (kind == null) {
             Files.deleteIfExists(temporary);
-            throw new IOException("在线音频文件头不是 OGG 或 MP3");
+            throw new AudioFailureException(FailureStage.BODY, new IOException("在线音频文件头不是 OGG 或 MP3"));
         }
         String contentHash = hex(digest.digest());
         Path target = cache.resolve(urlHash + "-" + contentHash + kind.extension);
@@ -417,14 +458,17 @@ public final class RemoteAudioDownload {
             moveNewFile(temporary, target);
         } catch (java.nio.file.FileAlreadyExistsException exception) {
             Files.deleteIfExists(temporary);
-            CachedAudio existing = findCached(cache, urlHash);
+            final CachedAudio existing;
+            try { existing = findCached(cache, urlHash); }
+            catch (IOException cacheException) { throw new AudioFailureException(FailureStage.CACHE, cacheException); }
             if (existing != null) return existing;
-            throw exception;
+            throw new AudioFailureException(FailureStage.CACHE, exception);
         } catch (IOException exception) {
             Files.deleteIfExists(temporary);
-            throw exception;
+            throw new AudioFailureException(FailureStage.CACHE, exception);
         }
-        trimCache(cache);
+        try { trimCache(cache); }
+        catch (IOException exception) { throw new AudioFailureException(FailureStage.CACHE, exception); }
         return new CachedAudio(target, kind, contentHash, false);
     }
 

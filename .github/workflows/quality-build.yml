@@ -100,8 +100,13 @@ jobs:
           grep -q 'client_diagnostics=' src/ciTest/java/cn/blindboxchallenge/citest/P4MusicCiScenario.java
           grep -q '在线音频下载或解码失败（仅客户端）' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
           grep -q 'failureSummary(exception)' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
-          grep -q 'return root.getClass().getSimpleName();' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
           ! grep -q 'getMessage()' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
+          grep -q 'FailureStage { DNS, PINNED_CONNECT, TLS_HANDSHAKE, HTTP_HEADERS, BODY, CACHE, DECODE, UNKNOWN }' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          grep -q 'throw new AudioFailureException(FailureStage.DNS, exception);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          grep -q 'throw new AudioFailureException(stage, exception);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          grep -q 'throw new AudioFailureException(FailureStage.BODY, exception);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          grep -q 'FailureStage.DECODE' src/main/java/cn/blindboxchallenge/client/audio/RemoteMusicSoundInstance.java
+          grep -q 'return stage + "/" + root.getClass().getSimpleName();' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
           # HTTP/1.1 已声明 Content-Length 时必须按长度收体，不能依赖保活连接 EOF；chunked+长度歧义一律拒绝。
           grep -q '在线音频响应同时声明 Content-Length 与 chunked' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'return saveResponse(response.body(), cache, urlHash, deadlineNanos, declaredContentLength);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java

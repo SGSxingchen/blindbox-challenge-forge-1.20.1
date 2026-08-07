@@ -110,8 +110,15 @@ public final class ClientMusicService {
     }
 
     private static String failureSummary(Throwable failure) {
+        Throwable current = failure;
+        RemoteAudioDownload.FailureStage stage = RemoteAudioDownload.FailureStage.UNKNOWN;
         Throwable root = failure;
-        while (root.getCause() != null && root.getCause() != root) root = root.getCause();
-        return root.getClass().getSimpleName();
+        while (current != null) {
+            if (current instanceof RemoteAudioDownload.AudioFailureException staged) stage = staged.stage();
+            root = current;
+            if (current.getCause() == null || current.getCause() == current) break;
+            current = current.getCause();
+        }
+        return stage + "/" + root.getClass().getSimpleName();
     }
 }
