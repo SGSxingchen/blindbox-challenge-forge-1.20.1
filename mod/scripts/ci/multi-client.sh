@@ -287,8 +287,8 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_STARTED=success' "${SERVER_DIR}/server.log"
-# 夹具本身的跨维 teleport id 也必须由两名真实客户端确认，且服务端复验双方已回到精确静止站立格后，
-# 才允许 Alice 按前进键。该日志仅证明夹具同步完成，不是门传送成功 marker。
+# 夹具中 Alice 的跨维 teleport id 必须先确认，服务端复验双方已回到精确静止站立格后，
+# 才允许 Alice 按前进键；Bob 的真实目标维同步仍由后续观察 marker 严格复验。该日志不是门传送成功 marker。
 for _ in $(seq 1 120); do
   if grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
   grep -q 'BLINDBOX_CITEST_P4_DOOR_RECOVERY_FIXTURE_SYNCED=success' "${SERVER_DIR}/server.log" && break

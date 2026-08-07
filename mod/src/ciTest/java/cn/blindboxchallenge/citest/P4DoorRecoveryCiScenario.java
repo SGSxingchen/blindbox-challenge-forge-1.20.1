@@ -190,13 +190,18 @@ public final class P4DoorRecoveryCiScenario {
 
         private void tick() throws IOException {
             if (phase == Phase.READY || phase == Phase.FAILED) return;
-            if (overworld.getGameTime() - startedAt > 800L) throw new IllegalStateException("P4 跨维门恢复场景超时");
             ServerPlayer alice = alice();
+            if (overworld.getGameTime() - startedAt > 800L) {
+                ServerPlayer bob = bob();
+                throw new IllegalStateException("P4 跨维门恢复场景超时：phase=" + phase
+                        + ", alice_changing=" + alice.isChangingDimension() + ", alice=" + alice.position()
+                        + ", bob_changing=" + bob.isChangingDimension() + ", bob=" + bob.position());
+            }
             if (phase == Phase.WAIT_FOR_FIXTURE_SYNC) {
                 ServerPlayer bob = bob();
-                // 夹具跨维同样需要客户端确认 teleport id。确认前客户端仍可能发旧维度位置包；
-                // 此时绝不放行前进键，也不把服务端夹具位置误算为生产门的进入结果。
-                if (alice.isChangingDimension() || bob.isChangingDimension()) return;
+                // Alice 是唯一要按前进键的本地客户端，必须先确认其 teleport id；确认前客户端仍可能
+                // 发旧维度位置包。Bob 仅为目标区块观察者，其客户端目标同步仍由后续 marker 严格复验。
+                if (alice.isChangingDimension()) return;
                 Vec3 expectedAlice = new Vec3(sourceDoor.getX() + 0.5D, sourceDoor.getY(), sourceDoor.getZ() + 2.5D);
                 Vec3 expectedBob = new Vec3(targetDoor.getX() + 2.5D, targetDoor.getY(), targetDoor.getZ() + 0.5D);
                 if (!alice.serverLevel().dimension().equals(overworld.dimension()) || alice.position().distanceToSqr(expectedAlice) > 0.08D
