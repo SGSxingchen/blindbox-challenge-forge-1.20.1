@@ -364,8 +364,11 @@ jobs:
           assert 'if (attackInjected[slot]) minecraft.options.keyAttack.setDown(false);' not in client
           # R1 的 break flag 会保留到 R2/R3；旧轮次已经变空气时不能在循环内抬起共享 attack 键，
           # 必须仅按当前仍存在的生产目标决定是否保持按下。
-          release = client.index('if (!attackHeldByActiveRound) minecraft.options.keyAttack.setDown(false);')
-          assert release > client.rindex('for (P5DecorCiScenario.DecorRound round')
+          drive_start = client.index('private static void driveRealInputs')
+          drive_end = client.index('private static boolean at', drive_start)
+          drive = client[drive_start:drive_end]
+          release = drive.index('if (!attackHeldByActiveRound) minecraft.options.keyAttack.setDown(false);')
+          assert release > drive.index('for (P5DecorCiScenario.DecorRound round')
           for forbidden_client_call in ('minecraft.gameMode', '.connection.send(', 'Serverbound', '.destroyBlock(', '.removeBlock(',
                                         '.setBlock(', 'Block.dropResources', 'setItemInHand(', '.useOn('):
               assert forbidden_client_call not in client, forbidden_client_call
