@@ -332,6 +332,7 @@ jobs:
           single_script = (root / 'scripts/ci/p5-single-decor.sh').read_text(encoding='utf-8')
           single_workflow = (root.parent / '.github/workflows/single-client.yml').read_text(encoding='utf-8')
           assert 'WAIT_FOR_INITIAL_PICKUP' in scenario and 'WAIT_FOR_RECOVERY_PICKUP' in scenario
+          assert 'target.getZ() + 3.75D' in scenario
           assert 'client_diagnostics=' in scenario and 'client-1-p5-decor-diagnostic.marker' in scenario
           assert 'new ClientboundSetCarriedItemPacket(found)' in scenario
           assert 'new ClientboundSetCarriedItemPacket(selected)' in scenario

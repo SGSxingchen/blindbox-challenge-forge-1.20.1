@@ -162,7 +162,9 @@ public final class P5DecorCiScenario {
     /** 破坏站位保留掉落实体与玩家之间的距离，避免即时拾取掩盖正常战利品路径。 */
     public static Vec3 breakingStance(Level level, int roundIndex) {
         BlockPos target = target(level, roundIndex);
-        return new Vec3(target.getX() + 0.5D, target.getY(), target.getZ() + 4.35D);
+        // 4.35 格对 2/16 格高的地面画板会使眼睛到命中面的真实距离超过生存 4.5 格；3.75 格
+        // 仍避免掉落即时碰撞，又让三个模型高度都在原版破坏距离内。
+        return new Vec3(target.getX() + 0.5D, target.getY(), target.getZ() + 3.75D);
     }
 
     private static BlockPos fixtureBase(Level level) {
