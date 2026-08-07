@@ -72,3 +72,5 @@
 `a5185bc` 的直连预检已在无代理 IPv4 下得到 `206/HTTP 1.1`、1 字节及公网 IP 的成功证据，而两个生产客户端仍在 Java 固定连接阶段失败，故不能把问题归为 Hosted Runner 直连出口或改用代理。下一轮只把客户端失败阶段细分为 `PINNED_CONNECT_IPV4` 与 `PINNED_CONNECT_IPV6`，仍只记录阶段和异常简单类名，不记录 IP、主机、端口、URL 或消息；据此确定生产 socket 失败的地址族后再作最小连接器修复。
 
 `3e59353` 的真实双客户端 artifact 已确认两端最终失败均为 `PINNED_CONNECT_IPV6/SocketException`，而同场景无代理 IPv4 预检继续成功；末次 IPv6 不能单独证明 IPv4 未尝试，故不把预检伪装成客户端下载成功。本次只修复固定 socket 的地址族歧义：在逐项拒绝危险 DNS 答案后稳定优先 IPv4，IPv4 全失败才回退全部已校验 IPv6；每个候选以相同地址族的无代理 `SocketChannel` 建立 TCP，再向同一 `InetAddress` 固定连接。DNS 全回答校验、NAT64/映射拒绝、10 秒单一截止、TLS/SNI/主机名验证、手写无认证/Cookie HTTP 与 PCM marker 均不变，仍由 Hosted Runner 验证。
+
+`98c0aca` 的双客户端仍在同一首错失败，说明地址族精确 socket 本身尚未使 Hosted Forge 客户端进入 TLS；两端最终阶段仍为 IPv6，不能据此断言 IPv4 的实际异常类型。下一轮只让既有**单条客户端本地失败日志**附带每个已尝试失败阶段的最内层异常简单类名（例如 `PINNED_CONNECT_IPV4/SocketException`），不含地址、URL、端口、异常消息、响应头、Cookie、令牌或完整栈，也不回传服务端；它不改变连接、下载、时限、TLS 或任何 PCM marker。

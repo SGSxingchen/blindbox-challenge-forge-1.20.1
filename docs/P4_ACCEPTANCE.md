@@ -35,3 +35,5 @@
 `a5185bc` 的直连预检在无代理 IPv4 下成功（HTTP 206、1 字节），但生产客户端仍在 Java 固定连接失败；下一轮只增加 IPv4/IPv6 阶段区分，不泄露地址或异常消息，不改代理、TLS、下载或 PCM 验收。P4 仍为 0/6。
 
 `3e59353` 的双客户端 run `31153402312` 使首错明确为两端 `PINNED_CONNECT_IPV6/SocketException`；同一运行的脱敏 IPv4 预检仍为 `206/HTTP 1.1/1 字节`，但它不替代 Forge 客户端。下一轮只在全量 DNS 公网校验之后优先 IPv4、保留 IPv6 回退，并以候选对应地址族的无代理 socket 向同一已校验 IP 固定连接；不改变 DNS、TLS/SNI、总时限、代理/认证/Cookie 禁止、服务端不下载或 PCM 成功断言。P4 仍为 0/6。
+
+`98c0aca` 的双客户端 run `31154215119` 已编译并实际运行地址族精确 socket，但仍在 `WAIT_OGG_FIRST` 以两端最终 `PINNED_CONNECT_IPV6/SocketException` 失败；故不能把 IPv4 优先修复虚报为生效。下一轮只在现有单条客户端失败日志增加每个尝试阶段的无敏感最内层异常类型，定位 IPv4 是否也失败；日志不含消息、IP、URL、端口、路径、响应头、Cookie、令牌或栈，不改连接/TLS/时限/PCM 断言。P4 仍为 0/6。

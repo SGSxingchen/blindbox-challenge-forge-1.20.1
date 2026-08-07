@@ -112,13 +112,18 @@ public final class ClientMusicService {
     private static String failureSummary(Throwable failure) {
         Throwable current = failure;
         RemoteAudioDownload.FailureStage stage = RemoteAudioDownload.FailureStage.UNKNOWN;
+        String connectionAttempts = "";
         Throwable root = failure;
         while (current != null) {
-            if (current instanceof RemoteAudioDownload.AudioFailureException staged) stage = staged.stage();
+            if (current instanceof RemoteAudioDownload.AudioFailureException staged) {
+                stage = staged.stage();
+                if (!staged.connectionAttemptSummary().isEmpty()) connectionAttempts = staged.connectionAttemptSummary();
+            }
             root = current;
             if (current.getCause() == null || current.getCause() == current) break;
             current = current.getCause();
         }
-        return stage + "/" + root.getClass().getSimpleName();
+        return stage + "/" + root.getClass().getSimpleName()
+                + (connectionAttempts.isEmpty() ? "" : "/attempts=" + connectionAttempts);
     }
 }

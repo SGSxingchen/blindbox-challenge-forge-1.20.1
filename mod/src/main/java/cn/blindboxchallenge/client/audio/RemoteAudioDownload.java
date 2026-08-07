@@ -24,6 +24,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -49,13 +50,21 @@ public final class RemoteAudioDownload {
     /** 保留实际 cause 供本地链路处理；对外诊断只允许读取无敏感数据的阶段枚举。 */
     public static final class AudioFailureException extends IOException {
         private final FailureStage stage;
+        private final String connectionAttemptSummary;
 
         public AudioFailureException(FailureStage stage, Throwable cause) {
+            this(stage, cause, "");
+        }
+
+        /** 只含失败阶段和异常简单类名，用于客户端本地定位；绝不包含地址、URL、端口或异常消息。 */
+        public AudioFailureException(FailureStage stage, Throwable cause, String connectionAttemptSummary) {
             super(cause);
             this.stage = stage;
+            this.connectionAttemptSummary = connectionAttemptSummary;
         }
 
         public FailureStage stage() { return stage; }
+        public String connectionAttemptSummary() { return connectionAttemptSummary; }
     }
 
     public static final int MAX_DOWNLOAD_BYTES = 16 * 1024 * 1024;
@@ -190,21 +199,27 @@ public final class RemoteAudioDownload {
         try { addresses = resolvePublicAddresses(uri.getHost(), deadlineNanos); }
         catch (IOException exception) { throw new AudioFailureException(FailureStage.DNS, exception); }
         IOException failure = null;
+        Map<FailureStage, String> attempts = new LinkedHashMap<>();
         for (InetAddress address : addresses) {
             try {
                 return openPinnedAtAddress(uri, address, deadlineNanos);
             } catch (IOException exception) {
-                failure = exception instanceof AudioFailureException ? exception
-                        : new AudioFailureException(connectStage(address), exception);
+                FailureStage attemptStage = exception instanceof AudioFailureException staged ? staged.stage() : connectStage(address);
+                attempts.put(attemptStage, rootExceptionType(exception));
+                failure = exception instanceof AudioFailureException ? exception : new AudioFailureException(attemptStage, exception);
                 try {
                     ensureBeforeDeadline(deadlineNanos);
                 } catch (IOException deadlineException) {
-                    if (failure instanceof AudioFailureException staged) throw staged;
+                    if (failure instanceof AudioFailureException staged) {
+                        throw new AudioFailureException(staged.stage(), staged, connectionAttemptSummary(attempts));
+                    }
                     throw new AudioFailureException(connectStage(address), deadlineException);
                 }
             }
         }
-        if (failure instanceof AudioFailureException staged) throw staged;
+        if (failure instanceof AudioFailureException staged) {
+            throw new AudioFailureException(staged.stage(), staged, connectionAttemptSummary(attempts));
+        }
         throw new AudioFailureException(FailureStage.UNKNOWN, failure);
     }
 
@@ -255,6 +270,18 @@ public final class RemoteAudioDownload {
     /** 只暴露已尝试目标的地址族，不输出地址、主机、端口或异常消息。 */
     private static FailureStage connectStage(InetAddress address) {
         return address.getAddress().length == 4 ? FailureStage.PINNED_CONNECT_IPV4 : FailureStage.PINNED_CONNECT_IPV6;
+    }
+
+    private static String connectionAttemptSummary(Map<FailureStage, String> attempts) {
+        StringJoiner summary = new StringJoiner(",");
+        attempts.forEach((stage, type) -> summary.add(stage + "/" + type));
+        return summary.toString();
+    }
+
+    private static String rootExceptionType(Throwable failure) {
+        Throwable root = failure;
+        while (root.getCause() != null && root.getCause() != root) root = root.getCause();
+        return root.getClass().getSimpleName();
     }
 
     /**

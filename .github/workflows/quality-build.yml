@@ -123,6 +123,11 @@ jobs:
           grep -q 'private static Socket directSocketFor(InetAddress address)' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'SocketChannel.open(address instanceof Inet4Address ? StandardProtocolFamily.INET : StandardProtocolFamily.INET6).socket()' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           ! grep -q 'Proxy.NO_PROXY' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          # 最终失败阶段可能是 IPv6，仍须输出每个地址族的无敏感异常类型，避免把末次地址族误作唯一尝试。
+          grep -q 'Map<FailureStage, String> attempts = new LinkedHashMap<>()' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          grep -q 'attempts.put(attemptStage, rootExceptionType(exception));' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          grep -q 'String connectionAttemptSummary()' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
+          grep -q 'staged.connectionAttemptSummary()' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
           grep -q 'throw new AudioFailureException(stage, exception);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'throw new AudioFailureException(FailureStage.BODY, exception);' src/main/java/cn/blindboxchallenge/client/audio/RemoteAudioDownload.java
           grep -q 'FailureStage.DECODE' src/main/java/cn/blindboxchallenge/client/audio/RemoteMusicSoundInstance.java
