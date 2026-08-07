@@ -1,7 +1,5 @@
 {
   "variants": {
-    "": {
-      "model": "blindboxchallenge:block/safety_landing"
-    }
+    "": { "model": "blindboxchallenge:block/safety_landing" }
   }
 }

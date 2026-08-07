@@ -4,15 +4,10 @@
     {
       "rolls": 1,
       "entries": [
-        {
-          "type": "minecraft:item",
-          "name": "blindboxchallenge:music_box"
-        }
+        { "type": "minecraft:item", "name": "blindboxchallenge:music_box" }
       ],
       "conditions": [
-        {
-          "condition": "minecraft:survives_explosion"
-        }
+        { "condition": "minecraft:survives_explosion" }
       ]
     }
   ]

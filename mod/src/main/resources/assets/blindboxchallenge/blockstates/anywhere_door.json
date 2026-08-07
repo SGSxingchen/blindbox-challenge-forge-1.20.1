@@ -1,7 +1,5 @@
 {
   "variants": {
-    "": {
-      "model": "blindboxchallenge:block/anywhere_door"
-    }
+    "": { "model": "blindboxchallenge:block/anywhere_door" }
   }
 }

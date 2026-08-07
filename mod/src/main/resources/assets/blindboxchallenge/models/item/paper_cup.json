@@ -1,6 +1,4 @@
 {
   "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "blindboxchallenge:item/paper_cup"
-  }
+  "textures": { "layer0": "blindboxchallenge:item/paper_cup" }
 }

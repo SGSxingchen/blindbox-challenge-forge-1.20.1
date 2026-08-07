@@ -1,7 +1,5 @@
 {
   "variants": {
-    "": {
-      "model": "blindboxchallenge:block/stone_pillow"
-    }
+    "": { "model": "blindboxchallenge:block/stone_pillow" }
   }
 }

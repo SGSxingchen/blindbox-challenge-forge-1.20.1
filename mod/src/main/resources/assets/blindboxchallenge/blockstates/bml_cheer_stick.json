@@ -1,10 +1,6 @@
 {
   "variants": {
-    "lit=false": {
-      "model": "blindboxchallenge:block/bml_cheer_stick_off"
-    },
-    "lit=true": {
-      "model": "blindboxchallenge:block/bml_cheer_stick_on"
-    }
+    "lit=false": { "model": "blindboxchallenge:block/bml_cheer_stick_off" },
+    "lit=true": { "model": "blindboxchallenge:block/bml_cheer_stick_on" }
   }
 }

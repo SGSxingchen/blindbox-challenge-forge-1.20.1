@@ -1,6 +1,4 @@
 {
   "parent": "minecraft:block/torch",
-  "textures": {
-    "torch": "blindboxchallenge:block/glow_stick"
-  }
+  "textures": { "torch": "blindboxchallenge:block/glow_stick" }
 }

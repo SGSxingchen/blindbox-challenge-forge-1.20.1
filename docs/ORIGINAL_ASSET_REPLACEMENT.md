@@ -28,20 +28,6 @@ python3 tools/generate_original_textures.py --check
 
 本批完成后，资源审计从 167 项“待权利人/法务确认；Release 阻塞”和 15 项“仍需发行前项目许可证确认”，变为 99 项前者和 83 项后者。这里的 68 项转为“项目维护者新建；仍需项目发行许可证确认”，并不声称已经取得整体公开发行权。
 
-## 批次 B：中性模型、状态与战利品模板
-
-`tools/generate_original_models.py` 将重建除三项已审计 P5 方块及其方块物品模型外的全部现有模型 JSON，以及九个历史方块状态和九个历史方块战利品表。它不读取旧 JSON：模型路径和注册 ID 只作为兼容约束；手持物使用原创的 `minecraft:item/generated` 模板，方块使用中性方块、火把、门或抱枕几何模板，状态只覆盖代码已注册的 `lit`/`facing` 变体，战利品只保留原版爆炸存活条件和本模组同 ID 方块物品掉落。伸缩刀和变形玩具工具的两个既有客户端谓词仍明确写入生成器，避免资源整改破坏已验收玩法。
-
-```bash
-python3 tools/generate_original_models.py
-python3 tools/generate_original_models.py --update-manifest
-python3 tools/generate_original_models.py --check
-```
-
-此批也不读取、采样或复制旧 JSON 的文字、图案、结构或第三方内容。新模板仍待项目整体许可证确认；语言、`mods.toml` 和 `pack.mcmeta` 留在最后元数据批次处理。
-
-本批的当前工作树审计将剩余历史授权阻塞降为 4 项：双语语言文件、`mods.toml` 与 `pack.mcmeta`。另有 178 项项目维护者新建资源仍需要项目整体许可证；批次 B 必须先通过其提交的同 SHA Hosted Runner 门禁，不能以静态生成器或清单状态取代动态验收。
-
 ## 仍未覆盖的发行条件
 
 替换一批视觉文件不自动取得项目整体许可证，也不确认注册 ID 或展示名称不涉及商标/角色风险。必须继续完成其余历史 JSON/元数据的原创重建、全部新资源的项目许可证条件以及名称/商标审查；在此之前 Issue #5 继续 OPEN，不创建 tag、公开 Release 或上传 Jar。

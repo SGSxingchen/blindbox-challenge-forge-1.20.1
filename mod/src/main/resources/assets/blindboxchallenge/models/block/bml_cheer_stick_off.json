@@ -1,6 +1,4 @@
 {
   "parent": "minecraft:block/torch",
-  "textures": {
-    "torch": "blindboxchallenge:block/bml_cheer_stick_off"
-  }
+  "textures": { "torch": "blindboxchallenge:block/bml_cheer_stick_off" }
 }

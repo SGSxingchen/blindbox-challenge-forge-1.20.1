@@ -1,6 +1,4 @@
 {
   "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "blindboxchallenge:item/bath_bucket"
-  }
+  "textures": { "layer0": "blindboxchallenge:item/bath_bucket" }
 }
