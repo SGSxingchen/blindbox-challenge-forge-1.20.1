@@ -186,7 +186,12 @@ public final class P4DoorRecoveryCiScenario {
             if (overworld.getGameTime() - startedAt > 800L) throw new IllegalStateException("P4 跨维门恢复场景超时");
             if (alice.serverLevel().dimension().equals(nether.dimension())) {
                 Vec3 expected = Vec3.atBottomCenterOf(targetDoor);
-                if (alice.position().distanceToSqr(expected) > 0.08D) throw new IllegalStateException("杀后进入任意门未抵达下界安全站立格");
+                Vec3 actual = alice.position();
+                double distanceSqr = actual.distanceToSqr(expected);
+                if (distanceSqr > 0.08D) {
+                    throw new IllegalStateException("杀后进入任意门未抵达下界安全站立格：expected=" + expected
+                            + ", actual=" + actual + ", distance_sqr=" + distanceSqr + ", velocity=" + alice.getDeltaMovement());
+                }
                 if (alice.getDeltaMovement().lengthSqr() > 1.0E-8D) throw new IllegalStateException("杀后进入任意门仍保留源门移动速度");
                 verifyPersistedLinks();
                 if (verifyAliceMarker() && verifyBobMarker()) {
