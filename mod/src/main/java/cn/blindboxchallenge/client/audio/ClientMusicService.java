@@ -4,6 +4,7 @@ import cn.blindboxchallenge.BlindBoxChallenge;
 import cn.blindboxchallenge.event.MusicBoxPlaybackEvent;
 import cn.blindboxchallenge.event.MusicBoxPlaybackFailedEvent;
 import cn.blindboxchallenge.service.AudioUrlPolicy;
+import com.mojang.logging.LogUtils;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -19,10 +20,12 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.slf4j.Logger;
 
 /** 完整在线音频链只在客户端类加载：异步下载/缓存/解码失败只提示本客户端，绝不阻塞服务端。 */
 @Mod.EventBusSubscriber(modid = BlindBoxChallenge.MOD_ID, value = Dist.CLIENT)
 public final class ClientMusicService {
+    private static final Logger LOGGER = LogUtils.getLogger();
     static final ExecutorService AUDIO_EXECUTOR = Executors.newFixedThreadPool(2, runnable -> {
         Thread thread = new Thread(runnable, "blindboxchallenge-remote-audio");
         thread.setDaemon(true);
@@ -77,6 +80,9 @@ public final class ClientMusicService {
                 .exceptionally(exception -> {
                     releaseSlot.run();
                     Minecraft.getInstance().execute(() -> {
+                        // 仅记录最内层异常类型，不打印 URL、Cookie、令牌、本地路径、消息或完整网络栈；这既让实际
+                        // 客户端失败可诊断，也不把本地下载细节回传给服务器。
+                        LOGGER.warn("在线音频下载或解码失败（仅客户端）：{}", failureSummary(exception));
                         MinecraftForge.EVENT_BUS.post(new MusicBoxPlaybackFailedEvent(event.eventId(), normalized, event.source()));
                         clientMessage("message.blindboxchallenge.music_box_download_failed");
                     });
@@ -101,5 +107,11 @@ public final class ClientMusicService {
 
     private static void clientMessage(String key) {
         if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.displayClientMessage(Component.translatable(key), true);
+    }
+
+    private static String failureSummary(Throwable failure) {
+        Throwable root = failure;
+        while (root.getCause() != null && root.getCause() != root) root = root.getCause();
+        return root.getClass().getSimpleName();
     }
 }

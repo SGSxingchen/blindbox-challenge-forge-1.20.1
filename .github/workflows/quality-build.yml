@@ -98,6 +98,10 @@ jobs:
           grep -q 'ogg-editor-reopened.marker' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
           grep -q 'RELEASE_SHIFT_TICKS = 4' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
           grep -q 'client_diagnostics=' src/ciTest/java/cn/blindboxchallenge/citest/P4MusicCiScenario.java
+          grep -q '在线音频下载或解码失败（仅客户端）' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
+          grep -q 'failureSummary(exception)' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
+          grep -q 'return root.getClass().getSimpleName();' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
+          ! grep -q 'getMessage()' src/main/java/cn/blindboxchallenge/client/audio/ClientMusicService.java
           python3 - <<'PY'
           from pathlib import Path
           source = Path('src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java').read_text(encoding='utf-8')
