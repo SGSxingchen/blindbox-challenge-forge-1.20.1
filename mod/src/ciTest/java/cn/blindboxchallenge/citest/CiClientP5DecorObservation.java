@@ -117,7 +117,9 @@ public final class CiClientP5DecorObservation {
             }
             if (!attackInjected[slot] && at(player.position(), P5DecorCiScenario.breakingStance(minecraft.level, round.index()))
                     && minecraft.level.getBlockState(target).is(round.block().get())) {
-                aimAt(player, Vec3.atCenterOf(target));
+                // 地面画板只有 2/16 格高。瞄准方块几何中心会让射线从其选择轮廓上方穿过，
+                // 命中目标后方的石地；三种装饰的底座都覆盖此低点，因此仍是原版可达的真实方块命中。
+                aimAt(player, new Vec3(target.getX() + 0.5D, target.getY() + 0.0625D, target.getZ() + 0.5D));
                 if (hits(minecraft, target)) breakingAimTicks[slot]++; else breakingAimTicks[slot] = 0;
                 if (breakingAimTicks[slot] >= AIM_STABLE_TICKS) {
                     minecraft.options.keyAttack.setDown(true);

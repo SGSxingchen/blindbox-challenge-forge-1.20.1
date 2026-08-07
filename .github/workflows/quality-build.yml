@@ -345,6 +345,10 @@ jobs:
           assert 'ItemEntity.class' in scenario and 'entity.getItem().getCount() == 1' in scenario
           assert 'KeyMapping.click(minecraft.options.keyUse.getKey())' in client
           assert 'minecraft.options.keyAttack.setDown(true)' in client
+          # 低矮画板（2/16 格）不能瞄准完整方块中心，否则射线会越过其选择轮廓命中后方地面；
+          # 必须保持命中三种方块共同拥有的低位底座，攻击仍只走原版 keyAttack 路径。
+          assert 'new Vec3(target.getX() + 0.5D, target.getY() + 0.0625D, target.getZ() + 0.5D)' in client
+          assert 'aimAt(player, Vec3.atCenterOf(target))' not in client
           assert 'BlockHitResult' in client and 'dropObserved' in client and 'observer_uuid' in client
           assert 'p5DecorDiagnostic' in client and 'placement_aim_ticks=' in client and 'ATOMIC_MOVE' in client
           assert '@Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, value = Dist.CLIENT' in client
