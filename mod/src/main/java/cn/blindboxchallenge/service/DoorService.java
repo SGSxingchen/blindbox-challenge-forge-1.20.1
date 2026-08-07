@@ -273,7 +273,9 @@ public final class DoorService {
         // 跨维迁移尚未完成时，玩家仍可能在源世界的 tick 收尾中；此时绝不能把为目标门
         // 预留的免疫误判为“已离开”，否则同一迁移调用栈的目标门会反向回跳。
         if (player.isChangingDimension()) return;
-        if (!arrival.dimension().equals(player.serverLevel().dimension()) || !arrival.pos().equals(player.blockPosition())) {
+        // 方块坐标已经跨边界时，玩家宽度 0.6 的碰撞盒仍可能压在无碰撞门格内；必须等真实
+        // 碰撞盒完全离开才能解除，避免下一 tick 又从目标门反向排队。
+        if (!arrival.dimension().equals(player.serverLevel().dimension()) || !insideDoorCell(player, arrival.pos())) {
             ARRIVAL_DOOR_IMMUNITIES.remove(player.getUUID());
         }
     }

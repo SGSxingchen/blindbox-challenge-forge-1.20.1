@@ -65,6 +65,7 @@ jobs:
           grep -q 'PENDING_TELEPORTS.putIfAbsent(player.getUUID(), sourceGlobal)' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'processPendingTeleports(event.getServer())' src/main/java/cn/blindboxchallenge/event/ServerLifecycleEvents.java
           grep -q 'insideDoorCell(player, source.pos())' src/main/java/cn/blindboxchallenge/service/DoorService.java
+          grep -q '!insideDoorCell(player, arrival.pos())' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'DoorService.processPendingTeleports(level.getServer())' src/ciTest/java/cn/blindboxchallenge/citest/DoorCiScenario.java
           grep -B16 'moveToVerifiedDestination(player, targetLevel, destination)' src/main/java/cn/blindboxchallenge/service/DoorService.java | grep -q 'ARRIVAL_DOOR_IMMUNITIES.put(playerId, targetDoorGlobal)'
           grep -q 'if (player.isChangingDimension()) return;' src/main/java/cn/blindboxchallenge/service/DoorService.java
