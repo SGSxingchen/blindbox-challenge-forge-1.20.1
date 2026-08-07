@@ -6,6 +6,8 @@
 
 `RemoteAudioDownload` 仍只在客户端运行，单个游戏目录的下载上限为 16 MiB、缓存上限为 64 MiB。P5 将缓存复验、原子改名和 LRU 淘汰放到同一短临界区：网络、DNS、TLS、响应体写入、完整 OGG/MP3 解码和 SoundEngine 播放都不会持有该锁。
 
+P4 的短音频继续从同一提交的 `raw.githubusercontent.com` 读取。P5 的 14 MiB 原创 ciTest OGG 则固定从 `cdn.jsdelivr.net/gh/<仓库>@<当前 Git SHA>/...` 读取：它只是同一不可变 Git 提交的 HTTPS 只读映射，目的是让 `.ogg` 获得正确的 `audio/ogg` 响应头。GitHub Raw 会把该大文件标为 `application/octet-stream`，而生产下载器必须严格拒绝该泛型类型，不能为 CI 放宽。jsDelivr URL 仍受生产客户端的公开 DNS、固定 IP TLS、SNI、无 Cookie/认证、16 MiB、Ogg 文件头与摘要缓存校验约束；质量门禁锁定当前 SHA 路径与专用 P5 基址。它不表示第三方音频可用性或 CDN 长期可用承诺。
+
 每次 `fetch` 返回的是独立的短租约，而不是被同 URL future 共享的可关闭对象。租约从下载/命中返回起保留到工作线程打开并完整解码缓存文件；LRU 会跳过仍被租用的条目，解码完成立即释放并重新收敛缓存。这样并发 URL 的新提交不能在另一个异步任务 `Files.newInputStream` 前删除它；PCM 已入内存后也不会因长音频播放而永久钉住磁盘缓存。
 
 缓存访问时间使用持久文件 mtime，并在同一毫秒的连续访问中单调递增；淘汰以该时间再以文件名作确定性次序。该策略的范围是**单个客户端进程和游戏目录**，不声称两个进程故意共用同一游戏目录时也有跨进程锁。

@@ -317,7 +317,9 @@ jobs:
           for needle in ('p5-music-cache-enabled.flag', 'p5-music-cache-eviction-reload.flag', 'p5-music-cache-singleflight.flag',
                          'p5-music-cache-corrupt-retry.flag', 'BLINDBOX_CITEST_P5_MUSIC_CACHE_SINGLE_FLIGHT=success'):
               assert needle in script
-          assert 'range(1, 6)' in runner and 'p5MusicCacheMarkerDir' in runner
+          assert 'range(1, 6)' in runner and 'p5MusicCacheMarkerDir' in runner and 'p5AudioBase' in runner
+          assert 'BLINDBOX_CITEST_P5_AUDIO_BASE_URL' in script and 'cdn.jsdelivr.net/gh/${GITHUB_REPOSITORY}@${GITHUB_SHA}' in script
+          assert 'BLINDBOX_CITEST_P5_AUDIO_BASE_URL' in server and 'blindbox.ci.p5AudioBase' in client
           assert 'continue-on-error' not in script and 'continue-on-error' not in runner
           PY
           CITEST_JAR="build/libs/blindboxchallenge-0.1.0-p1-citest.jar"

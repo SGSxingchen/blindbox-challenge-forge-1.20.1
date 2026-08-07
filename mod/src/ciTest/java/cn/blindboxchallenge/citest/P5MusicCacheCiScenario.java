@@ -339,9 +339,9 @@ public final class P5MusicCacheCiScenario {
             return directory;
         }
         private static String audioBaseUrl() {
-            String configured = System.getenv("BLINDBOX_CITEST_P4_AUDIO_BASE_URL");
+            String configured = System.getenv("BLINDBOX_CITEST_P5_AUDIO_BASE_URL");
             if (configured == null || configured.isBlank() || !configured.startsWith("https://")) {
-                throw new IllegalStateException("缺少安全的 BLINDBOX_CITEST_P4_AUDIO_BASE_URL");
+                throw new IllegalStateException("缺少安全的 BLINDBOX_CITEST_P5_AUDIO_BASE_URL");
             }
             return configured.endsWith("/") ? configured : configured + "/";
         }

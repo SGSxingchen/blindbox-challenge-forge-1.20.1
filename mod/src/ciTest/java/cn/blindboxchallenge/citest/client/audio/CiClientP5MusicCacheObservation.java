@@ -257,8 +257,8 @@ public final class CiClientP5MusicCacheObservation {
     private static boolean stage(String name) { Path directory = markerDirectory(); return directory != null && Files.isRegularFile(directory.resolve(name)); }
     private static String currentUrl() { return request == 7 ? singleFlightUrl() : request == 6 ? fillUrl(1) : fillUrl(request == 8 ? P5MusicCacheCiScenario.PRESSURE_ROUNDS : request); }
     private static String audioBase() {
-        String value = System.getProperty("blindbox.ci.p4AudioBase");
-        if (value == null || value.isBlank()) throw new IllegalStateException("缺少 blindbox.ci.p4AudioBase");
+        String value = System.getProperty("blindbox.ci.p5AudioBase");
+        if (value == null || value.isBlank()) throw new IllegalStateException("缺少 blindbox.ci.p5AudioBase");
         return value.endsWith("/") ? value : value + "/";
     }
     private static String fillUrl(int round) { return audioBase() + "blindbox-ci-cache-pressure.ogg?ci=p5-fill-" + round; }

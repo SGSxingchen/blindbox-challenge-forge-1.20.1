@@ -36,7 +36,7 @@ def stop(process):
 def launch(directory: Path, username: str, uuid: str, marker: Path, pillow_marker: Path, scissors_marker: Path, pig_marker: Path, release: Path, reconnect_marker: Path,
            ability_role: str, ability_self_sync_marker: Path, ability_key_marker: Path, ability_tracking_marker: Path, ability_lifecycle_marker: Path,
            ability_recovery_marker: Path, server_recovery_marker: Path, p4_text_marker: Path, p4_death_marker: Path, chicken_marker: Path,
-           p4_music_marker_directory: Path, p4_door_marker_directory: Path, p4_audio_base: str, p5_music_cache_marker_directory: Path,
+           p4_music_marker_directory: Path, p4_door_marker_directory: Path, p4_audio_base: str, p5_audio_base: str, p5_music_cache_marker_directory: Path,
            p5_decor_marker: Path, p5_decor_diagnostic: Path, p5_decor_stage_directory: Path):
     options = minecraft_launcher_lib.utils.generate_test_options()
     jvm_arguments = ["-Xms768M", "-Xmx2G", "-Dblindbox.ci.multiplayerSmoke=true", "-Dsun.net.inetaddr.ttl=0",
@@ -50,6 +50,7 @@ def launch(directory: Path, username: str, uuid: str, marker: Path, pillow_marke
                      f"-Dblindbox.ci.p4TextStageDir={p4_music_marker_directory}",
                      f"-Dblindbox.ci.p4DoorMarkerDir={p4_door_marker_directory}",
                      f"-Dblindbox.ci.p4AudioBase={p4_audio_base}",
+                     f"-Dblindbox.ci.p5AudioBase={p5_audio_base}",
                      f"-Dblindbox.ci.p5MusicCacheMarkerDir={p5_music_cache_marker_directory}",
                      f"-Dblindbox.ci.p5DecorMarker={p5_decor_marker}",
                      f"-Dblindbox.ci.p5DecorDiagnostic={p5_decor_diagnostic}",
@@ -125,6 +126,9 @@ def main():
     p4_audio_base = os.environ.get("BLINDBOX_CITEST_P4_AUDIO_BASE_URL")
     if not p4_audio_base:
         raise RuntimeError("缺少 BLINDBOX_CITEST_P4_AUDIO_BASE_URL")
+    p5_audio_base = os.environ.get("BLINDBOX_CITEST_P5_AUDIO_BASE_URL")
+    if not p5_audio_base:
+        raise RuntimeError("缺少 BLINDBOX_CITEST_P5_AUDIO_BASE_URL")
     for stale in evidence.glob("client-*-p4-music-*.marker"):
         stale.unlink()
     for stale in evidence.glob("client-*-p4-door-*.marker"):
@@ -195,7 +199,7 @@ def main():
                                     "alice" if username == "BlindBoxAlice" else "bob", ability_self_sync_marker, ability_key_marker,
                                     ability_tracking_marker, ability_lifecycle_marker, ability_recovery_marker,
                                     recovery_connection_marker, p4_text_marker, p4_death_marker, chicken_marker,
-                                    p4_music_marker_directory, p4_door_marker_directory, p4_audio_base, p5_music_cache_marker_directory,
+                                    p4_music_marker_directory, p4_door_marker_directory, p4_audio_base, p5_audio_base, p5_music_cache_marker_directory,
                                     p5_decor_marker, p5_decor_diagnostic, evidence), marker, pillow_marker, scissors_marker, pig_marker, username, uuid, directory,
                             recovery_connection_marker))
             # 先由 Alice 完成真实握手和稳定联机，再启动 Bob，规避专服登录层的瞬时并发错误。
