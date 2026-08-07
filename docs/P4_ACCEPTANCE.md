@@ -1,14 +1,14 @@
 # P4 交互、传送与在线音频验收矩阵
 
-> 阶段工单：[Issue #4](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/4)。当前 5/5 静态实现、0/6 阶段门禁；下表是必需真实验收，不是已获得结论。各批动态运行链接必须在 Hosted Runner 成功后填写。
+> 阶段工单：[Issue #4](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/4)。`672509faae6a6fc10741dedadcdc3f11d086b9af` 已取得 5/5 静态实现与六项 Hosted Runner 门禁的完整成功证据；本次归档提交仍须以其自身 SHA 重新走完同一六门禁后，才能关闭工单。
 
 |对象|真实服务端与客户端断言|
 |---|---|
-|信件|真实右键阅读、潜行编辑、会话/换手/修订冲突/控制字符/行数与码点超限拒绝，重连后 NBT 一致；第一批已接入真实 GUI 与负例探针，待 Hosted Runner|
-|死亡笔记|真实菜单提交、离线/换手/目标变化拒绝，延迟到期后只由服务端伤害原解析在线目标；第一批已接入真实 GUI、Bob 死亡界面、负例与待办持久化探针，待 Hosted Runner|
-|任意门与安全落点|两门配对与反链、跨维安全落点；未加载、无落点、碰撞、损坏关联、自指及配对后出现第二安全点均拒绝；第二批已接入服务端配对/进入门体/两侧安全点和两门拆除/下方安全点不回跳/自指/未加载不强加载/碰撞拒绝探针，并新增双方安全点和持久失效回执逻辑。所有门请求必须先由服务端真实 `entityInside` 排队至 `ServerTick.END`，按 UUID、存活/维度状态和全量门事实二次校验后才传送，不能在触发门的旧位置包调用栈内换维；服务器追帧时即使玩家刻末已走过门格，也只接受该刻已捕获的真实入门，不信任客户端位置或旧远端状态；目标门免疫在真正迁移前预留且失败回滚。另接入同一次 `save-all flush → SIGKILL → 同世界重启、两真实客户端重连` 的跨维专项：杀前/后两门 UUID、双向反链、伙伴/安全点 `GlobalPos` 必须一致且不得重新配对；夹具先以不创建门户的 Forge 完整玩家迁移定位 Alice 主世界源门和 Bob 下界观察点并严格复验。Alice 必须先完成两段无输入、精确起点的客户端观察（服务端分别复验新鲜 marker，第二段固定 40 刻以排空跨维定位确认），随后唯一允许的路径才是生产 `KeyMapping.keyUp` 经 `changeDimension` 门逻辑抵达下界门格；不增加原 400 客户端刻入门超时，也不伪造移动包。服务端必须等待原版 teleport id 客户端确认完成后，才严格核验 Alice 的位置与速度均为安全站立状态；Bob 必须同步观察远程 Alice、目标门和安全点；两客户端事实 marker 由服务端复验，旧 marker、超时或任一字段不符即失败，待 Hosted Runner|
-|发条小黄鸡|真实倒计时、保存/重启后恢复、恰一次原版语义爆炸和实体/物品账本；第三批已接入正式 Item#use、两客户端同实体 UUID/Fuse marker、默认 1200 tick 后单次 TNT 来源爆炸与强杀字段恢复探针，待 Hosted Runner|
-|八音盒|安全 URL 拒绝、真实菜单配置、当时两客户端同一播放事件、OGG/MP3 客户端路径、缓存/解码失败与新登录不补播；第四批已接入服务端会话、单次 S2C 事件、固定公网 TLS 下载、单飞原子缓存与 OGG/JLayer 客户端预解码路径，并追加真实 GUI→C2S→S2C→SoundEngine PCM read、断网缓存、截断失败、Bob 重连 80 tick 不补播场景，待 Hosted Runner|
+|信件|真实右键阅读、潜行编辑、会话/换手/修订冲突/控制字符/行数与码点超限拒绝，重连后 NBT 一致；`31162631774` 的两真实客户端 GUI、C2S、NBT 修订与清理成功|
+|死亡笔记|真实菜单提交、离线/换手/目标变化拒绝，延迟到期后只由服务端伤害原解析在线目标；同一双客户端运行确认 Bob 真实死亡界面、服务端排程/执行与负例成功|
+|任意门与安全落点|两门配对与反链、跨维安全落点；未加载、无落点、碰撞、损坏关联、自指及配对后出现第二安全点均拒绝；同一 `flush → SIGKILL → 重连` 会话确认生产 `entityInside`、跨维到达、双端同步、门/安全点反链与 cleanup 成功|
+|发条小黄鸡|真实倒计时、保存/重启后恢复、恰一次原版语义爆炸和实体/物品账本；同一双客户端运行确认生产 `Item#use`、两端同 UUID/Fuse、默认 1200 tick、单次 TNT 来源爆炸与 cleanup 成功，生命周期运行另确认持久字段|
+|八音盒|安全 URL 拒绝、真实菜单配置、当时两客户端同一播放事件、OGG/MP3 客户端路径、缓存/解码失败与新登录不补播；同一双客户端运行确认 OGG PCM、断网缓存 PCM、MP3 PCM、截断解码失败和 Bob 重连 80 tick 不补播成功|
 
 同一 P4 验收提交必须通过质量与构建、真实专服、生命周期强杀恢复、真实单客户端、真实双客户端和强制回归汇总六项。质量门禁还必须确认正式 Jar 不含 ciTest、网络方向和专服隔离正确；通过后填写正式 Jar SHA-256、六个运行链接和真实未覆盖边界。任意门强杀专项的证据包括杀前 manifest、两份客户端 marker 与 `PREPARED`、`STARTED`、`CLIENTS=success`、`CLEANUP` 日志；它只证明固定两门、目标区块已由 Bob 正常加载、已 flush 的同世界强杀恢复下的一次跨维进入和有限观察，不外推为未加载伙伴可传送、未 flush 掉电或任意门拓扑的全称恢复。死亡笔记必须单列“已到期任务在伤害前后恰遇异常断电”的非原子窗口，不能因 `SavedData` 排程跨重启保存而虚报严格恰一次。
 
@@ -51,3 +51,28 @@
 `cd1c558` 的双客户端 run `31160277755` 已使该支撑修复后的 P4 小黄鸡（两端同 UUID/Fuse、默认 1200 tick、单次 TNT 与 cleanup）全部成功；失败仅在随后文本开始前 Alice 的旧坠落结算，因而真实 C2S 未写入，不能把小黄鸡成功外推为 P4 通过。`b5bed07` 现在对武装位、安全位和 cleanup 原位的每一次同维夹具定位统一精确核验坐标，并清零速度与 `fallDistance`、标记同步；不复活、不跳过文本死亡笔记、不改生产物品、爆炸、marker、超时或双客户端组合。仍须由同一新 SHA 的全部六项门禁取得 success 后才可填写正式验收结论。
 
 `e1a2042` 的真实双客户端 run `31161575771` 使质量、专服、强杀恢复、单客户端以及小黄鸡的双端 UUID/Fuse、1200 tick、单次 TNT、cleanup 全部通过，却留下两个不能忽略的真实物理失败：Bob 在等待中溺水，Alice 在 cleanup 后、文本 GUI 前高处坠落，故真实信件 C2S 没有写入。前者定位为脚下平台没有清空身体/头顶水体，后者定位为强杀恢复保存的高空“原位”被交还给下一场景；都不是放宽坠落断言可解决的问题。下一轮只使夹具清出平台上两格空间，并在完整还原临时方块后搜索附近已有的非流体坚固支撑与两格空气站立格；找不到严格失败。不放置永久垫块、不复活、不跳过文本、生产小黄鸡、Fuse、爆炸、marker、超时或双客户端组合。P4 仍为 **0/6**。
+
+## `672509f` 首次完整验收证据
+
+证据提交：`672509faae6a6fc10741dedadcdc3f11d086b9af`。汇总 artifact 的 `p1-required-workflows.json` 为 schema 1，五项前置均为同一 `master` push 的 `completed/success`，且 `head_sha` 完全一致；不以被 concurrency 取消的早期汇总代替最终汇总。
+
+|门禁|结论|Hosted Runner 运行|
+|---|---|---|
+|质量与构建|success|[31162631845](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31162631845)|
+|专用服务器启动|success|[31162631769](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31162631769)|
+|生命周期强杀恢复|success|[31162631876](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31162631876)|
+|真实单客户端启动|success|[31162631864](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31162631864)|
+|真实双客户端联机|success|[31162631774](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31162631774)|
+|强制回归汇总|success|[31163161822](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31163161822)|
+
+双客户端 artifact 依次记录了跨维门 `CLIENTS/CLEANUP`、小黄鸡双端同 UUID/Fuse 与 1200 tick 单次 TNT、文本 `TEXT_SERVER/CLIENTS/CLEANUP`，以及八音盒 OGG PCM、断网缓存 PCM、MP3 PCM、截断解码失败和 Bob 重连不补播全部成功；这些 marker 均由生产路径或真实客户端观察写出，未预写或以脚本替代。
+
+质量 artifact 中正式发行候选为 `blindboxchallenge-0.1.0-p1-all.jar`，SHA-256 为 `a5a9ad417dfd79d6e97a2c11be0831915424851baad51287d76669ca0527930e`；下载后按 Runner 的 `SHA256SUMS` 复算，三个 Jar 均一致。该版本号仍是开发标记，不是正式 Release；P5 会统一版本、再生成最终发行 Jar/校验和与 GitHub Release。
+
+### 真实未覆盖边界
+
+* 任意门强杀恢复只覆盖已 `save-all flush` 的同世界 SIGKILL、固定两门和 Bob 已按正常玩家语义加载的目标区块；不外推未加载伙伴可传送、未 flush 掉电或任意门拓扑。
+* 死亡笔记已验证排程跨重启和一次真实到期伤害；到期伤害前后恰遇异常断电仍是 `SavedData` 与实体伤害之间的非原子窗口，不宣称严格恰一次。
+* 八音盒验证的是受控 CI 音频的有限真实下载/缓存/解码与 120 tick 不补播观察，不能承诺第三方 HTTPS 音频持续可访问、带宽或版权；也不是全地形、多人长期压力证明。
+
+因此 `672509f` 的 P4 代码与六门禁证据已齐全；本归档文档提交不改变生产或探针行为，仍须取得自身同 SHA 六门禁后才关闭 Issue #4 并开始 P5。
