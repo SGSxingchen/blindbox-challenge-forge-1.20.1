@@ -99,6 +99,8 @@ jobs:
           grep -q 'CONFIGURATION_INPUT_STALL_TICKS = 100' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
           grep -q 'configuration-open-attempt.marker' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
           grep -q 'configuration-input-stalled.marker' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          grep -q 'if (!observesMusicBox(minecraft)) return;' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
+          grep -q 'ModBlocks.MUSIC_BOX.get()' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java
           grep -q 'configuration_open_attempts=' src/ciTest/java/cn/blindboxchallenge/citest/P4MusicCiScenario.java
           grep -q 'configuration_input_stalls=' src/ciTest/java/cn/blindboxchallenge/citest/P4MusicCiScenario.java
           grep -q 'RELEASE_SHIFT_TICKS = 4' src/ciTest/java/cn/blindboxchallenge/citest/client/audio/CiClientMusicBoxObservation.java

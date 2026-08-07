@@ -7,6 +7,7 @@ import cn.blindboxchallenge.citest.P4MusicCiScenario;
 import cn.blindboxchallenge.client.MusicBoxScreen;
 import cn.blindboxchallenge.event.MusicBoxPlaybackEvent;
 import cn.blindboxchallenge.event.MusicBoxPlaybackFailedEvent;
+import cn.blindboxchallenge.registry.ModBlocks;
 import com.mojang.blaze3d.platform.InputConstants;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -170,6 +171,9 @@ public final class CiClientMusicBoxObservation {
         Screen screen = minecraft.screen;
         switch (alicePhase) {
             case WAIT_OGG_OPEN -> {
+                // 观察到服务器实际放置的生产方块前，不得写任何 p4-music 定位文件；否则启动前的
+                // 客户端空闲状态会被服务端正确当成旧 marker 拒绝，且根本不是本场景的输入事实。
+                if (!observesMusicBox(minecraft)) return;
                 if (canUseMusicBox(minecraft, player)) {
                     KeyMapping.click(minecraft.options.keyUse.getKey());
                     // 只证明真实 use 键已注入客户端队列，不能代替菜单、C2S、S2C 或 PCM 成功。
@@ -268,6 +272,12 @@ public final class CiClientMusicBoxObservation {
                 && player.blockPosition().equals(target.above()) && player.getXRot() >= 80.0F;
     }
 
+    /** 只以客户端已同步的生产方块启动输入诊断；服务端仍独立校验 use、菜单和 C2S。 */
+    private static boolean observesMusicBox(Minecraft minecraft) {
+        BlockPos target = minecraft.level.getSharedSpawnPos().offset(P4MusicCiScenario.MUSIC_BOX_OFFSET);
+        return minecraft.level.getBlockState(target).is(ModBlocks.MUSIC_BOX.get());
+    }
+
     /** 仅记录无敏感的客户端输入前置；不写 URL、服务器地址、路径、会话或成功字段。 */
     private static String configurationInputFacts(Minecraft minecraft, LocalPlayer player, boolean keyUseInjected) {
         BlockPos target = minecraft.level.getSharedSpawnPos().offset(P4MusicCiScenario.MUSIC_BOX_OFFSET);
@@ -281,6 +291,7 @@ public final class CiClientMusicBoxObservation {
                 + "standing=" + position(player.blockPosition()) + "\n"
                 + "target=" + position(target) + "\n"
                 + "pitch=" + player.getXRot() + "\n"
+                + "music_box_observed=" + observesMusicBox(minecraft) + "\n"
                 + "can_use_music_box=" + canUseMusicBox(minecraft, player) + "\n"
                 + "key_use_injected=" + keyUseInjected + "\n";
     }
