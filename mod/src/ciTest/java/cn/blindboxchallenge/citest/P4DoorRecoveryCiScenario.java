@@ -254,10 +254,14 @@ public final class P4DoorRecoveryCiScenario {
                         throw new IllegalStateException("杀后进入任意门未抵达下界安全站立格：expected=" + expected
                                 + ", actual=" + actual + ", distance_sqr=" + distanceSqr + ", velocity=" + alice.getDeltaMovement());
                     }
-                    // changeDimension 的落点确认和首个原版物理 tick 可能同帧完成：落地前的重力增量不是
-                    // 源门惯性。位置必须始终精确，且只有在真实落地、速度已归零后才能写成功结果。
-                    // 不稳定时自然落到同一 tick 的严格超时判断，绝不能无限等待。
-                    if (alice.onGround() && alice.getDeltaMovement().lengthSqr() <= 1.0E-8D) {
+                    // DoorService 在迁移完成时已权威写入 Vec3.ZERO。此处采样位于后续的
+                    // ServerTick.END：原版已落地玩家会在物理结算前重新积一帧 -0.0784 的重力，
+                    // 该值不代表位移或源门惯性。故必须是精确站立、水平零速，Y 只允许零或这一帧
+                    // 标准重力预积分；任意上冲或更大的下坠仍严格拒绝。
+                    Vec3 velocity = alice.getDeltaMovement();
+                    double horizontalSpeedSqr = velocity.x * velocity.x + velocity.z * velocity.z;
+                    if (alice.onGround() && horizontalSpeedSqr <= 1.0E-8D
+                            && velocity.y >= -0.0800001D && velocity.y <= 1.0E-8D) {
                         verifyPersistedLinks();
                         if (verifyAliceMarker() && verifyBobMarker()) {
                             phase = Phase.READY;

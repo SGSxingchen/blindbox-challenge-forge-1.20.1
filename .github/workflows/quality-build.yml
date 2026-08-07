@@ -89,6 +89,8 @@ jobs:
           grep -q 'if (phase != Phase.READY && timedOut) throw timeout(alice, bob());' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q 'alice_on_ground=' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q 'alice_velocity=' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
+          grep -q 'horizontalSpeedSqr <= 1.0E-8D' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
+          grep -q 'velocity.y >= -0.0800001D && velocity.y <= 1.0E-8D' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           python3 - <<'PY'
           from pathlib import Path
           source = Path('src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java').read_text(encoding='utf-8')
