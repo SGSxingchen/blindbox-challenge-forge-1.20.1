@@ -58,6 +58,9 @@ jobs:
           # 1.20.1 的 Player 只有无参 mayBuild()；方块位置权限必须再由 Level.mayInteract 校验。
           ! grep -RInE 'mayBuild\([^)]' src/main/java/cn/blindboxchallenge
           grep -q 'sourceLevel.mayInteract(player, sourcePos)' src/main/java/cn/blindboxchallenge/service/DoorService.java
+          # ServerPlayer 跨维 teleportTo 不会自动清除进入门体前的速度；安全落点必须是服务端归零后的站立位置。
+          grep -q 'player.setDeltaMovement(Vec3.ZERO);' src/main/java/cn/blindboxchallenge/service/DoorService.java
+          grep -q 'player.hurtMarked = true;' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'level.mayInteract(player, clicked)' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'box.getLevel().mayInteract(player, box.getBlockPos())' src/main/java/cn/blindboxchallenge/service/MusicBoxService.java
           grep -q 'player.level().mayInteract(player, packet.position())' src/main/java/cn/blindboxchallenge/network/CommitMusicBoxUrlPacket.java

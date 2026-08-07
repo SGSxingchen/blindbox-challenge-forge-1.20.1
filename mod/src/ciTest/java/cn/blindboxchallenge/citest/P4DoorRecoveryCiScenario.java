@@ -187,6 +187,7 @@ public final class P4DoorRecoveryCiScenario {
             if (alice.serverLevel().dimension().equals(nether.dimension())) {
                 Vec3 expected = Vec3.atBottomCenterOf(targetDoor);
                 if (alice.position().distanceToSqr(expected) > 0.08D) throw new IllegalStateException("杀后进入任意门未抵达下界安全站立格");
+                if (alice.getDeltaMovement().lengthSqr() > 1.0E-8D) throw new IllegalStateException("杀后进入任意门仍保留源门移动速度");
                 verifyPersistedLinks();
                 if (verifyAliceMarker() && verifyBobMarker()) {
                     phase = Phase.READY;

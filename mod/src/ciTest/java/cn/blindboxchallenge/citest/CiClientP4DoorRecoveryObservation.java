@@ -55,6 +55,9 @@ public final class CiClientP4DoorRecoveryObservation {
                 KeyMapping.set(minecraft.options.keyUp.getKey(), true);
                 walking = true;
             }
+            // 已由真实按键走进源门格后立即松开，不能把夹具的持续前进输入带进跨维同步首帧。
+            // walking 状态和服务端超时仍保留：若门没有真正传送，玩家会停在源门并明确失败。
+            if (walking && self.blockPosition().equals(source)) KeyMapping.set(minecraft.options.keyUp.getKey(), false);
             if (walking && ++walkingTicks > 100) throw new IllegalStateException("真实前进键未进入 P4 跨维门");
             return;
         }

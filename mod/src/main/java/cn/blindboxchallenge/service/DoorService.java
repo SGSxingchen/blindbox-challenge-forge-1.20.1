@@ -131,6 +131,10 @@ public final class DoorService {
         AABB playerBox = player.getDimensions(Pose.STANDING).makeBoundingBox(destination);
         if (!targetLevel.noCollision(player, playerBox) || targetLevel.containsAnyLiquid(playerBox)) return;
         player.teleportTo(targetLevel, destination.x, destination.y, destination.z, player.getYRot(), player.getXRot());
+        // ServerPlayer 的跨维 teleportTo 只同步坐标，不会清除进入源门时的惯性。
+        // 安全落点的语义是“站立”，因此必须由服务端权威地归零并同步速度，不能让旧移动量把玩家带离已校验的安全格。
+        player.setDeltaMovement(Vec3.ZERO);
+        player.hurtMarked = true;
         player.resetFallDistance();
         TELEPORT_COOLDOWNS.put(player.getUUID(), now);
         ARRIVAL_DOOR_IMMUNITIES.put(player.getUUID(), targetDoorGlobal);
