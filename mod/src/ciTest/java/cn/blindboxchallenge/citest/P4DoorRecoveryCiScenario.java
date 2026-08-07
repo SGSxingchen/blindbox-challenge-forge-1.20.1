@@ -278,7 +278,8 @@ public final class P4DoorRecoveryCiScenario {
         private IllegalStateException timeout(ServerPlayer alice, ServerPlayer bob) {
             return new IllegalStateException("P4 跨维门恢复场景超时：phase=" + phase
                     + ", alice_dimension=" + alice.serverLevel().dimension().location()
-                    + ", alice_changing=" + alice.isChangingDimension() + ", alice=" + alice.position()
+                    + ", alice_changing=" + alice.isChangingDimension() + ", alice_on_ground=" + alice.onGround()
+                    + ", alice_velocity=" + alice.getDeltaMovement() + ", alice=" + alice.position()
                     + ", bob_dimension=" + bob.serverLevel().dimension().location()
                     + ", bob_changing=" + bob.isChangingDimension() + ", bob=" + bob.position());
         }

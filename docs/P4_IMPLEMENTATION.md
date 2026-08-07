@@ -50,3 +50,5 @@
 最新跨维门 artifact 已定位并修复实际生产根因：`Entity#checkInsideBlocks` 将同一个 `MutableBlockPos` 传给 `Block#entityInside` 后会继续复用它枚举相邻格。旧延迟队列把该可变对象直接交给 `GlobalPos`，到 `ServerTick.END` 时源门 Y 坐标已被改为相邻空气格；候选、队列和全量复验都是真实发生的，却必然取不到源方块实体。现在 `tryTeleport` 在任何校验和排队前以 `sourcePos.immutable()` 固定源格，并仅保存该快照。为定位此问题临时加入的生产审计日志已移除；保留 ciTest 的一次性非成功源侧事实日志以及质量门闩。该修复仍待 Hosted Runner 动态结论，不能提前写为 P4 通过。
 
 随后的 Hosted Runner 双客户端运行 `31144937827` 已实际写出 Alice 下界到达与 Bob 同步观察两份 marker，且其中的维度、目标坐标均正确；失败并非生产门拒绝，而是场景在同一服务端刻先执行全局 800 tick 超时、后检查目标维度成功事实，形成边界 tick 的误报。现保持 800 tick 数值不变：除 `WAIT_FOR_CROSSING` 外的前置阶段仍先严格超时；跨维阶段则先检查原有的回跳负例、精确安全站立格、落地、零速度、持久反链和两份客户端 marker，再对尚未 `READY` 的状态严格超时。目标维的换维中、未落地或非零速度路径不再以 `return` 绕过上限。下一轮仍须由 Hosted Runner 验证，不能把本次 marker 写成阶段通过。
+
+`cbdd40b` 的下一轮已确认成功态检查的顺序生效：Alice、Bob 均在下界精确位置，且两份新鲜 marker 的 schema、离线 UUID、维度、坐标与观察字段完整；场景仍在 `WAIT_FOR_CROSSING` 结束时未到 `READY`。现有失败输出尚未携带余下严格门槛的落地/速度值，不能猜测改生产传送或放宽安全条件；本次仅为失败消息补充 `alice_on_ground` 与 `alice_velocity`，下一轮据真实证据在“未落地”与“未归零”之间继续定位，800 tick、落地、零速度、两 marker、反链和回跳断言均不变。
