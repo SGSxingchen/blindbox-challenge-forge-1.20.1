@@ -12,13 +12,7 @@ test -n "${GITHUB_ACTIONS:-}"
 : "${GITHUB_REPOSITORY:?真实在线音频 CI 缺少 GitHub 仓库名}"
 : "${GITHUB_SHA:?真实在线音频 CI 缺少提交 SHA}"
 export BLINDBOX_CITEST_P4_AUDIO_BASE_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/mod/src/ciTest/resources/ci-audio"
-# GitHub Raw 会把大于阈值的 OGG 标成 application/octet-stream；生产下载器必须继续严格拒绝该类型，
-# 不能为 CI 放宽。P5 固定使用 jsDelivr 对**同一 GitHub 提交**的只读 HTTPS 映射，它为 .ogg 正确
-# 声明 audio/ogg，路径仍由当前 GITHUB_SHA 锁定，且客户端照常执行公开 DNS、固定 TLS 与文件头校验。
-export BLINDBOX_CITEST_P5_AUDIO_BASE_URL="https://cdn.jsdelivr.net/gh/${GITHUB_REPOSITORY}@${GITHUB_SHA}/mod/src/ciTest/resources/ci-audio"
 test -n "${FORMAL}" && test -f "${FORMAL}" && test -f "${CITEST}"
-# P5 大 OGG 必须随独立 ciTest Jar 到两个真实客户端目录；正式 Jar 仍由质量门禁严格排除 ci-audio。
-jar tf "${CITEST}" | grep -qx 'ci-audio/blindbox-ci-cache-pressure.ogg'
 rm -rf "${SERVER_DIR}" "${CLIENT_TEMPLATE}" "${EVIDENCE}" build/ci-client-1 build/ci-client-2
 mkdir -p "${SERVER_DIR}" "${EVIDENCE}"
 EVIDENCE_ABS="$(cd "${EVIDENCE}" && pwd)"
@@ -38,7 +32,7 @@ curl --fail --location --retry 3 --connect-timeout 20 -o "${SERVER_DIR}/${INSTAL
  mkdir -p mods
  cp "../../${FORMAL}" "../../${CITEST}" mods/
  mkfifo server.stdin
- BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_SCISSORS_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_PIG_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P5_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_AUDIO_BASE_URL="${BLINDBOX_CITEST_P4_AUDIO_BASE_URL}" BLINDBOX_CITEST_P5_AUDIO_BASE_URL="${BLINDBOX_CITEST_P5_AUDIO_BASE_URL}" \
+ BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_SCISSORS_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_PIG_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_AUDIO_BASE_URL="${BLINDBOX_CITEST_P4_AUDIO_BASE_URL}" \
    setsid ./run.sh nogui < server.stdin > server.log 2>&1 & echo $! > server.pid
 )
 SERVER_PID="$(cat "${SERVER_DIR}/server.pid")"
@@ -252,7 +246,7 @@ wait "${SERVER_PID}" 2>/dev/null || true
  cd "${SERVER_DIR}"
  rm -f server.stdin
  mkfifo server.stdin
- BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_SCISSORS_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_PIG_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P5_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_AUDIO_BASE_URL="${BLINDBOX_CITEST_P4_AUDIO_BASE_URL}" BLINDBOX_CITEST_P5_AUDIO_BASE_URL="${BLINDBOX_CITEST_P5_AUDIO_BASE_URL}" \
+ BLINDBOX_CITEST_PILLOW_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_ABILITY_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_SCISSORS_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_PIG_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_MARKER_DIR="${EVIDENCE_ABS}" BLINDBOX_CITEST_P4_AUDIO_BASE_URL="${BLINDBOX_CITEST_P4_AUDIO_BASE_URL}" \
    setsid ./run.sh nogui < server.stdin > server.log 2>&1 & echo $! > server.pid
 )
 SERVER_PID="$(cat "${SERVER_DIR}/server.pid")"
@@ -398,70 +392,7 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_CHICKEN_CLEANUP=success' "${SERVER_DIR}/server.log"
-# P5 必须位于 P4 文本死亡笔记之前：此时 Alice 和 Bob 都仍存活，分别用真实客户端输入操作
-# 其轮次，并在每轮交叉观察同一生产方块和掉落实体。P4 文本已经拥有交接平台，P5 cleanup 会回到
-# 它；平台仍保留到最后 canonical 导出，不能把本段移动到文本/音频之后要求死亡 Bob 观察或操作。
-printf 'blindboxcitest start_p5_decor_clients\n' >&3
-for _ in $(seq 1 90); do
-  if grep -q 'BLINDBOX_CITEST_P5_DECOR=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
-  grep -q 'BLINDBOX_CITEST_P5_DECOR_STARTED=success' "${SERVER_DIR}/server.log" && break
-  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
-  sleep 1
-done
-grep -q 'BLINDBOX_CITEST_P5_DECOR_STARTED=success' "${SERVER_DIR}/server.log"
-touch "${EVIDENCE}/p5-decor-enabled.flag"
-for ROUND in 1 2 3; do
-  for _ in $(seq 1 90); do
-    if grep -q 'BLINDBOX_CITEST_P5_DECOR=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
-    grep -q "BLINDBOX_CITEST_P5_DECOR_ROUND_${ROUND}_PLACE_READY=success" "${SERVER_DIR}/server.log" && break
-    kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
-    sleep 1
-  done
-  grep -q "BLINDBOX_CITEST_P5_DECOR_ROUND_${ROUND}_PLACE_READY=success" "${SERVER_DIR}/server.log"
-  touch "${EVIDENCE}/p5-decor-place-${ROUND}.flag"
-  for _ in $(seq 1 90); do
-    if grep -q 'BLINDBOX_CITEST_P5_DECOR=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
-    grep -q "BLINDBOX_CITEST_P5_DECOR_ROUND_${ROUND}_BREAK_READY=success" "${SERVER_DIR}/server.log" && break
-    kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
-    sleep 1
-  done
-  grep -q "BLINDBOX_CITEST_P5_DECOR_ROUND_${ROUND}_BREAK_READY=success" "${SERVER_DIR}/server.log"
-  touch "${EVIDENCE}/p5-decor-break-${ROUND}.flag"
-  for _ in $(seq 1 90); do
-    if grep -q 'BLINDBOX_CITEST_P5_DECOR=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
-    grep -q "BLINDBOX_CITEST_P5_DECOR_ROUND_${ROUND}_SERVER_DROP=success" "${SERVER_DIR}/server.log" && break
-    kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
-    sleep 1
-  done
-  grep -q "BLINDBOX_CITEST_P5_DECOR_ROUND_${ROUND}_SERVER_DROP=success" "${SERVER_DIR}/server.log"
-done
-for _ in $(seq 1 120); do
-  if grep -q 'BLINDBOX_CITEST_P5_DECOR=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
-  grep -q 'BLINDBOX_CITEST_P5_DECOR_SERVER=success' "${SERVER_DIR}/server.log" && break
-  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
-  sleep 1
-done
-grep -q 'BLINDBOX_CITEST_P5_DECOR_SERVER=success' "${SERVER_DIR}/server.log"
-for _ in $(seq 1 120); do
-  [ -f "${EVIDENCE}/client-1-p5-decor-observed.marker" ] && [ -f "${EVIDENCE}/client-2-p5-decor-observed.marker" ] && break
-  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
-  sleep 1
-done
-test -f "${EVIDENCE}/client-1-p5-decor-observed.marker"
-test -f "${EVIDENCE}/client-2-p5-decor-observed.marker"
-printf 'blindboxcitest verify_p5_decor_clients\n' >&3
-for _ in $(seq 1 60); do
-  grep -q 'BLINDBOX_CITEST_P5_DECOR_CLIENTS=success' "${SERVER_DIR}/server.log" && break
-  sleep 1
-done
-grep -q 'BLINDBOX_CITEST_P5_DECOR_CLIENTS=success' "${SERVER_DIR}/server.log"
-printf 'blindboxcitest cleanup_p5_decor_clients\n' >&3
-for _ in $(seq 1 60); do
-  grep -q 'BLINDBOX_CITEST_P5_DECOR_CLEANUP=success' "${SERVER_DIR}/server.log" && break
-  sleep 1
-done
-grep -q 'BLINDBOX_CITEST_P5_DECOR_CLEANUP=success' "${SERVER_DIR}/server.log"
-rm -f "${EVIDENCE}/p5-decor-enabled.flag" "${EVIDENCE}"/p5-decor-place-*.flag "${EVIDENCE}"/p5-decor-break-*.flag
+# P5 装饰与缓存压力由独立干净世界的 p5-client-suite.sh 执行；本 P1—P4 回归链不承载 P5。
 # P4 负例只调用生产会话授权/文本过滤入口，验证换手、旧修订、伪造容器、控制字符与越限拒绝；
 # 它不替代下方由真实客户端右键和 Screen 控件完成的成功链路。
 printf 'blindboxcitest run_p4_text_negative\n' >&3
@@ -599,81 +530,7 @@ for _ in $(seq 1 120); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P4_MUSIC_CLIENTS=success' "${SERVER_DIR}/server.log"
-# P5 缓存压力复用两台已完成 P4 不补播验证的真实 Forge 客户端，但使用另一生产八音盒和完全独立 marker。
-# Alice 仍只能经 MusicBoxScreen 与原版 use 配置/播放；服务器只回读 SoundEngine PCM 事实。
-printf 'blindboxcitest start_p5_music_cache_clients\n' >&3
-for _ in $(seq 1 60); do
-  grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_STARTED=success' "${SERVER_DIR}/server.log" && break
-  sleep 1
-done
-grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_STARTED=success' "${SERVER_DIR}/server.log"
-touch "${EVIDENCE}/p5-music-cache-enabled.flag"
-p5_music_cache_failure() {
-  # 成功 marker 只能由两个真实客户端经 SoundEngine PCM read 写入；这里仅在既有严格等待
-  # 已超时后请求一份非成功客户端快照，再输出诊断和服务器状态；绝不补写、放宽或替代任何业务结果。
-  touch "${EVIDENCE}/p5-music-cache-diagnostic-request.flag"
-  for _ in $(seq 1 20); do
-    [ -f "${EVIDENCE}/client-1-p5-audio-postfailure.diagnostic" ] && break
-    sleep 1
-  done
-  printf '%s\n' 'P5 八音盒缓存压力未达到当前严格阶段；以下仅为非成功诊断：' >&2
-  for diagnostic in "${EVIDENCE}"/client-*-p5-music-cache-input-stalled.marker "${EVIDENCE}"/client-*-p5-audio-*.diagnostic; do
-    [ -f "${diagnostic}" ] || continue
-    printf '%s\n' "--- ${diagnostic} ---" >&2
-    cat "${diagnostic}" >&2
-  done
-  printf '%s\n' '--- P5 服务器日志尾部 ---' >&2
-  tail -n 240 "${SERVER_DIR}/server.log" >&2
-  exit 1
-}
-for round in $(seq 1 5); do
-  for _ in $(seq 1 240); do
-    if grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
-    grep -q "BLINDBOX_CITEST_P5_MUSIC_CACHE_FILL_${round}=success" "${SERVER_DIR}/server.log" && break
-    kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
-    sleep 1
-  done
-  grep -q "BLINDBOX_CITEST_P5_MUSIC_CACHE_FILL_${round}=success" "${SERVER_DIR}/server.log" || p5_music_cache_failure
-  if [ "${round}" -lt 5 ]; then touch "${EVIDENCE}/p5-music-cache-fill-$((round + 1)).flag"; fi
-done
-touch "${EVIDENCE}/p5-music-cache-eviction-reload.flag"
-for _ in $(seq 1 240); do
-  if grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
-  grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_EVICTION_REDOWNLOAD=success' "${SERVER_DIR}/server.log" && break
-  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
-  sleep 1
-done
-grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_EVICTION_REDOWNLOAD=success' "${SERVER_DIR}/server.log" || p5_music_cache_failure
-touch "${EVIDENCE}/p5-music-cache-singleflight.flag"
-for _ in $(seq 1 240); do
-  if grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
-  grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_SINGLE_FLIGHT=success' "${SERVER_DIR}/server.log" && break
-  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
-  sleep 1
-done
-grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_SINGLE_FLIGHT=success' "${SERVER_DIR}/server.log" || p5_music_cache_failure
-for _ in $(seq 1 120); do
-  if grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
-  grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CORRUPTION=ready' "${SERVER_DIR}/server.log" && break
-  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
-  sleep 1
-done
-grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CORRUPTION=ready' "${SERVER_DIR}/server.log" || p5_music_cache_failure
-touch "${EVIDENCE}/p5-music-cache-corrupt-retry.flag"
-for _ in $(seq 1 240); do
-  if grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
-  grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CLIENTS=success' "${SERVER_DIR}/server.log" && break
-  kill -0 "${CLIENT_PID}" 2>/dev/null || { cat "${EVIDENCE}/clients-runner.log"; exit 1; }
-  sleep 1
-done
-grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CLIENTS=success' "${SERVER_DIR}/server.log" || p5_music_cache_failure
-printf 'blindboxcitest cleanup_p5_music_cache_clients\n' >&3
-for _ in $(seq 1 60); do
-  grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CLEANUP=success' "${SERVER_DIR}/server.log" && break
-  sleep 1
-done
-grep -q 'BLINDBOX_CITEST_P5_MUSIC_CACHE_CLEANUP=success' "${SERVER_DIR}/server.log"
-rm -f "${EVIDENCE}"/p5-music-cache-*.flag
+# P5 缓存压力由独立干净世界的 p5-client-suite.sh 执行；P4 音频只验证自身播放与不补播回归。
 printf 'blindboxcitest cleanup_p4_music_clients\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_P4_MUSIC_CLEANUP=success' "${SERVER_DIR}/server.log" && break
@@ -710,8 +567,7 @@ assert sum(slot['stack']['count'] for slot in alice['main'] if marker in slot['s
 assert sum(slot['stack']['count'] for slot in bob['main'] if marker in slot['stack']['canonical_nbt'])==0
 assert sum(slot['stack']['count'] for slot in bob['main'] if 'blindboxchallenge:blind_box' in slot['stack']['canonical_nbt'])==1
 PY
-# P5 cleanup 已把两个玩家恢复到 P4 文本持有的安全交接平台；只有 canonical 导出已完成、且下一步
-# 就是 save-all/stop 时才归还该平台。若在 P5 snapshot 前撤台会把 cleanup 玩家送回无支撑高空。
+# P4 文本场景持有的安全交接平台须在 canonical 导出后才归还；此前撤台会把 cleanup 玩家送回无支撑高空。
 printf 'blindboxcitest release_p4_text_handoff\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_P4_TEXT_HANDOFF_RELEASED=success' "${SERVER_DIR}/server.log" && break
