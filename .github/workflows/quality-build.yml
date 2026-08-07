@@ -332,7 +332,9 @@ jobs:
           import hashlib
           import json
           import re
+          import runpy
           import struct
+          import subprocess
           from pathlib import Path
 
           root = Path('.').resolve()
@@ -392,6 +394,16 @@ jobs:
           for identifier in ids:
               assert f'`mod/src/main/resources/assets/blindboxchallenge/textures/block/{identifier}.png`' in manifest
           assert '待权利人/法务确认；Release 阻塞' in manifest
+          generator = root.parent / 'tools/generate_original_textures.py'
+          generator_values = runpy.run_path(str(generator))
+          generated_targets = generator_values['TARGETS']
+          assert len(generated_targets) == 68
+          subprocess.run(['python3', str(generator), '--check'], check=True)
+          for relative in generated_targets:
+              path = f'mod/src/main/resources/{relative}'
+              assert path in recorded, path
+              row = next(line for line in manifest.splitlines() if line.startswith(f'|`{path}`|'))
+              assert '项目维护者（2026-08-07）' in row and '确定性几何像素' in row, path
 
           scenario = (root / 'src/ciTest/java/cn/blindboxchallenge/citest/P5DecorCiScenario.java').read_text(encoding='utf-8')
           client = (root / 'src/ciTest/java/cn/blindboxchallenge/citest/CiClientP5DecorObservation.java').read_text(encoding='utf-8')
