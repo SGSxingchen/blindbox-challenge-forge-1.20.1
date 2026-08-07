@@ -82,6 +82,8 @@ jobs:
           grep -q 'source_present={}, source_linked={}, ' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q 'overworld.mayInteract(alice, sourceDoor)' src/ciTest/java/cn/blindboxchallenge/citest/P4DoorRecoveryCiScenario.java
           grep -q '037-B entityInside 候选' src/main/java/cn/blindboxchallenge/service/DoorService.java
+          grep -q '037-B entityInside 候选已' src/main/java/cn/blindboxchallenge/service/DoorService.java
+          grep -q '037-B 延迟候选开始全量复验' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q '真实前进键未进入 P4 跨维门：client=' src/ciTest/java/cn/blindboxchallenge/citest/CiClientP4DoorRecoveryObservation.java
           # 生命周期夹具任一前置等待失败也必须保留原始服务器日志；该钩子只保存证据，不能吞失败。
           bash -n scripts/ci/lifecycle-recovery.sh

@@ -108,7 +108,8 @@ public final class DoorService {
         reconcileInvalidatedDoor(sourceLevel, source);
         if (!source.linked()) return;
         // 同一 tick 同一玩家只允许一个候选；此 Map 不是授权结果，执行前必须重新校验全部远端事实。
-        PENDING_TELEPORTS.putIfAbsent(player.getUUID(), sourceGlobal);
+        boolean newlyQueued = PENDING_TELEPORTS.putIfAbsent(player.getUUID(), sourceGlobal) == null;
+        LOGGER.info("037-B entityInside 候选已{}延迟队列：player={}, source={}", newlyQueued ? "写入" : "保留既有", player.getGameProfile().getName(), sourcePos);
     }
 
     /** ServerTick.END 在原始移动包已经返回后消费真实入门请求；拒绝死亡、换维或状态变化的请求。 */
@@ -124,6 +125,7 @@ public final class DoorService {
             // PENDING 只能由本服务器 tick 的 Block#entityInside 写入。追帧时同一 tick 可先消费多个
             // 合法移动包，玩家的最终 AABB 已越过门格；以末态 AABB 拒绝会吞掉已经发生的真实入门。
             // 下方 execute 仍对源门、权限、冷却、反链、安全点、区块和出口做完整当前态重验。
+            LOGGER.info("037-B 延迟候选开始全量复验：player={}, source={}", player.getGameProfile().getName(), source.pos());
             executeVerifiedTeleport(player, player.serverLevel(), source.pos());
         }
     }
@@ -192,6 +194,8 @@ public final class DoorService {
             return;
         }
         TELEPORT_COOLDOWNS.put(player.getUUID(), now);
+        LOGGER.info("037-B 传送已提交：player={}, destination={}, dimension={}", player.getGameProfile().getName(), destination,
+                targetLevel.dimension().location());
     }
 
     /** 同维走原版位置包；跨维必须经 Forge 的 changeDimension 更新服务端世界、客户端维度包与跟踪状态。 */
