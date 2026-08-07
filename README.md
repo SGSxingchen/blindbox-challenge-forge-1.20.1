@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-P1—P5 的**技术验收**已完成。提交 `d9c0aea86658b4c7a5290942577823f1e65b0e63` 已在 GitHub Hosted Runner 同一 SHA 通过质量与构建、专用服务器、强杀恢复、真实单客户端、真实双客户端和汇总六项门禁。完整证据见 [P5 验收矩阵](docs/P5_ACCEPTANCE.md)。
+P1—P5 的**技术验收**已完成。提交 `b864e83021b57391c9c13abc5c0e4903b17a7e6f` 已在 GitHub Hosted Runner 同一 SHA 通过质量与构建、专用服务器、强杀恢复、真实单客户端、真实双客户端和汇总六项门禁；该次还复验了全部 182 项当前原创资源和无构建时刻 Jar。完整证据见 [P5 验收矩阵](docs/P5_ACCEPTANCE.md)。
 
 **尚未有公开 Release，也不能将仓库构建产物当作可再发行下载。**P5 批次 A 已替换 68 张历史 PNG，批次 B/C 的 99 项模型、数据、双语与 Forge 元数据正等待 Hosted Runner。当前工作树的 182 项正式资源均为项目维护者新建，但全数仍等待项目发行许可证确认。在书面授权齐备并完成名称/商标审查前，不会创建公开 tag、Release 或上传 Jar。详见 [正式资源审计清单](docs/ASSET_MANIFEST.md)。
 
@@ -12,7 +12,7 @@ P1—P5 的**技术验收**已完成。提交 `d9c0aea86658b4c7a5290942577823f1e
 
 ```text
 blindboxchallenge-0.1.0-p1-all.jar
-SHA-256: f07f917e2b80a8140726ffcf33337e6ec2b8d9cb3bf659168a870bb1cbf2db50
+SHA-256: 916c72feb039e1b10894e3497600472b20c8bdbb96c3add5afd724d0957c728e
 ```
 
 将来取得发行条件后，客户端与专用服务器均只应使用 `blindboxchallenge-<版本>-all.jar`；绝不能安装 `*-citest.jar`，它仅供 Hosted Runner 的真实业务探针使用。运行环境为 Java 17、Minecraft 1.20.1、Forge 47.4.22。下载 Jar 后须用发布页给出的 SHA-256 再次校验。
