@@ -58,7 +58,9 @@ jobs:
           # 1.20.1 的 Player 只有无参 mayBuild()；方块位置权限必须再由 Level.mayInteract 校验。
           ! grep -RInE 'mayBuild\([^)]' src/main/java/cn/blindboxchallenge
           grep -q 'sourceLevel.mayInteract(player, sourcePos)' src/main/java/cn/blindboxchallenge/service/DoorService.java
-          # ServerPlayer 跨维 teleportTo 不会自动清除进入门体前的速度；安全落点必须是服务端归零后的站立位置。
+          # 同维 teleportTo 不能代替跨维 changeDimension；安全门必须用无门户的精确 ITeleporter 并归零速度。
+          grep -q 'player.changeDimension(targetLevel, new SafeDoorTeleporter(destination, yaw, pitch))' src/main/java/cn/blindboxchallenge/service/DoorService.java
+          grep -q 'return repositionEntity.apply(false);' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'player.setDeltaMovement(Vec3.ZERO);' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'player.hurtMarked = true;' src/main/java/cn/blindboxchallenge/service/DoorService.java
           grep -q 'level.mayInteract(player, clicked)' src/main/java/cn/blindboxchallenge/service/DoorService.java

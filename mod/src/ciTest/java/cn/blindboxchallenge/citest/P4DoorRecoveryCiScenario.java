@@ -171,12 +171,13 @@ public final class P4DoorRecoveryCiScenario {
             BlockPos targetDoor = NETHER_TARGET;
             // 先保存两名真实玩家的场景前位置；Bob 随后进入下界只为按正常玩家语义加载目标区块。
             ActiveScenario scenario = new ActiveScenario(overworld, nether, alice, bob, sourceDoor, targetDoor, markerDirectory());
-            // Bob 的真实玩家传送让目标区块按正常玩家语义加载；之后才读取 BE，绝不由门逻辑强加载。
-            bob.teleportTo(nether, targetDoor.getX() + 2.5D, targetDoor.getY(), targetDoor.getZ() + 0.5D, 90.0F, 0.0F);
+            // 夹具通过原版跨维 tp 让 Bob 的真实玩家加载目标区块；之后才读取 BE，绝不由门逻辑强加载。
+            moveFixturePlayer(server, nether, bob, new Vec3(targetDoor.getX() + 2.5D, targetDoor.getY(), targetDoor.getZ() + 0.5D), 90.0F, 0.0F);
             scenario.verifyPersistedLinks();
             scenario.ensureNoOldMarkers();
             alice.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-            alice.teleportTo(overworld, sourceDoor.getX() + 0.5D, sourceDoor.getY(), sourceDoor.getZ() + 2.5D, 180.0F, 0.0F);
+            // P3 强杀恢复后 Alice 在下界；同样使用原版跨维 tp 返回主世界源门，随后只能靠生产门逻辑跨维。
+            moveFixturePlayer(server, overworld, alice, new Vec3(sourceDoor.getX() + 0.5D, sourceDoor.getY(), sourceDoor.getZ() + 2.5D), 180.0F, 0.0F);
             alice.containerMenu.broadcastChanges();
             return scenario;
         }
@@ -279,6 +280,21 @@ public final class P4DoorRecoveryCiScenario {
         ServerPlayer player = server.getPlayerList().getPlayerByName(name);
         if (player == null) throw new IllegalStateException("P4 跨维门场景缺少 " + name);
         return player;
+    }
+
+    /** 仅用于隔离夹具定位；必须走原版跨维命令，并在命令后严格核验世界、坐标和静止状态。 */
+    private static void moveFixturePlayer(MinecraftServer server, ServerLevel destinationLevel, ServerPlayer player,
+                                          Vec3 destination, float yaw, float pitch) {
+        CommandSourceStack source = server.createCommandSourceStack().withPermission(4).withLevel(destinationLevel).withSuppressedOutput();
+        String command = "tp " + player.getGameProfile().getName() + " " + destination.x + " " + destination.y + " " + destination.z
+                + " " + yaw + " " + pitch;
+        if (server.getCommands().performPrefixedCommand(source, command) <= 0
+                || player.serverLevel() != destinationLevel || player.position().distanceToSqr(destination) > 1.0E-6D) {
+            throw new IllegalStateException("P4 跨维门夹具原版 tp 未抵达预期维度或坐标：" + player.getGameProfile().getName());
+        }
+        player.setDeltaMovement(Vec3.ZERO);
+        player.hurtMarked = true;
+        player.resetFallDistance();
     }
 
     private static Path markerDirectory() {

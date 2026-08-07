@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
@@ -15,10 +16,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.portal.PortalInfo;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.util.ITeleporter;
 
 /** 037-B 只在逻辑服务端配对和传送；绝不加载远端区块或接受客户端传送数据。 */
 public final class DoorService {
@@ -130,14 +134,55 @@ public final class DoorService {
         Vec3 destination = Vec3.atBottomCenterOf(standingBlock);
         AABB playerBox = player.getDimensions(Pose.STANDING).makeBoundingBox(destination);
         if (!targetLevel.noCollision(player, playerBox) || targetLevel.containsAnyLiquid(playerBox)) return;
-        player.teleportTo(targetLevel, destination.x, destination.y, destination.z, player.getYRot(), player.getXRot());
-        // ServerPlayer 的跨维 teleportTo 只同步坐标，不会清除进入源门时的惯性。
-        // 安全落点的语义是“站立”，因此必须由服务端权威地归零并同步速度，不能让旧移动量把玩家带离已校验的安全格。
+        if (!moveToVerifiedDestination(player, targetLevel, destination)) return;
+        TELEPORT_COOLDOWNS.put(player.getUUID(), now);
+        ARRIVAL_DOOR_IMMUNITIES.put(player.getUUID(), targetDoorGlobal);
+    }
+
+    /** 同维走原版位置包；跨维必须经 Forge 的 changeDimension 更新服务端世界、客户端维度包与跟踪状态。 */
+    private static boolean moveToVerifiedDestination(ServerPlayer player, ServerLevel targetLevel, Vec3 destination) {
+        float yaw = player.getYRot();
+        float pitch = player.getXRot();
+        if (player.serverLevel().dimension().equals(targetLevel.dimension())) {
+            player.teleportTo(targetLevel, destination.x, destination.y, destination.z, yaw, pitch);
+        } else if (player.changeDimension(targetLevel, new SafeDoorTeleporter(destination, yaw, pitch)) != player
+                || player.serverLevel() != targetLevel || player.position().distanceToSqr(destination) > 1.0E-6D) {
+            return false;
+        }
+        // ServerPlayer 的位置同步不会清除进入源门时的惯性。安全落点是站立格，故必须权威归零并同步速度。
         player.setDeltaMovement(Vec3.ZERO);
         player.hurtMarked = true;
         player.resetFallDistance();
-        TELEPORT_COOLDOWNS.put(player.getUUID(), now);
-        ARRIVAL_DOOR_IMMUNITIES.put(player.getUUID(), targetDoorGlobal);
+        return true;
+    }
+
+    /** 非原版传送器禁止创建门户，且只把已完成安全校验的精确坐标交给原版跨维玩家迁移流程。 */
+    private static final class SafeDoorTeleporter implements ITeleporter {
+        private final Vec3 destination;
+        private final float yaw;
+        private final float pitch;
+
+        private SafeDoorTeleporter(Vec3 destination, float yaw, float pitch) {
+            this.destination = destination;
+            this.yaw = yaw;
+            this.pitch = pitch;
+        }
+
+        @Override
+        public PortalInfo getPortalInfo(Entity entity, ServerLevel destinationLevel, Function<ServerLevel, PortalInfo> defaultPortalInfo) {
+            return new PortalInfo(destination, Vec3.ZERO, yaw, pitch);
+        }
+
+        @Override
+        public Entity placeEntity(Entity entity, ServerLevel currentLevel, ServerLevel destinationLevel, float suggestedYaw,
+                                  Function<Boolean, Entity> repositionEntity) {
+            return repositionEntity.apply(false);
+        }
+
+        @Override
+        public boolean playTeleportSound(ServerPlayer player, ServerLevel sourceLevel, ServerLevel destinationLevel) {
+            return false;
+        }
     }
 
     public static void invalidateDoor(Level level, BlockPos pos) {
