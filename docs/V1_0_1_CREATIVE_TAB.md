@@ -24,3 +24,20 @@
 真实单客户端场景在独立专服世界中让 Alice 真实联机后切换创造模式，打开原版创造模式界面，运行时核对自定义标签存在、其显示集合与 `ModItems.playerCreativeEntries()` 完全一致、无重复，并记录首/中/末代表项和总数。该成功证据只能由真实客户端写入；随后恢复生存模式，继续原有 P5 原版拾取、放置、观察、破坏和回收场景。双客户端、专服、强杀恢复、质量和汇总门禁继续保持原有覆盖。
 
 禁止通过直设方块、直接给物、构造业务网络包、预写成功 marker 或放宽条目断言得到通过结果。
+
+## 首个实现提交的 Hosted Runner 证据
+
+`e70a705884367e6213b0be220395d229cf8092f6` 已通过同 SHA 六项门禁，确认补丁逻辑不破坏既有 P1—P5 覆盖：
+
+|门禁|结果|
+|---|---|
+|质量与构建|[success 31233581889](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31233581889)|
+|专用服务器启动|[success 31233581852](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31233581852)|
+|生命周期强杀恢复|[success 31233581868](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31233581868)|
+|真实单客户端|[success 31233581875](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31233581875)|
+|真实双客户端|[success 31233581849](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31233581849)|
+|强制回归汇总|[success 31233854998](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/actions/runs/31233854998)|
+
+单客户端 artifact 的真实 marker 记录 `CreativeModeInventoryScreen`、目标标签 ID、注册/标签/屏幕各 67 项、无重复、顺序相同，以及首 `blind_box`、中 `paper_cup`、末 `shark_dagger_pillow`。客户端日志还记录了切到 Forge 第二分页、真实鼠标选择和关闭屏幕；同一会话随后通过原有三项装饰方块的拾取→放置→观察→破坏→掉落→回收场景。
+
+本表是 `1.0.1` 升版前的实现证据；正式 `v1.0.1` 仍须以升版提交自己的同 SHA 六项门禁、正式 Jar 与 SHA-256 发布件替换为最终结论。
