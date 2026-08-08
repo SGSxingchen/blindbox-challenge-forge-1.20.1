@@ -21,6 +21,7 @@ MOD = ROOT / "mod"
 ASSETS = MOD / "src/main/resources/assets/blindboxchallenge"
 DATA = MOD / "src/main/resources/data/blindboxchallenge"
 P5_IDS = ("abstract_white_figurine", "floor_art_panel", "neutral_trophy")
+CREATIVE_TECHNICAL_BLOCKS = ("glow_stick_wall", "bml_cheer_stick_wall")
 
 
 def fail(message: str) -> None:
@@ -139,6 +140,40 @@ def check_original_resource_definitions() -> None:
     require(set(zh) == set(en) and all(zh.values()) and all(en.values()), "双语键集合不一致或存在空文案")
 
 
+def check_creative_inventory() -> None:
+    """校验创造栏只从玩家物品注册表派生，避免维护第二份易漂移的 ID 清单。"""
+    items = read("src/main/java/cn/blindboxchallenge/registry/ModItems.java")
+    blocks = read("src/main/java/cn/blindboxchallenge/registry/ModBlocks.java")
+    tabs = read("src/main/java/cn/blindboxchallenge/registry/ModCreativeModeTabs.java")
+
+    item_ids = re.findall(r'ITEMS\.register\s*\(\s*"([a-z0-9_]+)"', items)
+    require(len(item_ids) == 67, f"面向玩家的注册物品数应为 67，实际为 {len(item_ids)}")
+    require(len(item_ids) == len(set(item_ids)), "面向玩家的注册物品 ID 有重复")
+    require("return ITEMS.getEntries().stream();" in source_without_comments(items), "创造栏统一入口未直接派生自 ITEMS 注册表")
+    require(re.search(r'displayItems\s*\(.*?ModItems\.playerCreativeEntries\s*\(\).*?output\.accept', tabs, re.DOTALL) is not None,
+            "创造标签未消费统一玩家物品入口")
+    require(re.search(r'CREATIVE_MODE_TABS\.register\s*\(\s*"blind_box_challenge"', tabs) is not None,
+            "缺少盲盒挑战专属创造标签注册")
+    require("new ItemStack(ModItems.BLIND_BOX.get())" in source_without_comments(tabs), "创造标签图标不是稳定已注册的盲盒物品")
+
+    block_ids = set(re.findall(r'BLOCKS\.register\s*\(\s*"([a-z0-9_]+)"', blocks))
+    require(len(block_ids) == 12, f"注册方块数应为 12，实际为 {len(block_ids)}")
+    # 当前每个可放置方块物品沿用同名注册 ID；墙面附属状态即使被 StandingAndWallBlockItem
+    # 引用，也没有自己的 Item 注册，不能把“被引用”误判成可获得物品。
+    block_items = block_ids & set(item_ids)
+    excluded = block_ids - block_items
+    require(excluded == set(CREATIVE_TECHNICAL_BLOCKS),
+            f"墙面技术方块排除项错误：{', '.join(sorted(excluded)) or '无'}")
+    require(not (set(CREATIVE_TECHNICAL_BLOCKS) & set(item_ids)), "墙面技术方块被伪造为玩家物品")
+
+    for locale in ("zh_cn", "en_us"):
+        language = json.loads((ASSETS / "lang" / f"{locale}.json").read_text(encoding="utf-8"))
+        require(bool(language.get("itemGroup.blindboxchallenge")), f"缺少创造标签标题：{locale}")
+
+    print("创造栏静态核对通过：注册玩家物品=67，创造栏预期=67，重复=0；"
+          "技术排除=glow_stick_wall、bml_cheer_stick_wall（均无对应 Item）。")
+
+
 def check_network_and_isolation() -> None:
     network = read("src/main/java/cn/blindboxchallenge/network/ModNetwork.java")
     directions = {
@@ -194,6 +229,7 @@ def main() -> None:
     check_p5_resources()
     check_resource_manifest()
     check_original_resource_definitions()
+    check_creative_inventory()
     check_network_and_isolation()
     check_p5_safety()
     print("质量静态契约通过：资源闭合、双端隔离和反绕过安全边界均成立。")

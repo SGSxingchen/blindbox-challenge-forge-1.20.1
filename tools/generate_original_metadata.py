@@ -69,6 +69,7 @@ WALL_NAMES = {"zh": {"glow_stick_wall": "墙面冷光棒", "bml_cheer_stick_wall
 
 SYSTEM = {
     "zh": {
+        "itemGroup.blindboxchallenge": "盲盒挑战",
         "menu.blindboxchallenge.packing": "奖池封装", "menu.blindboxchallenge.letter_edit": "编辑信纸", "menu.blindboxchallenge.death_note": "命运名册", "menu.blindboxchallenge.music_box": "八音盒在线音频",
         "screen.blindboxchallenge.selection": "槽位:数量", "screen.blindboxchallenge.pack": "封装并生成惊喜盒", "screen.blindboxchallenge.help": "输入背包槽位:数量，例如 0:5、12:1", "screen.blindboxchallenge.invalid_selection": "请输入有效且不重复的槽位:数量。",
         "screen.blindboxchallenge.letter_read": "信纸", "screen.blindboxchallenge.letter_line": "第 %s 行", "screen.blindboxchallenge.letter_hint": "正文由服务器保存；最多 %s 个码点、%s 行。", "screen.blindboxchallenge.letter_too_long": "输入超过客户端安全上限。",
@@ -79,6 +80,7 @@ SYSTEM = {
         "key.blindboxchallenge.double_jump": "二段跳", "key.categories.blindboxchallenge": "盲盒挑战生存",
     },
     "en": {
+        "itemGroup.blindboxchallenge": "Blind Box Challenge",
         "menu.blindboxchallenge.packing": "Pool Packing", "menu.blindboxchallenge.letter_edit": "Edit Letter Sheet", "menu.blindboxchallenge.death_note": "Fate Ledger", "menu.blindboxchallenge.music_box": "Music Box Online Audio",
         "screen.blindboxchallenge.selection": "slot:count", "screen.blindboxchallenge.pack": "Pack and Create Surprise Box", "screen.blindboxchallenge.help": "Enter inventory slot:count, for example 0:5, 12:1", "screen.blindboxchallenge.invalid_selection": "Enter valid, non-duplicate slot:count pairs.",
         "screen.blindboxchallenge.letter_read": "Letter Sheet", "screen.blindboxchallenge.letter_line": "Line %s", "screen.blindboxchallenge.letter_hint": "The server saves the body; limit: %s code points and %s lines.", "screen.blindboxchallenge.letter_too_long": "The input exceeds the client safety limit.",
@@ -104,7 +106,7 @@ def language(locale: str) -> bytes:
     }
     values.update({f"entity.blindboxchallenge.{identifier}": name for identifier, name in entities.items()})
     values.update(SYSTEM[locale])
-    if len(values) != 119:
+    if len(values) != 120:
         raise ValueError(f"{locale} 翻译键数量异常：{len(values)}")
     return (json.dumps(dict(sorted(values.items())), ensure_ascii=False, indent=2) + "\n").encode("utf-8")
 

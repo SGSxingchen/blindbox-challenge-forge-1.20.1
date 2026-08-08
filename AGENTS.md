@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-P1 的盲盒、打包、全局奖池、事务隔离与调试命令，P2 的 50 项基础物品族，以及 P3 的持久能力、抱枕投掷与返航剪刀均已验收归档；P4 的信件、死亡笔记、任意门、安全落点、发条小黄鸡和木质手工八音盒亦已归档。P5 的三个中性原创装饰方块和 64 MiB 八音盒缓存压力，已在范围收束后的 `e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f` 获得质量、专服、强杀恢复、真实单客户端、拆分后的真实双客户端及汇总六门禁同 SHA 证据。当前交付批次将版本统一为 `1.0.0`，仍须由该版本自身的 Hosted Runner 六门禁产出正式 Jar、SHA-256、tag 和 Release。详细实现、验收和缓存边界见 [P5_IMPLEMENTATION.md](docs/P5_IMPLEMENTATION.md)、[P5_ACCEPTANCE.md](docs/P5_ACCEPTANCE.md)、[P5_AUDIO_PRESSURE.md](docs/P5_AUDIO_PRESSURE.md)。
+P1 的盲盒、打包、全局奖池、事务隔离与调试命令，P2 的 50 项基础物品族，以及 P3 的持久能力、抱枕投掷与返航剪刀均已验收归档；P4 的信件、死亡笔记、任意门、安全落点、发条小黄鸡和木质手工八音盒亦已归档。P5 的三个中性原创装饰方块和 64 MiB 八音盒缓存压力已随 `v1.0.0` 发布。当前补丁工单 [#6](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/6) 修复创造模式物品栏遗漏：专属标签页从 67 项玩家 `Item` 的统一注册来源生成，墙面附属方块、实体、方块实体和菜单不伪造条目；实现、静态契约与真实客户端验收见 [v1.0.1 创造栏补丁记录](docs/V1_0_1_CREATIVE_TAB.md)。
 
 质量工作流的稳定静态契约位于 `tools/verify_quality_contract.py`，范围和量化结果见 [P5_IMPLEMENTATION.md](docs/P5_IMPLEMENTATION.md)；真实行为只由 Hosted Runner 的运行期门禁裁决。
 
@@ -28,5 +28,6 @@ P1 的盲盒、打包、全局奖池、事务隔离与调试命令，P2 的 50 �
 * [P5 可审计原创资源替换记录](docs/ORIGINAL_ASSET_REPLACEMENT.md)
 * [P5 中性原创装饰方块与发布准备实施记录](docs/P5_IMPLEMENTATION.md)
 * [P5 中性原创装饰方块与发布准备验收矩阵](docs/P5_ACCEPTANCE.md)
+* [v1.0.1 创造模式物品栏补丁记录](docs/V1_0_1_CREATIVE_TAB.md)
 
 后续新增或变更功能时，必须同步更新对应文档与本索引；所有代码、提交信息和工程文档使用中文。
