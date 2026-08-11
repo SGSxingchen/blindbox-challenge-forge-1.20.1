@@ -25,6 +25,85 @@ from tools import generate_item_texture_candidates as 被测模块
 
 
 class 候选生成测试(unittest.TestCase):
+    def test_默认正式根为资源目录(self):
+        self.assertEqual(被测模块.仓库根目录 / "mod/src/main/resources", 被测模块.默认正式根)
+
+    def _五十九项(self):
+        return [dict(示例项, id=f"item_{i:02d}", texture=f"assets/blindboxchallenge/textures/item/item_{i:02d}.png") for i in range(59)]
+
+    def _准备安装(self, 根: Path):
+        清单 = self._五十九项(); 审查 = []
+        for i, 项 in enumerate(清单):
+            内容 = f"candidate-{i}".encode(); 候选 = 根 / "candidates" / Path(项["texture"]).name
+            候选.parent.mkdir(parents=True, exist_ok=True); 候选.write_bytes(内容)
+            正式 = 根 / "repo" / 项["texture"]; 正式.parent.mkdir(parents=True, exist_ok=True); 正式.write_bytes(f"old-{i}".encode())
+            审查.append({"id": 项["id"], "texture": 项["texture"], "candidate_path": 候选.name,
+                         "candidate_sha256": hashlib.sha256(内容).hexdigest(), "status": "pass", "notes": "通过"})
+        审查路径 = 根 / "review.json"; 审查路径.write_text(json.dumps(审查), encoding="utf-8")
+        return 清单, 审查, 审查路径
+
+    def test_prompt_suffix只允许单个only且写入最终提示词(self):
+        解析器 = 被测模块.创建参数解析器()
+        参数 = 解析器.parse_args(["--only", "blind_box", "--prompt-suffix", "仅加宽刃部"])
+        self.assertEqual("仅加宽刃部", 参数.prompt_suffix)
+        with self.assertRaises(SystemExit): 解析器.parse_args(["--all", "--prompt-suffix", "不允许"])
+        with self.assertRaises(SystemExit): 解析器.parse_args(["--only", "a", "--only", "b", "--prompt-suffix", "不允许"])
+
+    def test_prompt_suffix附加到命令与metadata(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根=Path(临时目录); 假脚本=根/"fake.py"; 假脚本.write_text("# fake",encoding="utf-8")
+            def 运行(命令, **kwargs):
+                请求=Path(命令[命令.index("--output")+1]); Image.new("RGB",(8,8),(80,20,150)).save(请求)
+                return subprocess.CompletedProcess(命令,0,"","")
+            self.assertEqual("成功", 被测模块.生成单项(示例项,根,运行,图像脚本=假脚本,提示词后缀="仅加宽刃部"))
+            数据=json.loads((根/"metadata/blind_box.json").read_text(encoding="utf-8"))
+            self.assertTrue(数据["最终提示词"].endswith("仅加宽刃部")); self.assertEqual("仅加宽刃部",数据["提示词后缀"])
+
+    def test_archive保留旧四层文件(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根=Path(临时目录)
+            for 子,后缀 in (("sources","blind_box.png"),("clean","blind_box.png"),("candidates","blind_box.png"),("metadata","blind_box.json")):
+                p=根/子/后缀; p.parent.mkdir(parents=True,exist_ok=True); p.write_bytes((子+"-old").encode())
+            版本=被测模块.归档现有版本(示例项,根)
+            self.assertIsNotNone(版本)
+            self.assertEqual({"source.png","clean.png","candidate.png","metadata.json"},{p.name for p in 版本.iterdir()})
+
+    def test_archive失败时不得调用生图(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根=Path(临时目录); 假脚本=根/"fake.py"; 假脚本.write_text("# fake",encoding="utf-8"); 调用=[]
+            with patch.object(被测模块,"归档现有版本",side_effect=OSError("archive failed")):
+                状态=被测模块.生成单项(示例项,根,lambda *a,**k: 调用.append(1),图像脚本=假脚本,归档已有=True)
+            self.assertEqual("失败",状态); self.assertEqual([],调用)
+
+    def test_install拒绝pending缺项hash错绝对路径和重复(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根=Path(临时目录); 清单,审查,审查路径=self._准备安装(根)
+            变体=[]
+            x=json.loads(json.dumps(审查)); x[0]["status"]="pending"; 变体.append(x)
+            变体.append(审查[:-1])
+            x=json.loads(json.dumps(审查)); x[0]["candidate_sha256"]="0"*64; 变体.append(x)
+            x=json.loads(json.dumps(审查)); x[0]["candidate_path"]="C:/escape.png"; 变体.append(x)
+            x=json.loads(json.dumps(审查)); x[-1]=dict(x[0]); 变体.append(x)
+            for i,数据 in enumerate(变体):
+                p=根/f"bad-{i}.json"; p.write_text(json.dumps(数据),encoding="utf-8")
+                with self.subTest(i=i),self.assertRaises(ValueError): 被测模块.安装已批准(p,清单,根,根/"repo")
+
+    def test_install成功五十九项且正式路径只来自清单(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根=Path(临时目录); 清单,审查,p=self._准备安装(根)
+            备份=被测模块.安装已批准(p,清单,根,根/"repo")
+            self.assertTrue((备份/"manifest.json").is_file())
+            for i,项 in enumerate(清单): self.assertEqual(f"candidate-{i}".encode(),(根/"repo"/项["texture"]).read_bytes())
+
+    def test_install第N次replace失败则全量回滚(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根=Path(临时目录); 清单,审查,p=self._准备安装(根); 次数=[0]
+            def 失败替换(src,dst):
+                次数[0]+=1
+                if 次数[0]==10: raise OSError("replace failed")
+                os.replace(src,dst)
+            with self.assertRaises(OSError): 被测模块.安装已批准(p,清单,根,根/"repo",替换器=失败替换)
+            for i,项 in enumerate(清单): self.assertEqual(f"old-{i}".encode(),(根/"repo"/项["texture"]).read_bytes())
     def test_提示词包含逐项内容与全部硬约束(self):
         提示词 = 被测模块.构造提示词(示例项)
         for 片段 in (
