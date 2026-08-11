@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 import subprocess
 import tempfile
 import unittest
@@ -99,9 +100,100 @@ class 候选生成测试(unittest.TestCase):
             状态 = 被测模块.生成单项(示例项, 根, 失败运行器)
             self.assertEqual("失败", 状态)
             self.assertFalse((根 / "candidates/blind_box.png").exists())
-            数据 = json.loads((根 / "metadata/blind_box.json").read_text(encoding="utf-8"))
+            失败文件 = list((根 / "failures").glob("blind_box-*.json"))
+            self.assertEqual(1, len(失败文件))
+            数据 = json.loads(失败文件[0].read_text(encoding="utf-8"))
             self.assertEqual("失败", 数据["生成状态"])
             self.assertNotIn("provider rejected", json.dumps(数据, ensure_ascii=False))
+
+    def test_清单拒绝路径穿越与不安全编号(self):
+        for 修改 in (
+            {"id": "../blind_box"},
+            {"texture": "../../escape.png"},
+            {"texture": "assets/blindboxchallenge/textures/item/../escape.png"},
+        ):
+            项 = dict(示例项, **修改)
+            with self.subTest(修改=修改), self.assertRaisesRegex(ValueError, "清单"):
+                被测模块.校验清单数据([项])
+
+    def test_清单拒绝重复id与重复贴图名(self):
+        第二项 = dict(示例项, id="letter", texture="assets/blindboxchallenge/textures/item/letter.png")
+        for 重复项 in (dict(第二项, id="blind_box"), dict(第二项, texture=示例项["texture"])):
+            with self.subTest(重复项=重复项), self.assertRaisesRegex(ValueError, "重复"):
+                被测模块.校验清单数据([示例项, 重复项])
+
+    def test_选择索引遇到重复键不会静默覆盖(self):
+        冲突 = dict(示例项, id="other", texture="assets/blindboxchallenge/textures/item/blind_box.png")
+        with self.assertRaisesRegex(ValueError, "重复"):
+            被测模块.选择项目([示例项, 冲突], ["blind_box"], False)
+
+    def test_输出路径不能逃离对应子目录(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            with self.assertRaisesRegex(ValueError, "输出路径"):
+                被测模块.安全输出路径(Path(临时目录), "candidates", "../escape.png")
+
+    def test_单项锁竞争时明确失败(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根 = Path(临时目录)
+            with 被测模块.单项锁(根, "blind_box"):
+                with self.assertRaisesRegex(RuntimeError, "正在生成"):
+                    with 被测模块.单项锁(根, "blind_box"):
+                        pass
+
+    def test_同stem前缀旧文件不会污染唯一运行目录(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根 = Path(临时目录)
+            (根 / "sources").mkdir()
+            (根 / "sources/blind_box_old.png").write_bytes(b"pollution")
+            假脚本 = 根 / "fake.py"
+            假脚本.write_text("# fake", encoding="utf-8")
+            def 成功运行器(命令, **kwargs):
+                请求 = Path(命令[命令.index("--output") + 1])
+                图 = Image.new("RGB", (20, 20), (0, 255, 0))
+                for x in range(4, 16):
+                    for y in range(4, 16):
+                        图.putpixel((x, y), (80, 40, 160))
+                图.save(请求.with_name(requested_name := requested_stem(请求) + "-2.png"))
+                return subprocess.CompletedProcess(命令, 0, "", "")
+            def requested_stem(路径):
+                return 路径.stem
+            self.assertEqual("成功", 被测模块.生成单项(示例项, 根, 成功运行器, 图像脚本=假脚本))
+            数据 = json.loads((根 / "metadata/blind_box.json").read_text(encoding="utf-8"))
+            self.assertNotIn("blind_box_old.png", 数据["源文件"])
+
+    def test_失败保留上一次成功提交并写独立失败记录(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根 = Path(临时目录)
+            for 相对, 内容 in (("candidates/blind_box.png", b"candidate"), ("clean/blind_box.png", b"clean")):
+                路径 = 根 / 相对; 路径.parent.mkdir(parents=True, exist_ok=True); 路径.write_bytes(内容)
+            元数据 = 根 / "metadata/blind_box.json"; 元数据.parent.mkdir(parents=True)
+            元数据.write_text(json.dumps({"生成状态": "成功", "候选SHA256": hashlib.sha256(b"candidate").hexdigest()}), encoding="utf-8")
+            假脚本 = 根 / "fake.py"; 假脚本.write_text("# fake", encoding="utf-8")
+            def 失败运行器(*args, **kwargs):
+                return subprocess.CompletedProcess(args[0], 9, "", "secret response")
+            self.assertEqual("失败", 被测模块.生成单项(示例项, 根, 失败运行器, 图像脚本=假脚本))
+            self.assertEqual(b"candidate", (根 / "candidates/blind_box.png").read_bytes())
+            self.assertEqual(b"clean", (根 / "clean/blind_box.png").read_bytes())
+            self.assertEqual("成功", json.loads(元数据.read_text(encoding="utf-8"))["生成状态"])
+            self.assertTrue(list((根 / "failures").glob("blind_box-*.json")))
+
+    def test_脚本发现支持显式参数环境变量与不存在错误(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            脚本 = Path(临时目录) / "fake.py"; 脚本.write_text("# fake", encoding="utf-8")
+            self.assertEqual(脚本.resolve(), 被测模块.发现图像脚本(脚本, {}))
+            self.assertEqual(脚本.resolve(), 被测模块.发现图像脚本(None, {"CHORDVERS_IMAGEGEN_SCRIPT": str(脚本)}))
+            with self.assertRaisesRegex(ValueError, "未找到"):
+                被测模块.发现图像脚本(Path(临时目录) / "missing.py", {})
+
+    def test_近绿色仅去除与画布边界连通区域(self):
+        图 = Image.new("RGB", (9, 9), (3, 250, 4))
+        for x in range(2, 7):
+            for y in range(2, 7):
+                图.putpixel((x, y), (100, 30, 150))
+        图.putpixel((4, 4), (0, 240, 0))
+        结果 = 被测模块._二值去背(图)
+        self.assertEqual(0, 结果.getpixel((0, 0))[3])
+        self.assertEqual(255, 结果.getpixel((4, 4))[3])
 
 
 if __name__ == "__main__":
