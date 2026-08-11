@@ -8,6 +8,7 @@ import threading
 import unittest
 from unittest.mock import patch
 from pathlib import Path
+from contextlib import contextmanager
 
 from PIL import Image
 
@@ -153,6 +154,101 @@ class 候选生成测试(unittest.TestCase):
                 os.replace(src,dst)
             with self.assertRaises(OSError): 被测模块.安装已批准(p,清单,根,根/"repo",替换器=失败替换)
             for i,项 in enumerate(清单): self.assertEqual(f"old-{i}".encode(),(根/"repo"/项["texture"]).read_bytes())
+
+    def test_install锁按全局后全部stem稳定排序获取(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根=Path(临时目录); 清单,_,p=self._准备安装(根); 获取=[]; 释放=[]
+            @contextmanager
+            def 记录锁(_根,名称):
+                获取.append(名称)
+                try: yield
+                finally: 释放.append(名称)
+            with patch.object(被测模块,"单项锁",记录锁): 被测模块.安装已批准(p,清单,根,根/"repo")
+            预期=["install-all",*sorted(Path(x["texture"]).stem for x in 清单)]
+            self.assertEqual(预期,获取); self.assertEqual(list(reversed(预期)),释放)
+
+    def test_install持锁后重新校验候选变化并拒绝(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根=Path(临时目录); 清单,_,p=self._准备安装(根); 候选=根/"candidates/item_00.png"
+            @contextmanager
+            def 锁前篡改(_根,_清单):
+                候选.write_bytes(b"changed-before-lock-yield"); yield
+            with patch.object(被测模块,"安装事务锁",锁前篡改),self.assertRaisesRegex(ValueError,"哈希"):
+                被测模块.安装已批准(p,清单,根,根/"repo")
+            self.assertEqual(b"old-0",(根/"repo"/清单[0]["texture"]).read_bytes())
+
+    def test_install只从staging读取不回读变化候选(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根=Path(临时目录); 清单,_,p=self._准备安装(根); 已改=[False]
+            def 替换(src,dst):
+                if not 已改[0]:
+                    已改[0]=True
+                    for 候选 in (根/"candidates").glob("*.png"): 候选.write_bytes(b"tampered-after-staging")
+                os.replace(src,dst)
+            被测模块.安装已批准(p,清单,根,根/"repo",替换器=替换)
+            for i,项 in enumerate(清单): self.assertEqual(f"candidate-{i}".encode(),(根/"repo"/项["texture"]).read_bytes())
+            self.assertFalse((根/".install-staging").exists())
+
+    def test_install前向失败并聚合多个回滚失败(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根=Path(临时目录); 清单,_,p=self._准备安装(根); 次数=[0]; 失败目标={"item_02.png","item_04.png"}
+            def 前向(src,dst):
+                次数[0]+=1
+                if 次数[0]==10: raise OSError("前向第十项失败")
+                os.replace(src,dst)
+            def 恢复(目标,数据):
+                if Path(目标).name in 失败目标: raise OSError("注入恢复失败")
+                被测模块._原子字节写入(目标,数据)
+            with self.assertRaises(被测模块.安装回滚异常) as 捕获:
+                被测模块.安装已批准(p,清单,根,根/"repo",替换器=前向,恢复器=恢复)
+            消息=str(捕获.exception); self.assertIn("前向第十项失败",消息)
+            for 名称 in 失败目标: self.assertIn(名称,消息)
+            for i,项 in enumerate(清单):
+                if Path(项["texture"]).name not in 失败目标: self.assertEqual(f"old-{i}".encode(),(根/"repo"/项["texture"]).read_bytes())
+
+    def test_install全局锁并发只允许一方进入且单项生成互斥(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根=Path(临时目录); 清单,_,p=self._准备安装(根); 已进入=threading.Event(); 允许结束=threading.Event(); 结果=[]
+            def 阻塞替换(src,dst):
+                if not 已进入.is_set(): 已进入.set(); 允许结束.wait(5)
+                os.replace(src,dst)
+            def 安装线程():
+                try: 被测模块.安装已批准(p,清单,根,根/"repo",替换器=阻塞替换); 结果.append("成功")
+                except Exception as e: 结果.append(type(e).__name__)
+            线程=threading.Thread(target=安装线程); 线程.start()
+            try:
+                self.assertTrue(已进入.wait(30))
+                with self.assertRaisesRegex(RuntimeError,"install-all"): 被测模块.安装已批准(p,清单,根,根/"repo")
+                假脚本=根/"fake.py"; 假脚本.write_text("# fake",encoding="utf-8")
+                self.assertEqual("失败",被测模块.生成单项(清单[0],根,lambda *a,**k: self.fail("不应调用生图"),图像脚本=假脚本))
+            finally:
+                允许结束.set(); 线程.join(10)
+            self.assertFalse(线程.is_alive())
+            self.assertEqual(["成功"],结果)
+
+    def test_install备份目录名含uuid避免碰撞(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根=Path(临时目录); 清单,_,p=self._准备安装(根); 备份=被测模块.安装已批准(p,清单,根,根/"repo")
+            self.assertRegex(备份.name,r"^\d{8}T\d{12}Z-[0-9a-f]{32}$")
+
+    def test_install全局锁强杀后由操作系统释放(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根=Path(临时目录); 就绪=根/"ready"
+            代码=("import sys,time; from pathlib import Path; from tools.generate_item_texture_candidates import 单项锁; "
+                  "root=Path(sys.argv[1]); ready=Path(sys.argv[2]); ctx=单项锁(root,'install-all'); "
+                  "ctx.__enter__(); ready.write_text('ok'); time.sleep(60)")
+            进程=subprocess.Popen([sys.executable,"-c",代码,str(根),str(就绪)],cwd=被测模块.仓库根目录)
+            try:
+                for _ in range(100):
+                    if 就绪.exists(): break
+                    threading.Event().wait(0.02)
+                self.assertTrue(就绪.exists())
+                with self.assertRaisesRegex(RuntimeError,"install-all"):
+                    with 被测模块.单项锁(根,"install-all"): pass
+                进程.kill(); 进程.wait(timeout=5)
+                with 被测模块.单项锁(根,"install-all"): pass
+            finally:
+                if 进程.poll() is None: 进程.kill(); 进程.wait(timeout=5)
     def test_提示词包含逐项内容与全部硬约束(self):
         提示词 = 被测模块.构造提示词(示例项)
         for 片段 in (

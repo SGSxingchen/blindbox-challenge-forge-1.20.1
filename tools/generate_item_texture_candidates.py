@@ -13,7 +13,7 @@ import sys
 import tempfile
 import uuid
 from collections import deque
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Callable, Iterator, Mapping
@@ -142,7 +142,7 @@ def 可恢复跳过(元数据路径: Path, 候选路径: Path) -> bool:
 
 @contextmanager
 def 单项锁(输出根: Path, 安全名: str) -> Iterator[None]:
-    if not 安全名规则.fullmatch(安全名): raise ValueError("锁名称不安全")
+    if 安全名!="install-all" and not 安全名规则.fullmatch(安全名): raise ValueError("锁名称不安全")
     锁目录=(Path(输出根).resolve()/".locks"); 锁目录.mkdir(parents=True, exist_ok=True)
     锁路径=锁目录/f"{安全名}.lock"
     审计路径=锁目录/f"{安全名}.owner.json"; token=uuid.uuid4().hex
@@ -156,7 +156,7 @@ def 单项锁(输出根: Path, 安全名: str) -> Iterator[None]:
             if os.name=="nt": msvcrt.locking(句柄.fileno(),msvcrt.LK_NBLCK,1)
             else: fcntl.flock(句柄.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
         except OSError as 异常:
-            raise RuntimeError(f"{安全名} 正在生成，无法重复执行") from 异常
+            raise RuntimeError(f"{安全名} 正在生成或安装，无法重复执行") from 异常
         _原子JSON(审计路径,{"pid":os.getpid(),"created_at":datetime.now(timezone.utc).isoformat(),"token":token})
         yield
     finally:
@@ -258,7 +258,17 @@ def 归档现有版本(项: dict, 输出根: Path) -> Path | None:
     return 目标
 
 
-def _校验审查(审查路径: Path, 清单: list[dict], 输出根: Path) -> list[tuple[dict,Path]]:
+@contextmanager
+def 安装事务锁(输出根: Path, 清单: list[dict]) -> Iterator[None]:
+    stems=sorted(PurePosixPath(项["texture"]).stem for 项 in 清单)
+    if len(stems)!=len(set(stems)): raise ValueError("清单存在重复候选锁名称")
+    with ExitStack() as 栈:
+        栈.enter_context(单项锁(输出根,"install-all"))
+        for stem in stems: 栈.enter_context(单项锁(输出根,stem))
+        yield
+
+
+def _校验审查(审查路径: Path, 清单: list[dict], 输出根: Path) -> list[tuple[dict,Path,bytes,str]]:
     数据=json.loads(Path(审查路径).read_text(encoding="utf-8"))
     if not isinstance(数据,list) or len(数据)!=59 or len(清单)!=59: raise ValueError("审查与清单必须恰好包含59项")
     if len({x.get("id") for x in 数据 if isinstance(x,dict)})!=59: raise ValueError("审查存在重复项")
@@ -271,41 +281,68 @@ def _校验审查(审查路径: Path, 清单: list[dict], 输出根: Path) -> li
         预期名=PurePosixPath(项["texture"]).name
         if 候选文本!=预期名: raise ValueError("候选路径与清单不匹配")
         候选=(候选根/候选文本).resolve()
-        if 候选.parent!=候选根 or not 候选.is_file() or 文件哈希(候选)!=审查.get("candidate_sha256"): raise ValueError("候选文件或哈希不匹配")
-        结果.append((项,候选))
+        if 候选.parent!=候选根 or not 候选.is_file(): raise ValueError("候选文件或哈希不匹配")
+        候选字节=候选.read_bytes(); 候选哈希=hashlib.sha256(候选字节).hexdigest()
+        if 候选哈希!=审查.get("candidate_sha256"): raise ValueError("候选文件或哈希不匹配")
+        结果.append((项,候选,候选字节,候选哈希))
     return 结果
 
 
+class 安装回滚异常(RuntimeError):
+    pass
+
+
 def 安装已批准(审查路径: Path, 清单: list[dict], 输出根: Path, 仓库根: Path=默认正式根,
-              替换器: Callable[[str|Path,str|Path],None]=os.replace) -> Path:
-    已校验=_校验审查(审查路径,清单,输出根); 仓库根=Path(仓库根).resolve()
-    时间=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ"); 备份=Path(输出根).resolve()/"install-backup"/时间
-    临时备份=备份.with_name(f".{备份.name}.{uuid.uuid4().hex}.tmp"); 临时备份.mkdir(parents=True)
-    正式=[]; 清单哈希=[]
-    try:
-        for 项,候选 in 已校验:
-            目标=(仓库根/项["texture"]).resolve()
-            if 仓库根 not in 目标.parents: raise ValueError("正式路径超出仓库")
-            if not 目标.is_file(): raise ValueError(f"正式贴图不存在：{项['texture']}")
-            相对=PurePosixPath(项["texture"]); 备份文件=临时备份/相对
-            备份文件.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(目标,备份文件)
-            清单哈希.append({"id":项["id"],"texture":项["texture"],"old_sha256":文件哈希(目标),
-                         "candidate_sha256":文件哈希(候选)})
-            正式.append((目标,候选,相对))
-        _原子JSON(临时备份/"manifest.json",{"count":59,"files":清单哈希})
-        os.replace(临时备份,备份)
-    except Exception:
-        shutil.rmtree(临时备份,ignore_errors=True); raise
-    try:
-        for 目标,候选,_ in 正式:
-            fd,临时名=tempfile.mkstemp(prefix=f".{目标.name}.",suffix=".tmp",dir=目标.parent); os.close(fd)
-            临时=Path(临时名)
-            try: shutil.copy2(候选,临时); 替换器(临时,目标)
-            finally: 临时.unlink(missing_ok=True)
-    except Exception:
-        for 目标,_,相对 in 正式: _原子字节写入(目标,(备份/相对).read_bytes())
-        raise
-    return 备份
+              替换器: Callable[[str|Path,str|Path],None]=os.replace,
+              恢复器: Callable[[Path,bytes],None]=_原子字节写入) -> Path:
+    输出根=Path(输出根).resolve(); 仓库根=Path(仓库根).resolve()
+    with 安装事务锁(输出根,清单):
+        已校验=_校验审查(审查路径,清单,输出根)
+        staging=输出根/".install-staging"/uuid.uuid4().hex; staging.mkdir(parents=True)
+        try:
+            staging项=[]
+            for 项,_,候选字节,候选哈希 in 已校验:
+                快照=staging/PurePosixPath(项["texture"]).name; _原子字节写入(快照,候选字节)
+                if 文件哈希(快照)!=候选哈希: raise OSError(f"候选 staging 哈希不匹配：{项['texture']}")
+                staging项.append((项,快照,候选哈希))
+            时间=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")+"-"+uuid.uuid4().hex
+            备份=输出根/"install-backup"/时间
+            临时备份=备份.with_name(f".{备份.name}.{uuid.uuid4().hex}.tmp"); 临时备份.mkdir(parents=True)
+            正式=[]; 清单哈希=[]
+            try:
+                for 项,快照,候选哈希 in staging项:
+                    目标=(仓库根/项["texture"]).resolve()
+                    if 仓库根 not in 目标.parents: raise ValueError("正式路径超出仓库")
+                    if not 目标.is_file(): raise ValueError(f"正式贴图不存在：{项['texture']}")
+                    相对=PurePosixPath(项["texture"]); 备份文件=临时备份/相对
+                    备份文件.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(目标,备份文件)
+                    清单哈希.append({"id":项["id"],"texture":项["texture"],"old_sha256":文件哈希(目标),
+                                     "candidate_sha256":候选哈希})
+                    正式.append((目标,快照,相对))
+                _原子JSON(临时备份/"manifest.json",{"count":59,"files":清单哈希})
+                os.replace(临时备份,备份)
+            except Exception:
+                shutil.rmtree(临时备份,ignore_errors=True); raise
+            try:
+                for 目标,快照,_ in 正式:
+                    fd,临时名=tempfile.mkstemp(prefix=f".{目标.name}.",suffix=".tmp",dir=目标.parent); os.close(fd)
+                    临时=Path(临时名)
+                    try: shutil.copy2(快照,临时); 替换器(临时,目标)
+                    finally: 临时.unlink(missing_ok=True)
+            except Exception as 原始异常:
+                回滚失败=[]
+                for 目标,_,相对 in 正式:
+                    try: 恢复器(目标,(备份/相对).read_bytes())
+                    except Exception as 回滚异常: 回滚失败.append(f"{目标}: {回滚异常}")
+                if 回滚失败:
+                    raise 安装回滚异常(f"安装失败：{原始异常}；回滚失败："+"；".join(回滚失败)) from 原始异常
+                raise
+            return 备份
+        finally:
+            shutil.rmtree(staging,ignore_errors=True)
+            staging父=staging.parent
+            try: staging父.rmdir()
+            except OSError: pass
 
 
 def 生成单项(项: dict, 输出根: Path, 运行器: Callable=subprocess.run, 演练: bool=False, 图像脚本: Path|None=None,
