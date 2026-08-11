@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 
 根目录 = Path(__file__).resolve().parents[2]
@@ -84,6 +84,20 @@ class 联系表测试(unittest.TestCase):
         with self.assertRaises(ValueError):
             模块.渲染联系表(self.候选, self.清单, self.输出, self.复核)
         self.assertEqual(b"keep", self.输出.read_bytes())
+
+    def test_完整清单的每个标签都不越过单元边界(self):
+        完整清单 = 根目录 / "tools/item_texture_redraw_manifest.json"
+        数据 = json.loads(完整清单.read_text(encoding="utf-8"))
+        尺寸 = 模块.渲染联系表(self.候选, 完整清单, self.输出, self.复核)
+        列数 = 8
+        单元宽 = 尺寸[0] // 列数
+        测量图 = Image.new("RGBA", (1, 1))
+        画笔 = ImageDraw.Draw(测量图)
+        字体 = ImageFont.load_default()
+        for 项 in 数据:
+            边界 = 画笔.textbbox((3, 134), 项["id"], font=字体)
+            self.assertGreaterEqual(单元宽 - 3, 边界[2], 项["id"])
+        self.assertGreaterEqual(尺寸[1], 8 * 160)
 
 
 if __name__ == "__main__":

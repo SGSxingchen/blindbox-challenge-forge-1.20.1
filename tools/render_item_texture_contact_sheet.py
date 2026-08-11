@@ -20,7 +20,8 @@ from PIL import Image, ImageDraw, ImageFont
 默认输出 = 仓库根目录 / "output/imagegen/item-redraw/contact-sheet.png"
 默认复核输出 = 仓库根目录 / "output/imagegen/item-redraw/visual-review.json"
 安全编号 = re.compile(r"^[a-z0-9_]+$")
-单元宽, 单元高, 图标尺寸 = 128, 160, 128
+最小单元宽, 单元高, 图标尺寸 = 128, 160, 128
+标签水平留白 = 3
 
 
 def 文件哈希(路径: Path) -> str:
@@ -76,9 +77,13 @@ def 渲染联系表(输入: Path, 清单路径: Path, 输出: Path, 复核输出
     列数 = 列数 or min(8, max(1, math.ceil(math.sqrt(len(项目)))))
     if 列数 < 1:
         raise ValueError("列数必须大于零")
+    字体 = ImageFont.load_default()
+    测量画笔 = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    最长标签宽 = max(测量画笔.textbbox((0, 0), 项["id"], font=字体)[2] for 项 in 项目)
+    单元宽 = max(最小单元宽, 最长标签宽 + 2 * 标签水平留白)
     行数 = math.ceil(len(项目) / 列数)
     画布 = Image.new("RGBA", (列数 * 单元宽, 行数 * 单元高), (32, 32, 32, 255))
-    画笔, 字体, 复核 = ImageDraw.Draw(画布), ImageFont.load_default(), []
+    画笔, 复核 = ImageDraw.Draw(画布), []
     for 序号, 项 in enumerate(项目):
         x, y = (序号 % 列数) * 单元宽, (序号 // 列数) * 单元高
         候选路径 = (输入 / f"{项['stem']}.png").resolve()
@@ -93,7 +98,7 @@ def 渲染联系表(输入: Path, 清单路径: Path, 输出: Path, 复核输出
         else:
             画笔.rectangle((x, y, x + 图标尺寸 - 1, y + 图标尺寸 - 1), fill=(180, 0, 0, 255))
             画笔.text((x + 38, y + 58), "MISSING", fill=(255, 255, 255, 255), font=字体)
-        画笔.text((x + 3, y + 134), 项["id"], fill=(255, 255, 255, 255), font=字体)
+        画笔.text((x + 标签水平留白, y + 134), 项["id"], fill=(255, 255, 255, 255), font=字体)
         复核.append({"id": 项["id"], "texture": 项["texture"], "candidate_path": str(候选路径), "candidate_sha256": 哈希, "status": 状态, "notes": 备注})
     原子写图(画布, Path(输出))
     原子写JSON(复核, Path(复核输出))
