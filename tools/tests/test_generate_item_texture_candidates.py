@@ -52,7 +52,7 @@ class 候选生成测试(unittest.TestCase):
     def test_install_cli逐项拒绝所有生图参数且不写入(self):
         冲突参数 = [
             ["--all"], ["--only", "blind_box"], ["--dry-run"], ["--resume"],
-            ["--prompt-suffix", "仅改轮廓"], ["--archive-existing"],
+            ["--prompt-suffix", "仅改轮廓"], ["--archive-existing"], ["--imagegen-script", "fake.py"],
         ]
         with tempfile.TemporaryDirectory() as 临时目录:
             根=Path(临时目录); 审查=根/"review.json"; 审查.write_text("[]",encoding="utf-8")
