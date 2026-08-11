@@ -10,9 +10,17 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import struct
 import zlib
 from pathlib import Path
+
+from PIL import Image
+
+try:
+    from .original_item_pixel_payloads import BLOCK_PNG_PAYLOADS, ITEM_PIXEL_PAYLOADS, decode_block_png, decode_rgba
+except ImportError:  # 兼容直接执行 tools/generate_original_textures.py
+    from original_item_pixel_payloads import BLOCK_PNG_PAYLOADS, ITEM_PIXEL_PAYLOADS, decode_block_png, decode_rgba
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -88,6 +96,7 @@ TARGETS = (
     "assets/blindboxchallenge/textures/item/yijin_manual.png",
     "assets/blindboxchallenge/textures/models/armor/road_barrier_layer_1.png",
 )
+ITEM_TARGETS = tuple(ITEM_PIXEL_PAYLOADS)
 
 
 def digest(name: str) -> bytes:
@@ -268,8 +277,38 @@ def render(relative: str) -> bytes:
     if "/textures/models/armor/" in relative:
         return png(armor(relative))
     if "/textures/block/" in relative:
-        return png(block(relative))
-    return png(small_object(relative))
+        return render_block_payload(relative)
+    return render_item(relative)
+
+
+def render_block_payload(relative: str) -> bytes:
+    """只从源码内嵌确定性载荷重建 8 张权威方块 PNG。"""
+    return decode_block_png(relative)
+
+
+def render_item(relative: str) -> bytes:
+    """只从源码内嵌像素载荷重建正式物品 PNG。"""
+    image = Image.frombytes("RGBA", (16, 16), decode_rgba(relative))
+    output = io.BytesIO()
+    image.save(output, format="PNG")
+    return output.getvalue()
+
+
+def write_items(resource_root: Path) -> None:
+    """把 59 张物品贴图写入显式指定的资源根。"""
+    for relative in ITEM_TARGETS:
+        target = resource_root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(render_item(relative))
+
+
+def check_items(resource_root: Path) -> list[str]:
+    """返回 59 张物品贴图中的缺失或逐字节漂移项。"""
+    return [
+        relative for relative in ITEM_TARGETS
+        if not (resource_root / relative).is_file()
+        or (resource_root / relative).read_bytes() != render_item(relative)
+    ]
 
 
 def update_manifest() -> None:
@@ -300,10 +339,34 @@ def update_manifest() -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true", help="只比较目标贴图是否和生成结果完全一致")
+    parser.add_argument("--check-items", action="store_true", help="只检查 59 张物品贴图，不受方块或盔甲漂移影响")
+    parser.add_argument("--write-items", action="store_true", help="只重建 59 张物品贴图")
+    parser.add_argument("--write-all", action="store_true", help="重建生成器拥有的全部贴图")
     parser.add_argument("--update-manifest", action="store_true", help="重算并更新本工具拥有的资源清单行")
     args = parser.parse_args()
+    operations = sum((args.check, args.check_items, args.write_items, args.write_all))
+    if operations > 1:
+        parser.error("--check、--check-items、--write-items 与 --write-all 互斥")
     if args.check and args.update_manifest:
         raise SystemExit("--check 不修改文件，不能和 --update-manifest 同时使用")
+    if args.check_items and args.update_manifest:
+        raise SystemExit("--check-items 不修改文件，不能和 --update-manifest 同时使用")
+    if operations == 0:
+        parser.print_help()
+        return 0
+    if args.check_items:
+        drift = check_items(RESOURCE_ROOT)
+        if drift:
+            raise SystemExit("物品原创贴图与生成器不一致：" + ", ".join(drift))
+        print(f"物品原创贴图检查通过：{len(ITEM_TARGETS)} 张")
+        return 0
+    if args.write_items:
+        write_items(RESOURCE_ROOT)
+        for relative in ITEM_TARGETS:
+            print((RESOURCE_ROOT / relative).relative_to(ROOT))
+        if args.update_manifest:
+            update_manifest()
+        return 0
     drift = []
     for relative in TARGETS:
         target = RESOURCE_ROOT / relative

@@ -13,6 +13,11 @@ import hashlib
 import json
 from pathlib import Path
 
+try:
+    from .original_model_json_payloads import AUTHORITATIVE_JSON_PAYLOADS, decode_authoritative_json
+except ImportError:  # 兼容直接执行脚本
+    from original_model_json_payloads import AUTHORITATIVE_JSON_PAYLOADS, decode_authoritative_json
+
 
 ROOT = Path(__file__).resolve().parents[1]
 RESOURCE_ROOT = ROOT / "mod/src/main/resources"
@@ -157,7 +162,7 @@ def loot(identifier: str) -> dict[str, object]:
     }
 
 
-def render(relative: str) -> bytes:
+def render_template(relative: str) -> bytes:
     path = Path(relative)
     if "/models/block/" in f"/{relative}":
         value = block_model(path.stem)
@@ -170,6 +175,19 @@ def render(relative: str) -> bytes:
     else:
         raise ValueError(f"未知原创模型目标：{relative}")
     return (json.dumps(value, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+
+
+def render(relative: str) -> bytes:
+    if relative in AUTHORITATIVE_JSON_PAYLOADS:
+        return decode_authoritative_json(relative)
+    return render_template(relative)
+
+
+def write_authoritative_json(resource_root: Path) -> None:
+    for relative in AUTHORITATIVE_JSON_PAYLOADS:
+        target = resource_root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(decode_authoritative_json(relative))
 
 
 def update_manifest() -> None:

@@ -13,6 +13,11 @@ import hashlib
 import json
 from pathlib import Path
 
+try:
+    from .original_metadata_payloads import AUTHORITATIVE_METADATA_PAYLOADS, decode_authoritative_metadata
+except ImportError:  # 兼容直接执行脚本
+    from original_metadata_payloads import AUTHORITATIVE_METADATA_PAYLOADS, decode_authoritative_metadata
+
 
 ROOT = Path(__file__).resolve().parents[1]
 RESOURCE_ROOT = ROOT / "mod/src/main/resources"
@@ -137,7 +142,7 @@ side="BOTH"
 """.encode("utf-8")
 
 
-def render(relative: str) -> bytes:
+def render_template(relative: str) -> bytes:
     if relative.endswith("zh_cn.json"):
         return language("zh")
     if relative.endswith("en_us.json"):
@@ -147,6 +152,19 @@ def render(relative: str) -> bytes:
     if relative == "pack.mcmeta":
         return (json.dumps({"pack": {"pack_format": 15, "description": "盲盒挑战生存资源"}}, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     raise ValueError(relative)
+
+
+def render(relative: str) -> bytes:
+    if relative in AUTHORITATIVE_METADATA_PAYLOADS:
+        return decode_authoritative_metadata(relative)
+    return render_template(relative)
+
+
+def write_authoritative_metadata(resource_root: Path) -> None:
+    for relative in AUTHORITATIVE_METADATA_PAYLOADS:
+        target = resource_root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(decode_authoritative_metadata(relative))
 
 
 def update_manifest() -> None:

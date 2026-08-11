@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-P1 的盲盒、打包、全局奖池、事务隔离与调试命令，P2 的 50 项基础物品族，以及 P3 的持久能力、抱枕投掷与返航剪刀均已验收归档；P4 的信件、死亡笔记、任意门、安全落点、发条小黄鸡和木质手工八音盒亦已归档。P5 的三个中性原创装饰方块和 64 MiB 八音盒缓存压力，已在范围收束后的 `e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f` 获得质量、专服、强杀恢复、真实单客户端、拆分后的真实双客户端及汇总六门禁同 SHA 证据。当前交付批次将版本统一为 `1.0.0`，仍须由该版本自身的 Hosted Runner 六门禁产出正式 Jar、SHA-256、tag 和 Release。详细实现、验收和缓存边界见 [P5_IMPLEMENTATION.md](docs/P5_IMPLEMENTATION.md)、[P5_ACCEPTANCE.md](docs/P5_ACCEPTANCE.md)、[P5_AUDIO_PRESSURE.md](docs/P5_AUDIO_PRESSURE.md)。
+P1 的盲盒、打包、全局奖池、事务隔离与调试命令，P2 的 50 项基础物品族，以及 P3 的持久能力、抱枕投掷与返航剪刀均已验收归档；P4 的信件、死亡笔记、任意门、安全落点、发条小黄鸡和木质手工八音盒亦已归档。59 张正式物品贴图已完成逐项原创重绘、人工视觉复核和本地确定性生成器闭合。P5 的三个中性原创装饰方块和 64 MiB 八音盒缓存压力，已在范围收束后的 `e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f` 获得质量、专服、强杀恢复、真实单客户端、拆分后的真实双客户端及汇总六门禁同 SHA 证据。当前交付批次将版本统一为 `1.0.0`，仍须由该版本自身的 Hosted Runner 六门禁产出正式 Jar、SHA-256、tag 和 Release。详细实现、验收和缓存边界见 [P5_IMPLEMENTATION.md](docs/P5_IMPLEMENTATION.md)、[P5_ACCEPTANCE.md](docs/P5_ACCEPTANCE.md)、[P5_AUDIO_PRESSURE.md](docs/P5_AUDIO_PRESSURE.md)。
 
 质量工作流的稳定静态契约位于 `tools/verify_quality_contract.py`，范围和量化结果见 [P5_IMPLEMENTATION.md](docs/P5_IMPLEMENTATION.md)；真实行为只由 Hosted Runner 的运行期门禁裁决。
 
@@ -26,6 +26,7 @@ P1 的盲盒、打包、全局奖池、事务隔离与调试命令，P2 的 50 �
 * [P5 八音盒缓存压力实施与验收设计](docs/P5_AUDIO_PRESSURE.md)
 * [正式资源审计清单](docs/ASSET_MANIFEST.md)
 * [P5 可审计原创资源替换记录](docs/ORIGINAL_ASSET_REPLACEMENT.md)
+* [59 张物品贴图原创重绘交付记录](docs/ITEM_TEXTURE_REDRAW.md)
 * [P5 中性原创装饰方块与发布准备实施记录](docs/P5_IMPLEMENTATION.md)
 * [P5 中性原创装饰方块与发布准备验收矩阵](docs/P5_ACCEPTANCE.md)
 
