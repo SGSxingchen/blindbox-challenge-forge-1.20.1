@@ -24,7 +24,7 @@ python3 tools/generate_original_textures.py --check
 python3 tools/generate_original_textures.py --check-items
 ```
 
-轮廓只使用中性的工具、纸张、食品、佩饰、方块、门、照明棒、抱枕、八音盒和安全落点几何符号；不绘制人物、赛事、商标、画作、包装、旗帜文字或现实照片。
+轮廓只使用中性的工具、纸张、食品、佩饰、方块、门、照明棒、抱枕、八音盒和安全落点几何符号；不绘制真实人物或可识别人物肖像、第三方角色、赛事、商标、画作、包装、旗帜文字或现实照片；`wenxu_standee` 允许使用项目内原创抽象人形吉祥物。
 
 ## 批次 B：模型、数据与元数据闭合
 
