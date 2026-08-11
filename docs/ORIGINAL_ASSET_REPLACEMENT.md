@@ -15,7 +15,7 @@
 
 ## 批次 A：确定性几何像素贴图
 
-`tools/generate_original_textures.py` 闭合 68 张 PNG：8 张 16×16 RGBA 方块贴图与 1 张 64×32 RGBA 装备层继续使用确定性几何算法；59 张 16×16 RGBA 物品贴图使用源码内嵌的确定性像素载荷和 Pillow 重建。运行时不读取正式 PNG、`output/` 或网络，因此可以用下列命令检测漂移；写入必须显式指定范围：
+`tools/generate_original_textures.py` 闭合 68 张 PNG：8 张 16×16 RGBA 方块贴图使用源码内嵌确定性 RGBA 载荷逐字节重建，1 张 64×32 RGBA 装备层继续使用确定性几何算法；59 张 16×16 RGBA 物品贴图使用源码内嵌的确定性像素载荷和 Pillow 重建。运行时不读取正式 PNG、`output/` 或网络，因此可以用下列命令检测漂移；写入必须显式指定范围：
 
 ```bash
 python3 tools/generate_original_textures.py --write-all
@@ -46,6 +46,8 @@ python3 tools/generate_original_metadata.py --check
 59 项视觉复核均通过。`chainsaw_sword`、`flowing_black_flag`、`rat_jerky_totem`、`road_barrier_helmet`、`safety_exit_sign_shield` 共 5 项经过定向重试后通过，其余 54 项使用首轮批准候选。详细逐项状态与 SHA-256 见 [ITEM_TEXTURE_REDRAW.md](ITEM_TEXTURE_REDRAW.md)。
 
 生成器现以源码内嵌的确定性 RGBA 像素载荷闭合这 59 张正式 PNG；`--check-items` 只检查本批物品，不受方块或盔甲漂移影响。该闭合证明逐字节可复现、路径与清单一致，不代替真实游戏视觉运行验证；运行期仍由 Hosted Runner 门禁裁决。
+
+资源清单审计开始时，182 条记录中有 170 条旧 SHA-256 漂移、12 条一致。确认 182 条正式资源路径均由 Git 跟踪且工作树干净后，本批只更新 `ASSET_MANIFEST.md` 的审计记录，不修改正式资源内容；闭合后 182/182 路径均存在且哈希一致。
 
 ## 真实边界
 
