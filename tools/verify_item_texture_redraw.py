@@ -161,6 +161,16 @@ def 校验类别关键词(项: dict, 序号: int) -> list[str]:
     return 错误
 
 
+def 校验状态变体(项: dict, 序号: int) -> list[str]:
+    路径 = 项.get("texture")
+    if 路径 not in 状态变体编号:
+        return []
+    期望编号 = 状态变体编号[路径]
+    if 项.get("id") != 期望编号:
+        return [f"第 {序号} 项 001/002 状态变体 id 必须为 {期望编号}"]
+    return []
+
+
 def 校验清单(清单路径: Path, 贴图目录: Path) -> list[str]:
     错误: list[str] = []
     try:
@@ -197,6 +207,7 @@ def 校验清单(清单路径: Path, 贴图目录: Path) -> list[str]:
                 if 语义摘要(项) != 期望摘要:
                     错误.append(f"第 {序号} 项 subject/must_show 与固定逐项语义规格不符")
         错误.extend(校验类别关键词(项, 序号))
+        错误.extend(校验状态变体(项, 序号))
         状态 = 项.get("reference_status")
         if 状态 not in 合法参考状态:
             错误.append(f"第 {序号} 项 reference_status 非法：{状态}")
@@ -206,7 +217,13 @@ def 校验清单(清单路径: Path, 贴图目录: Path) -> list[str]:
         if not isinstance(禁项, list):
             错误.append(f"第 {序号} 项 avoid 必须是数组")
         else:
-            少禁项 = 必需禁项 - set(禁项)
+            合法禁项: set[str] = set()
+            for 禁项序号, 内容 in enumerate(禁项, start=1):
+                if not isinstance(内容, str) or not 内容.strip():
+                    错误.append(f"第 {序号} 项 avoid 第 {禁项序号} 个元素必须是非空字符串")
+                else:
+                    合法禁项.add(内容)
+            少禁项 = 必需禁项 - 合法禁项
             if 少禁项:
                 错误.append(f"第 {序号} 项 avoid 缺少禁项：{', '.join(sorted(少禁项))}")
         配色 = 项.get("palette")
@@ -241,14 +258,18 @@ def 校验清单(清单路径: Path, 贴图目录: Path) -> list[str]:
     return 错误
 
 
-def 查询Git状态(相对路径: str) -> str:
-    结果 = subprocess.run(
-        ["git", "status", "--short", "--", 相对路径],
-        cwd=仓库根目录, text=True, capture_output=True, encoding="utf-8", errors="replace"
-    )
+def 查询Git状态(相对路径: str) -> tuple[str | None, str | None]:
+    try:
+        结果 = subprocess.run(
+            ["git", "status", "--short", "--", 相对路径],
+            cwd=仓库根目录, text=True, capture_output=True, encoding="utf-8", errors="replace"
+        )
+    except (FileNotFoundError, OSError) as 异常:
+        return None, f"无法执行 Git：{异常}"
     if 结果.returncode != 0:
-        return "查询失败"
-    return 结果.stdout.rstrip("\r\n") or "clean"
+        详情 = (结果.stderr or "无错误详情").strip()
+        return None, f"Git 状态查询失败（退出码 {结果.returncode}）：{详情}"
+    return 结果.stdout.rstrip("\r\n") or "clean", None
 
 
 def 写入基线(输出路径: Path, 贴图目录: Path) -> list[str]:
@@ -258,6 +279,9 @@ def 写入基线(输出路径: Path, 贴图目录: Path) -> list[str]:
     基线 = []
     for 路径 in 贴图.values():
         相对路径 = 路径.relative_to(仓库根目录).as_posix()
+        Git状态, Git错误 = 查询Git状态(相对路径)
+        if Git错误:
+            return [f"{相对路径}：{Git错误}"]
         with Image.open(路径) as 图像:
             宽, 高 = 图像.size
             模式 = 图像.mode
@@ -267,7 +291,7 @@ def 写入基线(输出路径: Path, 贴图目录: Path) -> list[str]:
             "height": 高,
             "mode": 模式,
             "sha256": hashlib.sha256(路径.read_bytes()).hexdigest(),
-            "git_status": 查询Git状态(相对路径),
+            "git_status": Git状态,
         })
     输出路径.parent.mkdir(parents=True, exist_ok=True)
     输出路径.write_text(json.dumps(基线, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -276,8 +300,9 @@ def 写入基线(输出路径: Path, 贴图目录: Path) -> list[str]:
 
 def main() -> int:
     解析器 = argparse.ArgumentParser(description=__doc__)
-    解析器.add_argument("--validate-manifest", action="store_true", help="校验重绘清单（默认行为）")
-    解析器.add_argument("--write-baseline", type=Path, help="把正式贴图基线写入指定路径")
+    操作组 = 解析器.add_mutually_exclusive_group()
+    操作组.add_argument("--validate-manifest", action="store_true", help="校验重绘清单（默认行为）")
+    操作组.add_argument("--write-baseline", type=Path, help="把正式贴图基线写入指定路径")
     解析器.add_argument("--manifest", type=Path, default=默认清单路径, help=argparse.SUPPRESS)
     解析器.add_argument("--texture-root", type=Path, default=默认贴图目录, help=argparse.SUPPRESS)
     参数 = 解析器.parse_args()
