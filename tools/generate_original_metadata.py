@@ -175,14 +175,56 @@ def write_authoritative_metadata(resource_root: Path) -> None:
 def validate_generated_metadata(relative: str, data: bytes) -> None:
     try:
         text = data.decode("utf-8")
-        if relative.endswith((".json", ".mcmeta")):
+        if relative.endswith("/lang/zh_cn.json") or relative.endswith("/lang/en_us.json"):
+            value = json.loads(text)
+            if not isinstance(value, dict):
+                raise ValueError("语言文件根必须是对象")
+            if not value or not all(isinstance(key, str) and key and isinstance(item, str) and item for key, item in value.items()):
+                raise ValueError("语言文件的键值必须全是非空字符串")
+            expected = json.loads(decode_authoritative_metadata(relative))
+            if set(value) != set(expected):
+                raise ValueError("语言键与权威期望不一致")
+        elif relative == "pack.mcmeta":
+            value = json.loads(text)
+            pack = value.get("pack") if isinstance(value, dict) else None
+            if not isinstance(pack, dict):
+                raise ValueError("pack.mcmeta 缺少 pack 对象")
+            if type(pack.get("pack_format")) is not int or pack["pack_format"] <= 0 or not isinstance(pack.get("description"), str) or not pack["description"]:
+                raise ValueError("pack.mcmeta 的 pack_format 或 description 类型错误")
+        elif relative.endswith(".json"):
             json.loads(text)
-        elif relative.endswith(".toml"):
+        elif relative == "META-INF/mods.toml":
             # Forge 允许 Gradle 在 TOML 表名中展开 ${mod_id}；标准 TOML 解析器
             # 不认识该模板键，因此仅为语法校验替换这一个已知占位位置。
-            tomllib.loads(text.replace("dependencies.${mod_id}", "dependencies.__forge_mod_id__"))
+            value = tomllib.loads(text.replace("dependencies.${mod_id}", "dependencies.__forge_mod_id__"))
+            for key in ("modLoader", "loaderVersion", "license"):
+                if not isinstance(value.get(key), str) or not value[key]:
+                    raise ValueError(f"mods.toml 的 {key} 必须是非空字符串")
+            mods = value.get("mods")
+            if not isinstance(mods, list) or not mods:
+                raise ValueError("mods.toml 缺少非空 mods 列表")
+            for mod in mods:
+                if not isinstance(mod, dict) or not all(isinstance(mod.get(key), str) and mod[key] for key in ("modId", "version", "displayName")):
+                    raise ValueError("mods.toml 的模组必要字段类型错误")
+            if not any(mod["modId"] in {"${mod_id}", "blindboxchallenge"} for mod in mods):
+                raise ValueError("mods.toml 缺少 blindboxchallenge 模组定义")
+            dependency_groups = value.get("dependencies")
+            if not isinstance(dependency_groups, dict):
+                raise ValueError("mods.toml 的 dependencies 必须是对象")
+            dependencies = dependency_groups.get("__forge_mod_id__")
+            if not isinstance(dependencies, list):
+                raise ValueError("mods.toml 缺少模组依赖列表")
+            actual_dependencies = set()
+            for dependency in dependencies:
+                if not isinstance(dependency, dict) or not isinstance(dependency.get("modId"), str) or not dependency["modId"]:
+                    raise ValueError("mods.toml 的依赖必要字段类型错误")
+                if type(dependency.get("mandatory")) is not bool or not all(isinstance(dependency.get(key), str) and dependency[key] for key in ("versionRange", "ordering", "side")):
+                    raise ValueError("mods.toml 的依赖属性类型错误或为空")
+                actual_dependencies.add(dependency["modId"])
+            if not {"forge", "minecraft"}.issubset(actual_dependencies):
+                raise ValueError("mods.toml 缺少 Forge 或 Minecraft 依赖")
     except (UnicodeDecodeError, json.JSONDecodeError, tomllib.TOMLDecodeError, ValueError) as error:
-        raise ValueError(f"生成元数据无效：{relative}：{error}") from error
+        raise ValueError(f"生成元数据无效：{relative}：{error}") from None
 
 
 def write_all(resource_root: Path, *, renderer=render, replacer=None, restorer=None) -> None:
