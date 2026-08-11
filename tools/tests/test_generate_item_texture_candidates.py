@@ -49,6 +49,25 @@ class 候选生成测试(unittest.TestCase):
         with self.assertRaises(SystemExit): 解析器.parse_args(["--all", "--prompt-suffix", "不允许"])
         with self.assertRaises(SystemExit): 解析器.parse_args(["--only", "a", "--only", "b", "--prompt-suffix", "不允许"])
 
+    def test_install_cli逐项拒绝所有生图参数且不写入(self):
+        冲突参数 = [
+            ["--all"], ["--only", "blind_box"], ["--dry-run"], ["--resume"],
+            ["--prompt-suffix", "仅改轮廓"], ["--archive-existing"],
+        ]
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根=Path(临时目录); 审查=根/"review.json"; 审查.write_text("[]",encoding="utf-8")
+            for 附加 in 冲突参数:
+                输出=根/("out-"+str(len(list(根.iterdir()))))
+                命令=[sys.executable,str(被测模块.__file__),"--install-approved",str(审查),"--output-root",str(输出),*附加]
+                环境=dict(os.environ, PYTHONUTF8="1")
+                结果=subprocess.run(命令,text=True,capture_output=True,encoding="utf-8",errors="strict",env=环境)
+                with self.subTest(附加=附加):
+                    self.assertEqual(2,结果.returncode); self.assertIn("互斥",结果.stderr); self.assertFalse(输出.exists())
+
+    def test_install_cli允许output_root共存(self):
+        参数=被测模块.创建参数解析器().parse_args(["--install-approved","review.json","--output-root","custom-output"])
+        self.assertEqual(Path("custom-output"),参数.output_root)
+
     def test_prompt_suffix附加到命令与metadata(self):
         with tempfile.TemporaryDirectory() as 临时目录:
             根=Path(临时目录); 假脚本=根/"fake.py"; 假脚本.write_text("# fake",encoding="utf-8")
@@ -75,6 +94,18 @@ class 候选生成测试(unittest.TestCase):
                 状态=被测模块.生成单项(示例项,根,lambda *a,**k: 调用.append(1),图像脚本=假脚本,归档已有=True)
             self.assertEqual("失败",状态); self.assertEqual([],调用)
 
+    def test_archive四层任一缺失均拒绝且不调用生图不改旧文件(self):
+        四层=(("sources","blind_box.png"),("clean","blind_box.png"),("candidates","blind_box.png"),("metadata","blind_box.json"))
+        for 缺失索引 in range(4):
+            with self.subTest(缺失索引=缺失索引),tempfile.TemporaryDirectory() as 临时目录:
+                根=Path(临时目录); 快照={}; 假脚本=根/"fake.py"; 假脚本.write_text("# fake",encoding="utf-8"); 调用=[]
+                for i,(目录,名称) in enumerate(四层):
+                    if i==缺失索引: continue
+                    p=根/目录/名称; p.parent.mkdir(parents=True,exist_ok=True); p.write_bytes(f"old-{i}".encode()); 快照[p]=p.read_bytes()
+                状态=被测模块.生成单项(示例项,根,lambda *a,**k: 调用.append(1),图像脚本=假脚本,归档已有=True)
+                self.assertEqual("失败",状态); self.assertEqual([],调用)
+                for p,内容 in 快照.items(): self.assertEqual(内容,p.read_bytes())
+
     def test_install拒绝pending缺项hash错绝对路径和重复(self):
         with tempfile.TemporaryDirectory() as 临时目录:
             根=Path(临时目录); 清单,审查,审查路径=self._准备安装(根)
@@ -88,11 +119,29 @@ class 候选生成测试(unittest.TestCase):
                 p=根/f"bad-{i}.json"; p.write_text(json.dumps(数据),encoding="utf-8")
                 with self.subTest(i=i),self.assertRaises(ValueError): 被测模块.安装已批准(p,清单,根,根/"repo")
 
+    def test_install拒绝顺序错texture错和相对路径穿越且正式图不变(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            根=Path(临时目录); 清单,审查,_=self._准备安装(根)
+            变体=[]
+            x=json.loads(json.dumps(审查)); x[0],x[1]=x[1],x[0]; 变体.append(x)
+            x=json.loads(json.dumps(审查)); x[0]["texture"]=清单[1]["texture"]; 变体.append(x)
+            x=json.loads(json.dumps(审查)); x[0]["candidate_path"]="../"+x[0]["candidate_path"]; 变体.append(x)
+            for i,数据 in enumerate(变体):
+                p=根/f"identity-bad-{i}.json"; p.write_text(json.dumps(数据),encoding="utf-8")
+                with self.subTest(i=i),self.assertRaises(ValueError): 被测模块.安装已批准(p,清单,根,根/"repo")
+                for n,项 in enumerate(清单): self.assertEqual(f"old-{n}".encode(),(根/"repo"/项["texture"]).read_bytes())
+
     def test_install成功五十九项且正式路径只来自清单(self):
         with tempfile.TemporaryDirectory() as 临时目录:
             根=Path(临时目录); 清单,审查,p=self._准备安装(根)
             备份=被测模块.安装已批准(p,清单,根,根/"repo")
-            self.assertTrue((备份/"manifest.json").is_file())
+            备份清单=json.loads((备份/"manifest.json").read_text(encoding="utf-8")); 备份PNG=list(备份.rglob("*.png"))
+            self.assertEqual(59,len(备份PNG)); self.assertEqual(59,备份清单["count"]); self.assertEqual(59,len(备份清单["files"]))
+            for 项,记录 in zip(清单,备份清单["files"]):
+                备份图=备份/项["texture"]
+                self.assertEqual(项["id"],记录["id"]); self.assertEqual(项["texture"],记录["texture"])
+                self.assertEqual(hashlib.sha256(备份图.read_bytes()).hexdigest(),记录["old_sha256"])
+                self.assertEqual(hashlib.sha256((根/"candidates"/Path(项["texture"]).name).read_bytes()).hexdigest(),记录["candidate_sha256"])
             for i,项 in enumerate(清单): self.assertEqual(f"candidate-{i}".encode(),(根/"repo"/项["texture"]).read_bytes())
 
     def test_install第N次replace失败则全量回滚(self):

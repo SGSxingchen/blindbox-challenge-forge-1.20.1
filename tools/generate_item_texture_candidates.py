@@ -289,7 +289,8 @@ def 安装已批准(审查路径: Path, 清单: list[dict], 输出根: Path, 仓
             if not 目标.is_file(): raise ValueError(f"正式贴图不存在：{项['texture']}")
             相对=PurePosixPath(项["texture"]); 备份文件=临时备份/相对
             备份文件.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(目标,备份文件)
-            清单哈希.append({"texture":项["texture"],"sha256":文件哈希(目标)})
+            清单哈希.append({"id":项["id"],"texture":项["texture"],"old_sha256":文件哈希(目标),
+                         "candidate_sha256":文件哈希(候选)})
             正式.append((目标,候选,相对))
         _原子JSON(临时备份/"manifest.json",{"count":59,"files":清单哈希})
         os.replace(临时备份,备份)
@@ -342,16 +343,19 @@ def 生成单项(项: dict, 输出根: Path, 运行器: Callable=subprocess.run,
 class _参数解析器(argparse.ArgumentParser):
     def parse_args(self, args=None, namespace=None):
         参数=super().parse_args(args,namespace)
+        if 参数.install_approved and (参数.only or 参数.all or 参数.dry_run or 参数.resume or 参数.prompt_suffix is not None or 参数.archive_existing or 参数.imagegen_script):
+            self.error("--install-approved 与生图模式参数互斥")
+        模式数=bool(参数.only)+bool(参数.all)+bool(参数.install_approved)
+        if 模式数!=1: self.error("--only、--all 与 --install-approved 三种模式互斥且必须选择一种")
         if 参数.prompt_suffix is not None and (not 参数.only or len(参数.only)!=1): self.error("--prompt-suffix 仅允许与恰好一个 --only 一起使用")
         if 参数.archive_existing and (not 参数.only or len(参数.only)!=1): self.error("--archive-existing 仅允许与恰好一个 --only 一起使用")
-        if 参数.install_approved and (参数.dry_run or 参数.resume or 参数.prompt_suffix is not None or 参数.archive_existing or 参数.imagegen_script): self.error("--install-approved 与生图参数互斥")
         return 参数
 
 
 def 创建参数解析器() -> argparse.ArgumentParser:
-    p=_参数解析器(description=__doc__); 模式=p.add_mutually_exclusive_group(required=True)
-    模式.add_argument("--only",action="append",default=[],metavar="ID或贴图名"); 模式.add_argument("--all",action="store_true")
-    模式.add_argument("--install-approved",type=Path,metavar="REVIEW_JSON")
+    p=_参数解析器(description=__doc__)
+    p.add_argument("--only",action="append",default=[],metavar="ID或贴图名"); p.add_argument("--all",action="store_true")
+    p.add_argument("--install-approved",type=Path,metavar="REVIEW_JSON")
     p.add_argument("--prompt-suffix"); p.add_argument("--archive-existing",action="store_true")
     p.add_argument("--dry-run",action="store_true"); p.add_argument("--resume",action="store_true"); p.add_argument("--output-root",type=Path,default=默认输出根); p.add_argument("--imagegen-script",type=Path)
     return p
