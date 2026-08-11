@@ -75,6 +75,40 @@ class 物品贴图重绘验证测试(unittest.TestCase):
         清单[0]["avoid"].remove("广告背景")
         self.assertNotEqual(0, self.运行验证(清单).returncode)
 
+    def test_空泛语义替换全部逐项规格失败(self):
+        清单 = copy.deepcopy(self.有效清单)
+        for 项 in 清单:
+            项["subject"] = "物品"
+            项["must_show"] = "一个物品"
+        self.assertNotEqual(0, self.运行验证(清单).returncode)
+
+    def test_食品只画包装不画本体失败(self):
+        清单 = copy.deepcopy(self.有效清单)
+        牛肉粒 = next(项 for 项 in 清单 if 项["id"] == "beef_bites")
+        牛肉粒["subject"] = "品牌包装"
+        牛肉粒["must_show"] = "只画品牌包装，不画牛肉本体"
+        self.assertNotEqual(0, self.运行验证(清单).returncode)
+
+    def test_书籍复刻人物和可读标题失败(self):
+        清单 = copy.deepcopy(self.有效清单)
+        笔记 = next(项 for 项 in 清单 if 项["id"] == "death_note")
+        笔记["subject"] = "完整复刻动漫人物"
+        笔记["must_show"] = "完整复刻动漫人物和可读标题"
+        self.assertNotEqual(0, self.运行验证(清单).returncode)
+
+    def test_001与002四个状态编号被替换均失败(self):
+        状态编号 = {
+            "black_knight_telescopic_knife",
+            "black_knight_telescopic_knife_extended",
+            "purple_toy_pickaxe_sword_pickaxe",
+            "purple_toy_pickaxe_sword_sword",
+        }
+        for 编号 in 状态编号:
+            with self.subTest(编号=编号):
+                清单 = copy.deepcopy(self.有效清单)
+                next(项 for 项 in 清单 if 项["id"] == 编号)["id"] = "replaced_state"
+                self.assertNotEqual(0, self.运行验证(清单).returncode)
+
     def test_baseline恰好59项且包含完整元数据(self):
         with tempfile.TemporaryDirectory() as 临时目录:
             输出 = Path(临时目录) / "baseline.json"
