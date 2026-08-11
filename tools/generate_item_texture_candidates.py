@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
 import hashlib
 import json
 import os
@@ -11,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import uuid
 from collections import deque
 from contextlib import contextmanager
@@ -133,20 +135,97 @@ def 可恢复跳过(元数据路径: Path, 候选路径: Path) -> bool:
     except (OSError, ValueError, json.JSONDecodeError): return False
 
 
+def _pid存活(pid: int) -> bool | None:
+    """只在操作系统明确报告进程不存在时返回 False；权限不足按存活处理。"""
+    if os.name == "nt":
+        查询权限 = 0x1000  # PROCESS_QUERY_LIMITED_INFORMATION
+        仍在运行 = 259  # STILL_ACTIVE
+        内核 = ctypes.WinDLL("kernel32", use_last_error=True)
+        句柄 = 内核.OpenProcess(查询权限, False, pid)
+        if not 句柄:
+            错误码 = ctypes.get_last_error()
+            if 错误码 == 87:  # ERROR_INVALID_PARAMETER：PID 不存在
+                return False
+            if 错误码 == 5:  # ERROR_ACCESS_DENIED：保守视为存活
+                return True
+            return None
+        try:
+            退出码 = ctypes.c_ulong()
+            if not 内核.GetExitCodeProcess(句柄, ctypes.byref(退出码)):
+                return None
+            return 退出码.value == 仍在运行
+        finally:
+            内核.CloseHandle(句柄)
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return None
+
+
+def _读取锁(锁路径: Path) -> dict:
+    try:
+        数据 = json.loads(锁路径.read_text(encoding="utf-8"))
+        if (not isinstance(数据, dict) or not isinstance(数据.get("pid"), int)
+                or not isinstance(数据.get("created_at"), (int, float))
+                or ("token" in 数据 and not isinstance(数据["token"], str))):
+            raise ValueError
+        return 数据
+    except (OSError, json.JSONDecodeError, ValueError) as 异常:
+        raise RuntimeError(f"锁文件损坏或信息未知：{锁路径}；请确认没有生成进程后手动删除") from 异常
+
+
+def _尝试回收陈旧锁(锁路径: Path, pid存活检查: Callable[[int], bool | None], 当前时间: float, 最短锁龄: float) -> None:
+    数据 = _读取锁(锁路径)
+    存活 = pid存活检查(数据["pid"])
+    if 存活 is True:
+        raise RuntimeError(f"{锁路径.stem} 正在生成，活动进程 PID={数据['pid']}")
+    if 存活 is None:
+        raise RuntimeError(f"无法确认锁进程 PID={数据['pid']} 是否存活；请人工检查，锁未自动删除")
+    锁龄 = 当前时间 - float(数据["created_at"])
+    if 锁龄 < 最短锁龄:
+        raise RuntimeError(f"进程虽已不存在，但锁未超过 {最短锁龄:g} 秒保护期，未自动删除")
+    隔离路径 = 锁路径.with_name(f".{锁路径.name}.stale-{uuid.uuid4().hex}")
+    try:
+        os.replace(锁路径, 隔离路径)
+    except FileNotFoundError:
+        return
+    隔离路径.unlink(missing_ok=True)
+
+
 @contextmanager
-def 单项锁(输出根: Path, 安全名: str) -> Iterator[None]:
+def 单项锁(输出根: Path, 安全名: str, *, pid存活检查: Callable[[int], bool | None] = _pid存活,
+           当前时间: float | None = None, 最短锁龄: float = 60.0) -> Iterator[None]:
     if not 安全名规则.fullmatch(安全名): raise ValueError("锁名称不安全")
     锁目录=(Path(输出根).resolve()/".locks"); 锁目录.mkdir(parents=True, exist_ok=True)
     锁路径=锁目录/f"{安全名}.lock"
+    时间戳 = time.time() if 当前时间 is None else 当前时间
+    token = uuid.uuid4().hex
+    for 尝试 in range(2):
+        try:
+            fd=os.open(锁路径, os.O_CREAT|os.O_EXCL|os.O_WRONLY)
+            break
+        except FileExistsError as 异常:
+            if 尝试:
+                raise RuntimeError(f"{安全名} 正在生成，无法重复执行") from 异常
+            _尝试回收陈旧锁(锁路径, pid存活检查, 时间戳, 最短锁龄)
+    else:
+        raise RuntimeError(f"{安全名} 正在生成，无法重复执行")
     try:
-        fd=os.open(锁路径, os.O_CREAT|os.O_EXCL|os.O_WRONLY)
-    except FileExistsError as 异常: raise RuntimeError(f"{安全名} 正在生成，无法重复执行") from 异常
-    try:
-        os.write(fd, f"pid={os.getpid()} time={datetime.now(timezone.utc).isoformat()}\n".encode()); os.fsync(fd); os.close(fd); fd=-1
+        锁数据 = json.dumps({"pid": os.getpid(), "created_at": 时间戳, "token": token}, ensure_ascii=False) + "\n"
+        os.write(fd, 锁数据.encode("utf-8")); os.fsync(fd); os.close(fd); fd=-1
         yield
     finally:
         if fd >= 0: os.close(fd)
-        锁路径.unlink(missing_ok=True)
+        try:
+            if _读取锁(锁路径).get("token") == token:
+                锁路径.unlink(missing_ok=True)
+        except RuntimeError:
+            pass
 
 
 def _二值去背(图像: Image.Image) -> Image.Image:

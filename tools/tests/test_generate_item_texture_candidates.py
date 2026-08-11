@@ -3,7 +3,9 @@ import json
 import os
 import subprocess
 import tempfile
+import time
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from PIL import Image
@@ -32,9 +34,11 @@ class 候选生成测试(unittest.TestCase):
             self.assertIn(片段, 提示词)
 
     def test_每个物品形成独立命令(self):
-        另一项 = dict(示例项, id="letter", texture="assets/x/letter.png", subject="信件")
-        命令一 = 被测模块.构造命令(示例项, Path("sources/blind_box.png"))
-        命令二 = 被测模块.构造命令(另一项, Path("sources/letter.png"))
+        with tempfile.TemporaryDirectory() as 临时目录:
+            假脚本 = Path(临时目录) / "fake.py"; 假脚本.write_text("# fake", encoding="utf-8")
+            另一项 = dict(示例项, id="letter", texture="assets/x/letter.png", subject="信件")
+            命令一 = 被测模块.构造命令(示例项, Path("sources/blind_box.png"), 假脚本)
+            命令二 = 被测模块.构造命令(另一项, Path("sources/letter.png"), 假脚本)
         self.assertEqual("generate", 命令一[2])
         self.assertIn("gpt-image-2", 命令一)
         self.assertIn("#00FF00", 命令一)
@@ -95,9 +99,10 @@ class 候选生成测试(unittest.TestCase):
     def test_子进程失败不生成候选并写失败元数据(self):
         with tempfile.TemporaryDirectory() as 临时目录:
             根 = Path(临时目录)
+            假脚本 = 根 / "fake.py"; 假脚本.write_text("# fake", encoding="utf-8")
             def 失败运行器(*args, **kwargs):
                 return subprocess.CompletedProcess(args[0], 7, "", "provider rejected secret text")
-            状态 = 被测模块.生成单项(示例项, 根, 失败运行器)
+            状态 = 被测模块.生成单项(示例项, 根, 失败运行器, 图像脚本=假脚本)
             self.assertEqual("失败", 状态)
             self.assertFalse((根 / "candidates/blind_box.png").exists())
             失败文件 = list((根 / "failures").glob("blind_box-*.json"))
@@ -139,6 +144,39 @@ class 候选生成测试(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "正在生成"):
                     with 被测模块.单项锁(根, "blind_box"):
                         pass
+
+    def _写锁(self, 根, 内容):
+        路径 = Path(根) / ".locks/blind_box.lock"; 路径.parent.mkdir(parents=True)
+        路径.write_text(json.dumps(内容), encoding="utf-8")
+        return 路径
+
+    def test_活锁不会被回收(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            锁 = self._写锁(临时目录, {"pid": 123, "created_at": time.time() - 3600})
+            with self.assertRaisesRegex(RuntimeError, "正在生成"):
+                with 被测模块.单项锁(Path(临时目录), "blind_box", pid存活检查=lambda pid: True): pass
+            self.assertTrue(锁.exists())
+
+    def test_死亡且过期锁会被回收(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            锁 = self._写锁(临时目录, {"pid": 123, "created_at": time.time() - 3600})
+            with 被测模块.单项锁(Path(临时目录), "blind_box", pid存活检查=lambda pid: False):
+                self.assertTrue(锁.exists())
+            self.assertFalse(锁.exists())
+
+    def test_死亡但新锁不会被回收(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            锁 = self._写锁(临时目录, {"pid": 123, "created_at": time.time()})
+            with self.assertRaisesRegex(RuntimeError, "未超过"):
+                with 被测模块.单项锁(Path(临时目录), "blind_box", pid存活检查=lambda pid: False): pass
+            self.assertTrue(锁.exists())
+
+    def test_损坏锁不会被回收(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            锁 = Path(临时目录) / ".locks/blind_box.lock"; 锁.parent.mkdir(parents=True); 锁.write_text("broken", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "损坏.*手动"):
+                with 被测模块.单项锁(Path(临时目录), "blind_box", pid存活检查=lambda pid: False): pass
+            self.assertTrue(锁.exists())
 
     def test_同stem前缀旧文件不会污染唯一运行目录(self):
         with tempfile.TemporaryDirectory() as 临时目录:
@@ -184,6 +222,14 @@ class 候选生成测试(unittest.TestCase):
             self.assertEqual(脚本.resolve(), 被测模块.发现图像脚本(None, {"CHORDVERS_IMAGEGEN_SCRIPT": str(脚本)}))
             with self.assertRaisesRegex(ValueError, "未找到"):
                 被测模块.发现图像脚本(Path(临时目录) / "missing.py", {})
+
+    def test_隔离环境下显式假脚本不依赖本机路径(self):
+        with tempfile.TemporaryDirectory() as 临时目录:
+            假脚本 = Path(临时目录) / "fake.py"; 假脚本.write_text("# fake", encoding="utf-8")
+            隔离环境 = {"USERPROFILE": str(Path(临时目录) / "missing-profile")}
+            with patch.dict(os.environ, 隔离环境, clear=True):
+                命令 = 被测模块.构造命令(示例项, Path(临时目录) / "out.png", 假脚本)
+            self.assertEqual(str(假脚本.resolve()), 命令[1])
 
     def test_近绿色仅去除与画布边界连通区域(self):
         图 = Image.new("RGB", (9, 9), (3, 250, 4))
