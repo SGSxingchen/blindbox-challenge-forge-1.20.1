@@ -2,8 +2,9 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 import tempfile
-import time
+import threading
 import unittest
 from unittest.mock import patch
 from pathlib import Path
@@ -145,38 +146,55 @@ class 候选生成测试(unittest.TestCase):
                     with 被测模块.单项锁(根, "blind_box"):
                         pass
 
-    def _写锁(self, 根, 内容):
-        路径 = Path(根) / ".locks/blind_box.lock"; 路径.parent.mkdir(parents=True)
-        路径.write_text(json.dumps(内容), encoding="utf-8")
-        return 路径
-
-    def test_活锁不会被回收(self):
+    def test_释放后可再次获取且持久锁文件不代表占用(self):
         with tempfile.TemporaryDirectory() as 临时目录:
-            锁 = self._写锁(临时目录, {"pid": 123, "created_at": time.time() - 3600})
-            with self.assertRaisesRegex(RuntimeError, "正在生成"):
-                with 被测模块.单项锁(Path(临时目录), "blind_box", pid存活检查=lambda pid: True): pass
+            根 = Path(临时目录)
+            with 被测模块.单项锁(根, "blind_box"): pass
+            锁 = 根 / ".locks/blind_box.lock"
             self.assertTrue(锁.exists())
+            with 被测模块.单项锁(根, "blind_box"): pass
 
-    def test_死亡且过期锁会被回收(self):
+    def test_不同stem可同时进入(self):
         with tempfile.TemporaryDirectory() as 临时目录:
-            锁 = self._写锁(临时目录, {"pid": 123, "created_at": time.time() - 3600})
-            with 被测模块.单项锁(Path(临时目录), "blind_box", pid存活检查=lambda pid: False):
-                self.assertTrue(锁.exists())
-            self.assertFalse(锁.exists())
+            with 被测模块.单项锁(Path(临时目录), "blind_box"):
+                with 被测模块.单项锁(Path(临时目录), "letter"):
+                    pass
 
-    def test_死亡但新锁不会被回收(self):
+    def test_确定性交错下同一锁不会同时进入(self):
         with tempfile.TemporaryDirectory() as 临时目录:
-            锁 = self._写锁(临时目录, {"pid": 123, "created_at": time.time()})
-            with self.assertRaisesRegex(RuntimeError, "未超过"):
-                with 被测模块.单项锁(Path(临时目录), "blind_box", pid存活检查=lambda pid: False): pass
-            self.assertTrue(锁.exists())
+            根 = Path(临时目录); 已进入 = threading.Event(); 允许退出 = threading.Event(); 结果 = []
+            def 持有者():
+                with 被测模块.单项锁(根, "blind_box"):
+                    结果.append("A进入"); 已进入.set(); 允许退出.wait(5)
+            线程 = threading.Thread(target=持有者); 线程.start(); self.assertTrue(已进入.wait(5))
+            try:
+                with self.assertRaisesRegex(RuntimeError, "正在生成"):
+                    with 被测模块.单项锁(根, "blind_box"): 结果.append("B进入")
+            finally:
+                允许退出.set(); 线程.join(5)
+            self.assertEqual(["A进入"], 结果)
 
-    def test_损坏锁不会被回收(self):
+    def test_子进程强杀后操作系统自动释放锁(self):
         with tempfile.TemporaryDirectory() as 临时目录:
-            锁 = Path(临时目录) / ".locks/blind_box.lock"; 锁.parent.mkdir(parents=True); 锁.write_text("broken", encoding="utf-8")
-            with self.assertRaisesRegex(RuntimeError, "损坏.*手动"):
-                with 被测模块.单项锁(Path(临时目录), "blind_box", pid存活检查=lambda pid: False): pass
-            self.assertTrue(锁.exists())
+            根 = Path(临时目录); 就绪 = 根 / "ready"
+            代码 = (
+                "import sys,time; from pathlib import Path; "
+                "from tools.generate_item_texture_candidates import 单项锁; "
+                "root=Path(sys.argv[1]); ready=Path(sys.argv[2]); "
+                "ctx=单项锁(root,'blind_box'); ctx.__enter__(); ready.write_text('ok'); time.sleep(60)"
+            )
+            进程 = subprocess.Popen([sys.executable, "-c", 代码, str(根), str(就绪)], cwd=被测模块.仓库根目录)
+            try:
+                for _ in range(100):
+                    if 就绪.exists(): break
+                    threading.Event().wait(0.02)
+                self.assertTrue(就绪.exists())
+                with self.assertRaisesRegex(RuntimeError, "正在生成"):
+                    with 被测模块.单项锁(根, "blind_box"): pass
+                进程.kill(); 进程.wait(timeout=5)
+                with 被测模块.单项锁(根, "blind_box"): pass
+            finally:
+                if 进程.poll() is None: 进程.kill(); 进程.wait(timeout=5)
 
     def test_同stem前缀旧文件不会污染唯一运行目录(self):
         with tempfile.TemporaryDirectory() as 临时目录:
