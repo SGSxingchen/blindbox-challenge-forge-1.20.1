@@ -11,12 +11,15 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import tomllib
 from pathlib import Path
 
 try:
     from .original_metadata_payloads import AUTHORITATIVE_METADATA_PAYLOADS, decode_authoritative_metadata
+    from .transactional_resource_writer import transactional_write
 except ImportError:  # 兼容直接执行脚本
     from original_metadata_payloads import AUTHORITATIVE_METADATA_PAYLOADS, decode_authoritative_metadata
+    from transactional_resource_writer import transactional_write
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -161,10 +164,34 @@ def render(relative: str) -> bytes:
 
 
 def write_authoritative_metadata(resource_root: Path) -> None:
-    for relative in AUTHORITATIVE_METADATA_PAYLOADS:
-        target = resource_root / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(decode_authoritative_metadata(relative))
+    transactional_write(
+        resource_root,
+        AUTHORITATIVE_METADATA_PAYLOADS,
+        decode_authoritative_metadata,
+        validate_generated_metadata,
+    )
+
+
+def validate_generated_metadata(relative: str, data: bytes) -> None:
+    try:
+        text = data.decode("utf-8")
+        if relative.endswith((".json", ".mcmeta")):
+            json.loads(text)
+        elif relative.endswith(".toml"):
+            # Forge 允许 Gradle 在 TOML 表名中展开 ${mod_id}；标准 TOML 解析器
+            # 不认识该模板键，因此仅为语法校验替换这一个已知占位位置。
+            tomllib.loads(text.replace("dependencies.${mod_id}", "dependencies.__forge_mod_id__"))
+    except (UnicodeDecodeError, json.JSONDecodeError, tomllib.TOMLDecodeError, ValueError) as error:
+        raise ValueError(f"生成元数据无效：{relative}：{error}") from error
+
+
+def write_all(resource_root: Path, *, renderer=render, replacer=None, restorer=None) -> None:
+    options = {}
+    if replacer is not None:
+        options["replacer"] = replacer
+    if restorer is not None:
+        options["restorer"] = restorer
+    transactional_write(resource_root, TARGETS, renderer, validate_generated_metadata, **options)
 
 
 def update_manifest() -> None:
@@ -186,24 +213,26 @@ def update_manifest() -> None:
     MANIFEST.write_text("\n".join(rows) + "\n", encoding="utf-8")
 
 
-def main() -> int:
+def main(argv=None, *, resource_root: Path = RESOURCE_ROOT) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--check", action="store_true")
+    operations = parser.add_mutually_exclusive_group()
+    operations.add_argument("--check", action="store_true")
+    operations.add_argument("--write-all", action="store_true")
     parser.add_argument("--update-manifest", action="store_true")
-    args = parser.parse_args()
-    if args.check and args.update_manifest:
-        raise SystemExit("--check 不修改文件，不能和 --update-manifest 同时使用")
-    drift = []
+    args = parser.parse_args(argv)
+    if args.update_manifest and not args.write_all:
+        parser.error("--update-manifest 只能与 --write-all 一起使用")
+    if not args.check and not args.write_all:
+        parser.print_help()
+        return 0
+    if args.check:
+        drift = [relative for relative in TARGETS if not (resource_root / relative).is_file() or (resource_root / relative).read_bytes() != render(relative)]
+        if drift:
+            raise SystemExit("原创元数据与生成器不一致：" + ", ".join(drift))
+        return 0
+    write_all(resource_root)
     for relative in TARGETS:
-        target, expected = RESOURCE_ROOT / relative, render(relative)
-        if args.check:
-            if not target.is_file() or target.read_bytes() != expected:
-                drift.append(relative)
-        else:
-            target.write_bytes(expected)
-            print(target.relative_to(ROOT))
-    if drift:
-        raise SystemExit("原创元数据与生成器不一致：" + ", ".join(drift))
+        print(resource_root / relative)
     if args.update_manifest:
         update_manifest()
     return 0
