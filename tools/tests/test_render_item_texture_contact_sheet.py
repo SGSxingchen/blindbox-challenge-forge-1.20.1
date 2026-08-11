@@ -1,9 +1,13 @@
 import hashlib
 import importlib.util
 import json
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -45,6 +49,7 @@ class 联系表测试(unittest.TestCase):
         复核 = json.loads(self.复核.read_text(encoding="utf-8"))
         self.assertEqual(["second", "first"], [项["id"] for 项 in 复核])
         self.assertEqual(hashlib.sha256(二.read_bytes()).hexdigest(), 复核[0]["candidate_sha256"])
+        self.assertEqual("second.png", 复核[0]["candidate_path"])
         self.assertEqual("pending", 复核[0]["status"])
         with Image.open(self.输出) as 图:
             self.assertGreaterEqual(图.width, 256)
@@ -98,6 +103,83 @@ class 联系表测试(unittest.TestCase):
             边界 = 画笔.textbbox((3, 134), 项["id"], font=字体)
             self.assertGreaterEqual(单元宽 - 3, 边界[2], 项["id"])
         self.assertGreaterEqual(尺寸[1], 8 * 160)
+
+    def test_第二个替换失败时回滚两个旧输出且无残片(self):
+        self.写清单("one")
+        self.写图("one", (1, 2, 3, 255))
+        self.输出.write_bytes(b"old-png")
+        self.复核.write_bytes(b"old-json")
+        真替换 = os.replace
+        次数 = 0
+
+        def 第二次失败(源, 目标):
+            nonlocal 次数
+            次数 += 1
+            if 次数 == 2:
+                raise OSError("注入失败")
+            return 真替换(源, 目标)
+
+        with mock.patch.object(模块.os, "replace", side_effect=第二次失败):
+            with self.assertRaisesRegex(ValueError, "回滚"):
+                模块.渲染联系表(self.候选, self.清单, self.输出, self.复核)
+        self.assertEqual(b"old-png", self.输出.read_bytes())
+        self.assertEqual(b"old-json", self.复核.read_bytes())
+        self.assertEqual([], [p for p in self.根.rglob(".*") if p.is_file()])
+
+    def test_JSON父路径错误时不改动旧图且无残片(self):
+        self.写清单("one")
+        self.写图("one", (1, 2, 3, 255))
+        self.输出.write_bytes(b"old-png")
+        阻塞 = self.根 / "blocked"
+        阻塞.write_bytes(b"not-a-directory")
+        with self.assertRaisesRegex(ValueError, "写入联系表"):
+            模块.渲染联系表(self.候选, self.清单, self.输出, 阻塞 / "review.json")
+        self.assertEqual(b"old-png", self.输出.read_bytes())
+        self.assertEqual(b"not-a-directory", 阻塞.read_bytes())
+        self.assertEqual([], [p for p in self.根.rglob(".*") if p.is_file()])
+
+    def test_百万字符编号在分配画布前被拒绝(self):
+        self.写清单("a" * 1_000_000)
+        with mock.patch.object(模块.Image, "new") as 分配:
+            with self.assertRaisesRegex(ValueError, "128"):
+                模块.渲染联系表(self.候选, self.清单, self.输出, self.复核)
+            分配.assert_not_called()
+
+    def test_过多项目在分配画布前被拒绝(self):
+        self.写清单(*(f"item_{i}" for i in range(101)))
+        with mock.patch.object(模块.Image, "new") as 分配:
+            with self.assertRaisesRegex(ValueError, "100"):
+                模块.渲染联系表(self.候选, self.清单, self.输出, self.复核)
+            分配.assert_not_called()
+
+    def test_总像素超限在分配画布前被拒绝(self):
+        self.写清单("one")
+        with mock.patch.object(模块.Image, "new") as 分配:
+            with self.assertRaisesRegex(ValueError, "总像素"):
+                模块.渲染联系表(self.候选, self.清单, self.输出, self.复核, 最大总像素=1)
+            分配.assert_not_called()
+
+    def test_损坏PNG的CLI错误为中文且无traceback(self):
+        self.写清单("broken")
+        (self.候选 / "broken.png").write_bytes(b"not-png")
+        环境 = dict(os.environ)
+        环境["PYTHONUTF8"] = "1"
+        结果 = subprocess.run([
+            sys.executable, str(脚本路径), "--input", str(self.候选), "--manifest", str(self.清单),
+            "--output", str(self.输出), "--review-output", str(self.复核),
+        ], text=True, encoding="utf-8", capture_output=True, env=环境)
+        self.assertNotEqual(0, 结果.returncode)
+        self.assertIn("候选图无法读取", 结果.stderr)
+        self.assertNotIn("Traceback", 结果.stderr)
+
+    def test_复核路径不携带临时目录绝对路径(self):
+        self.写清单("portable")
+        self.写图("portable", (1, 2, 3, 255))
+        模块.渲染联系表(self.候选, self.清单, self.输出, self.复核)
+        路径 = json.loads(self.复核.read_text(encoding="utf-8"))[0]["candidate_path"]
+        self.assertEqual("portable.png", 路径)
+        self.assertNotIn(str(self.根), 路径)
+        self.assertNotIn("\\", 路径)
 
 
 if __name__ == "__main__":
