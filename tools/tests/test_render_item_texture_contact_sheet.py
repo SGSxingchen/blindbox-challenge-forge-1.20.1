@@ -181,6 +181,26 @@ class 联系表测试(unittest.TestCase):
         self.assertNotIn(str(self.根), 路径)
         self.assertNotIn("\\", 路径)
 
+    def test_字面相同的两个输出路径在写入前被拒绝(self):
+        self.写清单("one")
+        self.写图("one", (1, 2, 3, 255))
+        self.输出.write_bytes(b"keep")
+        with self.assertRaisesRegex(ValueError, "不能相同"):
+            模块.渲染联系表(self.候选, self.清单, self.输出, self.输出)
+        self.assertEqual(b"keep", self.输出.read_bytes())
+        self.assertEqual([], [p for p in self.根.rglob(".*") if p.is_file()])
+
+    def test_经点点规范化后相同的输出路径在写入前被拒绝(self):
+        self.写清单("one")
+        self.写图("one", (1, 2, 3, 255))
+        self.输出.write_bytes(b"keep")
+        等价路径 = self.根 / "unused" / ".." / self.输出.name
+        with self.assertRaisesRegex(ValueError, "不能相同"):
+            模块.渲染联系表(self.候选, self.清单, self.输出, 等价路径)
+        self.assertEqual(b"keep", self.输出.read_bytes())
+        self.assertFalse((self.根 / "unused").exists())
+        self.assertEqual([], [p for p in self.根.rglob(".*") if p.is_file()])
+
 
 if __name__ == "__main__":
     unittest.main()

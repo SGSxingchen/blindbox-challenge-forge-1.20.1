@@ -124,6 +124,8 @@ def 成对提交(图: Image.Image, 复核: object, 输出: Path, 复核输出: P
 
 
 def 渲染联系表(输入: Path, 清单路径: Path, 输出: Path, 复核输出: Path, 列数: int | None = None, 最大项目数: int = 默认最大项目数, 最大总像素: int = 默认最大总像素) -> tuple[int, int]:
+    if Path(输出).resolve(strict=False) == Path(复核输出).resolve(strict=False):
+        raise ValueError("联系表 PNG 与复核 JSON 的输出路径不能相同")
     项目 = 读取清单(Path(清单路径))
     if len(项目) > 最大项目数:
         raise ValueError(f"清单项目数不能超过 {最大项目数}")
