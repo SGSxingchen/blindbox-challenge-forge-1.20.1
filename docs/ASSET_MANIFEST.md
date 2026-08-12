@@ -194,7 +194,7 @@
 |`mod/src/main/resources/data/blindboxchallenge/loot_tables/blocks/neutral_trophy.json`|`503d67ea3cbce345c8cc97eb162389df5313d1af952c6a8fd9767184952c3ac9`|项目内原创定义产物|项目内定义的资源路径、模型、数据、双语或元数据；不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
 |`mod/src/main/resources/data/blindboxchallenge/loot_tables/blocks/safety_landing.json`|`a8c560ef432029bdbd571958e16c03921e52d98c7db27a0e5e1cf6261974bb0c`|项目内原创定义产物|项目内定义的模型、数据或双语；与原创纹理引用闭合，不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
 |`mod/src/main/resources/data/blindboxchallenge/loot_tables/blocks/stone_pillow.json`|`274f0b00a2245ffea53fc91bf61d5773139cc2d859c01d3087fddc4e99d898d3`|项目内原创定义产物|项目内定义的模型、数据或双语；与原创纹理引用闭合，不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
-|`mod/src/main/resources/pack.mcmeta`|`7e62b593e498b0d766a42de237283f0dd8a4f52147392c7721cd439acf96dea2`|项目内原创定义产物|项目内定义的资源路径、模型、数据、双语或元数据；不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
+|`mod/src/main/resources/pack.mcmeta`|`288be2d56b11e12a28e02657e0ac3324b3e86c86ab1549ad3b190bf19d8a9104`|项目内原创定义产物|项目内定义的资源路径、模型、数据、双语或元数据；不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
 
 ## 维护规则
 
