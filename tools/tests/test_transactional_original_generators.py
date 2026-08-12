@@ -9,6 +9,10 @@ from tools import generate_original_models as 模型
 
 
 class 安全命令行测试(unittest.TestCase):
+    def test_模型权威JSON固定使用LF换行(self):
+        for relative in 模型.TARGETS:
+            self.assertNotIn(b"\r\n", 模型.render(relative), relative)
+
     def test_无参数只显示帮助且不写(self):
         for 模块 in (模型, 元数据):
             with self.subTest(模块=模块.__name__), tempfile.TemporaryDirectory() as 临时目录:

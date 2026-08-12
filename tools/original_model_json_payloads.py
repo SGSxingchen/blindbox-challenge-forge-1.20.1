@@ -106,4 +106,4 @@ AUTHORITATIVE_JSON_PAYLOADS = {
 
 def decode_authoritative_json(relative: str) -> bytes:
     """Decode embedded JSON bytes without reading workspace resources."""
-    return zlib.decompress(base64.b64decode(AUTHORITATIVE_JSON_PAYLOADS[relative], validate=True))
+    return zlib.decompress(base64.b64decode(AUTHORITATIVE_JSON_PAYLOADS[relative], validate=True)).replace(b'\r\n', b'\n')

@@ -10,7 +10,7 @@ class 权威模型确定性生成测试(unittest.TestCase):
     def test_权威载荷集合恰为当前旧生成器漂移集合(self):
         漂移 = {
             relative for relative in 被测模块.TARGETS
-            if (被测模块.RESOURCE_ROOT / relative).read_bytes() != 被测模块.render_template(relative)
+            if (被测模块.RESOURCE_ROOT / relative).read_bytes().replace(b"\r\n", b"\n") != 被测模块.render_template(relative)
         }
         self.assertEqual(95, len(漂移))
         self.assertEqual(漂移, set(被测模块.AUTHORITATIVE_JSON_PAYLOADS))
@@ -21,7 +21,7 @@ class 权威模型确定性生成测试(unittest.TestCase):
             被测模块.write_authoritative_json(临时根)
             for relative in 被测模块.AUTHORITATIVE_JSON_PAYLOADS:
                 self.assertEqual(
-                    (被测模块.RESOURCE_ROOT / relative).read_bytes(),
+                    (被测模块.RESOURCE_ROOT / relative).read_bytes().replace(b"\r\n", b"\n"),
                     (临时根 / relative).read_bytes(),
                     relative,
                 )

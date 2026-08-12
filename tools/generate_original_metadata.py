@@ -268,7 +268,7 @@ def main(argv=None, *, resource_root: Path = RESOURCE_ROOT) -> int:
         parser.print_help()
         return 0
     if args.check:
-        drift = [relative for relative in TARGETS if not (resource_root / relative).is_file() or (resource_root / relative).read_bytes() != render(relative)]
+        drift = [relative for relative in TARGETS if not (resource_root / relative).is_file() or (resource_root / relative).read_bytes().replace(b"\r\n", b"\n") != render(relative)]
         if drift:
             raise SystemExit("原创元数据与生成器不一致：" + ", ".join(drift))
         return 0
