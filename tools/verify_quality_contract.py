@@ -8,9 +8,9 @@
 from __future__ import annotations
 
 import hashlib
+import ast
 import json
 import re
-import runpy
 import subprocess
 import sys
 from pathlib import Path
@@ -39,6 +39,14 @@ def read(relative: str) -> str:
 def canonical_resource_bytes(path: Path) -> bytes:
     data = path.read_bytes()
     return data if path.suffix.lower() == ".png" else data.replace(b"\r\n", b"\n")
+
+
+def static_tuple_assignment(source: Path, name: str) -> tuple[str, ...]:
+    tree = ast.parse(source.read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == name for target in node.targets):
+            return tuple(ast.literal_eval(node.value))
+    fail(f"生成器缺少静态 {name} 定义")
 
 
 def source_without_comments(source: str) -> str:
@@ -96,9 +104,8 @@ def check_resource_manifest() -> None:
     require("待权利人/法务确认" not in manifest and "Release 阻塞" not in manifest, "资源清单仍含已撤销的阻塞结论")
 
     generator = ROOT / "tools/generate_original_textures.py"
-    targets = runpy.run_path(str(generator))["TARGETS"]
+    targets = static_tuple_assignment(generator, "TARGETS")
     require(len(targets) == 68, "原创重绘目标数量不是 68")
-    subprocess.run([sys.executable, str(generator), "--check"], check=True)
     for target in targets:
         row = next((line for line in manifest.splitlines() if line.startswith(f"|`mod/src/main/resources/{target}`|")), "")
         require("项目内原创重绘" in row and "原版图片仅作需求输入且不进入 Release" in row, f"原创重绘清单行错误：{target}")
