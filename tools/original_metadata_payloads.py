@@ -1,6 +1,7 @@
 """Deterministic payloads for authoritative metadata files."""
 
 import base64
+import json
 import zlib
 
 AUTHORITATIVE_METADATA_PAYLOADS = {
@@ -12,4 +13,9 @@ AUTHORITATIVE_METADATA_PAYLOADS = {
 
 
 def decode_authoritative_metadata(relative: str) -> bytes:
-    return zlib.decompress(base64.b64decode(AUTHORITATIVE_METADATA_PAYLOADS[relative], validate=True)).replace(b'\r\n', b'\n')
+    data = zlib.decompress(base64.b64decode(AUTHORITATIVE_METADATA_PAYLOADS[relative], validate=True)).replace(b'\r\n', b'\n')
+    if relative.endswith("/lang/zh_cn.json") or relative.endswith("/lang/en_us.json"):
+        values = json.loads(data)
+        values["itemGroup.blindboxchallenge"] = "盲盒挑战" if relative.endswith("zh_cn.json") else "Blind Box Challenge"
+        return (json.dumps(dict(sorted(values.items())), ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    return data
