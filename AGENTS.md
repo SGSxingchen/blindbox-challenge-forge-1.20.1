@@ -27,7 +27,9 @@ P1 的盲盒、打包、全局奖池、事务隔离与调试命令，P2 的 50 �
 * [正式资源审计清单](docs/ASSET_MANIFEST.md)
 * [P5 可审计原创资源替换记录](docs/ORIGINAL_ASSET_REPLACEMENT.md)
 * [59 张物品贴图原创重绘交付记录](docs/ITEM_TEXTURE_REDRAW.md)
+* [59 张物品贴图原创重绘交付记录](docs/ITEM_TEXTURE_REDRAW.md)
 * [P5 中性原创装饰方块与发布准备实施记录](docs/P5_IMPLEMENTATION.md)
 * [P5 中性原创装饰方块与发布准备验收矩阵](docs/P5_ACCEPTANCE.md)
+* [v1.0.1 创造模式物品栏补丁记录](docs/V1_0_1_CREATIVE_TAB.md)
 
 后续新增或变更功能时，必须同步更新对应文档与本索引；所有代码、提交信息和工程文档使用中文。

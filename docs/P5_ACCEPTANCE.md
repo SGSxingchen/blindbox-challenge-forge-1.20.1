@@ -1,6 +1,8 @@
 # P5 中性原创装饰方块与发布准备验收矩阵
 
-> 阶段工单：[Issue #5](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/5)。所有 Forge/Minecraft 动态结论只以 GitHub Hosted Runner 为准；正式 `1.0.0` 版本提交仍须以自身 SHA 再跑六项门禁，之后才创建 Release。
+> 阶段工单：[Issue #5](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/5)。所有 Forge/Minecraft 动态结论只以 GitHub Hosted Runner 为准；`v1.0.0` 的同 SHA 六项门禁与发布件已归档，后续补丁仍必须以自身 SHA 重跑完整门禁。
+
+> `v1.0.0` 已发布后，创造模式入口遗漏由独立补丁工单 [#6](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/6) 处理。它复用本矩阵的真实单/双客户端与六项门禁，不降低 P5 的原版交互、缓存压力或隔离拓扑断言；验收设计见 [V1_0_1_CREATIVE_TAB.md](V1_0_1_CREATIVE_TAB.md)。
 
 |范围|必须真实验收|
 |---|---|

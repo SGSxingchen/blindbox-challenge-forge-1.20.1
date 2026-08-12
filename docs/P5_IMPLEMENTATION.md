@@ -1,6 +1,8 @@
 # P5 中性原创装饰方块与发布准备实施记录
 
-> 阶段工单：[Issue #5](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/5)。P4 已归档；P5 范围收束后的独立拓扑已在 `e33a3fe` 取得真实同 SHA 六门禁。正式 `1.0.0` 版本仍须以自身 SHA 重跑完整门禁，随后完成发布。
+> 阶段工单：[Issue #5](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/5)。P4 已归档；P5 范围收束后的独立拓扑已在 `e33a3fe` 取得真实同 SHA 六门禁，并已作为 `v1.0.0` 发布基线归档。
+
+> `v1.0.0` 已发布后发现的创造栏遗漏转入独立补丁工单 [#6](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/issues/6)，不改变 P5 玩法、资源或独立客户端拓扑；补丁记录见 [V1_0_1_CREATIVE_TAB.md](V1_0_1_CREATIVE_TAB.md)。
 
 ## P5 技术完成状态
 

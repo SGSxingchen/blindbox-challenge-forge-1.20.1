@@ -46,7 +46,8 @@ def launch(template: Path, evidence: Path, mode: str, index: int, username: str,
     connected = evidence / f"client-{index}-connected.marker"
     decor_marker = evidence / (f"client-{index}-p5-decor-single-observed.marker" if mode == "single" else f"client-{index}-p5-decor-observed.marker")
     diagnostic = evidence / f"client-{index}-p5-decor-diagnostic.marker"
-    for marker in (connected, decor_marker, diagnostic):
+    creative_marker = evidence / f"client-{index}-creative-tab-observed.marker"
+    for marker in (connected, decor_marker, diagnostic, creative_marker):
         marker.unlink(missing_ok=True)
     arguments = [
         "-Xms768M", "-Xmx2G", "-Dblindbox.ci.multiplayerSmoke=true",
@@ -56,7 +57,10 @@ def launch(template: Path, evidence: Path, mode: str, index: int, username: str,
         f"-Dblindbox.ci.p5DecorStageDir={evidence}", f"-Dblindbox.ci.p5DecorRole={username}",
     ]
     if mode == "single":
-        arguments.append("-Dblindbox.ci.p5DecorSingle=true")
+        # P5 单端开始前由同一真实联机客户端短暂验证创造模式标签页；成功 marker 只能由客户端 GUI 写入。
+        arguments.extend(("-Dblindbox.ci.p5DecorSingle=true",
+                          f"-Dblindbox.ci.creativeTabMarker={creative_marker}",
+                          f"-Dblindbox.ci.creativeTabStageDir={evidence}"))
     else:
         audio_base = os.environ.get("BLINDBOX_CITEST_P5_AUDIO_BASE_URL")
         if not audio_base:
@@ -100,7 +104,7 @@ def main():
     evidence.mkdir(parents=True, exist_ok=True)
     release = evidence / "release-clients.marker"
     release.unlink(missing_ok=True)
-    for flag in [evidence / "p5-decor-enabled.flag", *[evidence / f"p5-decor-{stage}-{index}.flag" for stage in ("place", "break") for index in (1, 2, 3)],
+    for flag in [evidence / "creative-tab-enabled.flag", evidence / "p5-decor-enabled.flag", *[evidence / f"p5-decor-{stage}-{index}.flag" for stage in ("place", "break") for index in (1, 2, 3)],
                  evidence / "p5-music-cache-enabled.flag", evidence / "p5-music-cache-eviction-reload.flag",
                  evidence / "p5-music-cache-singleflight.flag", evidence / "p5-music-cache-corrupt-retry.flag",
                  evidence / "p5-music-cache-diagnostic-request.flag", *[evidence / f"p5-music-cache-fill-{index}.flag" for index in range(1, 6)]]:

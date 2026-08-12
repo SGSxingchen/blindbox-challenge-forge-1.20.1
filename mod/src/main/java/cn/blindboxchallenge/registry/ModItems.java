@@ -43,6 +43,7 @@ import net.minecraft.world.item.Tiers;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+import java.util.stream.Stream;
 
 public final class ModItems {
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, BlindBoxChallenge.MOD_ID);
@@ -145,6 +146,14 @@ public final class ModItems {
 
     private static Item food(int nutrition, float saturation) {
         return new Item(new Item.Properties().food(new FoodProperties.Builder().nutrition(nutrition).saturationMod(saturation).build()));
+    }
+
+    /**
+     * 创造模式条目的唯一来源。DeferredRegister 保留本类注册顺序，故新增普通物品会自动进入
+     * 标签页；实体、方块实体、菜单和墙面附属方块从不属于 ITEMS，自然不会伪造展示条目。
+     */
+    public static Stream<RegistryObject<Item>> playerCreativeEntries() {
+        return ITEMS.getEntries().stream();
     }
 
     private ModItems() {}

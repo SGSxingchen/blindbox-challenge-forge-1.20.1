@@ -5,6 +5,7 @@ import cn.blindboxchallenge.registry.ModBlocks;
 import cn.blindboxchallenge.registry.ModMenus;
 import cn.blindboxchallenge.registry.ModEntities;
 import cn.blindboxchallenge.registry.ModBlockEntities;
+import cn.blindboxchallenge.registry.ModCreativeModeTabs;
 import cn.blindboxchallenge.network.ModNetwork;
 import cn.blindboxchallenge.config.ModServerConfig;
 import net.minecraftforge.fml.common.Mod;
@@ -21,6 +22,7 @@ public final class BlindBoxChallenge {
         var bus = FMLJavaModLoadingContext.get().getModEventBus();
         ModBlocks.BLOCKS.register(bus);
         ModItems.ITEMS.register(bus);
+        ModCreativeModeTabs.CREATIVE_MODE_TABS.register(bus);
         ModMenus.MENUS.register(bus);
         ModEntities.ENTITIES.register(bus);
         ModBlockEntities.BLOCK_ENTITIES.register(bus);

@@ -89,6 +89,35 @@ python scripts/ci/run-p5-decor-clients.py "${CLIENT_TEMPLATE}" "${EVIDENCE}" "${
 wait_file "${EVIDENCE}/client-1-connected.marker" 600
 if [ "${MODE}" = dual ]; then wait_file "${EVIDENCE}/client-2-connected.marker" 600; fi
 
+validate_creative_tab_marker() {
+  local marker="$1"
+  grep -qx 'schema=1' "${marker}"
+  grep -Eq '^observer_uuid=[0-9a-f-]{36}$' "${marker}"
+  grep -qx 'creative_ability=true' "${marker}"
+  grep -qx 'screen=CreativeModeInventoryScreen' "${marker}"
+  grep -qx 'tab=blindboxchallenge:blind_box_challenge' "${marker}"
+  grep -qx 'expected_count=67' "${marker}"
+  grep -qx 'tab_count=67' "${marker}"
+  grep -qx 'screen_count=67' "${marker}"
+  grep -qx 'duplicates=false' "${marker}"
+  grep -qx 'order_matches=true' "${marker}"
+  grep -qx 'first=blindboxchallenge:blind_box' "${marker}"
+  grep -qx 'middle=blindboxchallenge:paper_cup' "${marker}"
+  grep -qx 'last=blindboxchallenge:shark_dagger_pillow' "${marker}"
+  test "$(wc -l < "${marker}")" -eq 13
+}
+
+if [ "${MODE}" = single ]; then
+  CREATIVE_TAB_MARKER="${EVIDENCE}/client-1-creative-tab-observed.marker"
+  # 阶段旗标不是成功结果：客户端仍须先收到专服创造能力同步、打开原版 GUI、点击本模组标签并原子写 marker。
+  printf 'gamemode creative BlindBoxAlice\n' >&3
+  touch "${EVIDENCE}/creative-tab-enabled.flag"
+  wait_file "${CREATIVE_TAB_MARKER}" 120
+  validate_creative_tab_marker "${CREATIVE_TAB_MARKER}"
+  printf 'gamemode survival BlindBoxAlice\n' >&3
+  rm -f "${EVIDENCE}/creative-tab-enabled.flag"
+fi
+
 if [ "${MODE}" = single ]; then
   START='BLINDBOX_CITEST_P5_DECOR_SINGLE_STARTED=success'
   VERIFIED='BLINDBOX_CITEST_P5_DECOR_SINGLE_CLIENT=success'
