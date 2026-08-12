@@ -13,6 +13,13 @@ import hashlib
 import json
 from pathlib import Path
 
+try:
+    from .original_model_json_payloads import AUTHORITATIVE_JSON_PAYLOADS, decode_authoritative_json
+    from .transactional_resource_writer import transactional_write
+except ImportError:  # 兼容直接执行脚本
+    from original_model_json_payloads import AUTHORITATIVE_JSON_PAYLOADS, decode_authoritative_json
+    from transactional_resource_writer import transactional_write
+
 
 ROOT = Path(__file__).resolve().parents[1]
 RESOURCE_ROOT = ROOT / "mod/src/main/resources"
@@ -157,7 +164,7 @@ def loot(identifier: str) -> dict[str, object]:
     }
 
 
-def render(relative: str) -> bytes:
+def render_template(relative: str) -> bytes:
     path = Path(relative)
     if "/models/block/" in f"/{relative}":
         value = block_model(path.stem)
@@ -170,6 +177,37 @@ def render(relative: str) -> bytes:
     else:
         raise ValueError(f"未知原创模型目标：{relative}")
     return (json.dumps(value, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+
+
+def render(relative: str) -> bytes:
+    if relative in AUTHORITATIVE_JSON_PAYLOADS:
+        return decode_authoritative_json(relative)
+    return render_template(relative)
+
+
+def write_authoritative_json(resource_root: Path) -> None:
+    transactional_write(
+        resource_root,
+        AUTHORITATIVE_JSON_PAYLOADS,
+        decode_authoritative_json,
+        validate_generated_json,
+    )
+
+
+def validate_generated_json(relative: str, data: bytes) -> None:
+    try:
+        json.loads(data.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError(f"生成 JSON 无效：{relative}：{error}") from error
+
+
+def write_all(resource_root: Path, *, renderer=render, replacer=None, restorer=None) -> None:
+    options = {}
+    if replacer is not None:
+        options["replacer"] = replacer
+    if restorer is not None:
+        options["restorer"] = restorer
+    transactional_write(resource_root, TARGETS, renderer, validate_generated_json, **options)
 
 
 def update_manifest() -> None:
@@ -196,25 +234,26 @@ def update_manifest() -> None:
     MANIFEST.write_text("\n".join(rows) + "\n", encoding="utf-8")
 
 
-def main() -> int:
+def main(argv=None, *, resource_root: Path = RESOURCE_ROOT) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--check", action="store_true", help="只比较目标 JSON 是否和生成结果完全一致")
+    operations = parser.add_mutually_exclusive_group()
+    operations.add_argument("--check", action="store_true", help="只比较目标 JSON 是否和生成结果完全一致")
+    operations.add_argument("--write-all", action="store_true", help="以事务方式重建全部目标 JSON")
     parser.add_argument("--update-manifest", action="store_true", help="重算并更新本工具拥有的资源清单行")
-    args = parser.parse_args()
-    if args.check and args.update_manifest:
-        raise SystemExit("--check 不修改文件，不能和 --update-manifest 同时使用")
-    drift = []
+    args = parser.parse_args(argv)
+    if args.update_manifest and not args.write_all:
+        parser.error("--update-manifest 只能与 --write-all 一起使用")
+    if not args.check and not args.write_all:
+        parser.print_help()
+        return 0
+    if args.check:
+        drift = [relative for relative in TARGETS if not (resource_root / relative).is_file() or (resource_root / relative).read_bytes().replace(b"\r\n", b"\n") != render(relative)]
+        if drift:
+            raise SystemExit("原创模型与生成器不一致：" + ", ".join(drift))
+        return 0
+    write_all(resource_root)
     for relative in TARGETS:
-        target = RESOURCE_ROOT / relative
-        expected = render(relative)
-        if args.check:
-            if not target.is_file() or target.read_bytes() != expected:
-                drift.append(relative)
-            continue
-        target.write_bytes(expected)
-        print(target.relative_to(ROOT))
-    if drift:
-        raise SystemExit("原创模型与生成器不一致：" + ", ".join(drift))
+        print(resource_root / relative)
     if args.update_manifest:
         update_manifest()
     return 0

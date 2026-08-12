@@ -13,3 +13,6 @@ __pycache__/
 /source-package/
 /contact-sheet.jpg
 /archive-manifest.json
+
+# Codex 隔离开发工作树，仅保留本地执行环境。
+/.worktrees/

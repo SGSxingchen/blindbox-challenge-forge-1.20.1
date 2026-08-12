@@ -11,7 +11,15 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import tomllib
 from pathlib import Path
+
+try:
+    from .original_metadata_payloads import AUTHORITATIVE_METADATA_PAYLOADS, decode_authoritative_metadata
+    from .transactional_resource_writer import transactional_write
+except ImportError:  # 兼容直接执行脚本
+    from original_metadata_payloads import AUTHORITATIVE_METADATA_PAYLOADS, decode_authoritative_metadata
+    from transactional_resource_writer import transactional_write
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -139,7 +147,7 @@ side="BOTH"
 """.encode("utf-8")
 
 
-def render(relative: str) -> bytes:
+def render_template(relative: str) -> bytes:
     if relative.endswith("zh_cn.json"):
         return language("zh")
     if relative.endswith("en_us.json"):
@@ -149,6 +157,85 @@ def render(relative: str) -> bytes:
     if relative == "pack.mcmeta":
         return (json.dumps({"pack": {"pack_format": 15, "description": "盲盒挑战生存资源"}}, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     raise ValueError(relative)
+
+
+def render(relative: str) -> bytes:
+    if relative in AUTHORITATIVE_METADATA_PAYLOADS:
+        return decode_authoritative_metadata(relative)
+    return render_template(relative)
+
+
+def write_authoritative_metadata(resource_root: Path) -> None:
+    transactional_write(
+        resource_root,
+        AUTHORITATIVE_METADATA_PAYLOADS,
+        decode_authoritative_metadata,
+        validate_generated_metadata,
+    )
+
+
+def validate_generated_metadata(relative: str, data: bytes) -> None:
+    try:
+        text = data.decode("utf-8")
+        if relative.endswith("/lang/zh_cn.json") or relative.endswith("/lang/en_us.json"):
+            value = json.loads(text)
+            if not isinstance(value, dict):
+                raise ValueError("语言文件根必须是对象")
+            if not value or not all(isinstance(key, str) and key and isinstance(item, str) and item for key, item in value.items()):
+                raise ValueError("语言文件的键值必须全是非空字符串")
+            expected = json.loads(decode_authoritative_metadata(relative))
+            if set(value) != set(expected):
+                raise ValueError("语言键与权威期望不一致")
+        elif relative == "pack.mcmeta":
+            value = json.loads(text)
+            pack = value.get("pack") if isinstance(value, dict) else None
+            if not isinstance(pack, dict):
+                raise ValueError("pack.mcmeta 缺少 pack 对象")
+            if type(pack.get("pack_format")) is not int or pack["pack_format"] <= 0 or not isinstance(pack.get("description"), str) or not pack["description"]:
+                raise ValueError("pack.mcmeta 的 pack_format 或 description 类型错误")
+        elif relative.endswith(".json"):
+            json.loads(text)
+        elif relative == "META-INF/mods.toml":
+            # Forge 允许 Gradle 在 TOML 表名中展开 ${mod_id}；标准 TOML 解析器
+            # 不认识该模板键，因此仅为语法校验替换这一个已知占位位置。
+            value = tomllib.loads(text.replace("dependencies.${mod_id}", "dependencies.__forge_mod_id__"))
+            for key in ("modLoader", "loaderVersion", "license"):
+                if not isinstance(value.get(key), str) or not value[key]:
+                    raise ValueError(f"mods.toml 的 {key} 必须是非空字符串")
+            mods = value.get("mods")
+            if not isinstance(mods, list) or not mods:
+                raise ValueError("mods.toml 缺少非空 mods 列表")
+            for mod in mods:
+                if not isinstance(mod, dict) or not all(isinstance(mod.get(key), str) and mod[key] for key in ("modId", "version", "displayName")):
+                    raise ValueError("mods.toml 的模组必要字段类型错误")
+            if not any(mod["modId"] in {"${mod_id}", "blindboxchallenge"} for mod in mods):
+                raise ValueError("mods.toml 缺少 blindboxchallenge 模组定义")
+            dependency_groups = value.get("dependencies")
+            if not isinstance(dependency_groups, dict):
+                raise ValueError("mods.toml 的 dependencies 必须是对象")
+            dependencies = dependency_groups.get("__forge_mod_id__")
+            if not isinstance(dependencies, list):
+                raise ValueError("mods.toml 缺少模组依赖列表")
+            actual_dependencies = set()
+            for dependency in dependencies:
+                if not isinstance(dependency, dict) or not isinstance(dependency.get("modId"), str) or not dependency["modId"]:
+                    raise ValueError("mods.toml 的依赖必要字段类型错误")
+                if type(dependency.get("mandatory")) is not bool or not all(isinstance(dependency.get(key), str) and dependency[key] for key in ("versionRange", "ordering", "side")):
+                    raise ValueError("mods.toml 的依赖属性类型错误或为空")
+                actual_dependencies.add(dependency["modId"])
+            if not {"forge", "minecraft"}.issubset(actual_dependencies):
+                raise ValueError("mods.toml 缺少 Forge 或 Minecraft 依赖")
+    except (UnicodeDecodeError, json.JSONDecodeError, tomllib.TOMLDecodeError, ValueError) as error:
+        raise ValueError(f"生成元数据无效：{relative}：{error}") from None
+
+
+def write_all(resource_root: Path, *, renderer=render, replacer=None, restorer=None) -> None:
+    options = {}
+    if replacer is not None:
+        options["replacer"] = replacer
+    if restorer is not None:
+        options["restorer"] = restorer
+    transactional_write(resource_root, TARGETS, renderer, validate_generated_metadata, **options)
 
 
 def update_manifest() -> None:
@@ -170,24 +257,26 @@ def update_manifest() -> None:
     MANIFEST.write_text("\n".join(rows) + "\n", encoding="utf-8")
 
 
-def main() -> int:
+def main(argv=None, *, resource_root: Path = RESOURCE_ROOT) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--check", action="store_true")
+    operations = parser.add_mutually_exclusive_group()
+    operations.add_argument("--check", action="store_true")
+    operations.add_argument("--write-all", action="store_true")
     parser.add_argument("--update-manifest", action="store_true")
-    args = parser.parse_args()
-    if args.check and args.update_manifest:
-        raise SystemExit("--check 不修改文件，不能和 --update-manifest 同时使用")
-    drift = []
+    args = parser.parse_args(argv)
+    if args.update_manifest and not args.write_all:
+        parser.error("--update-manifest 只能与 --write-all 一起使用")
+    if not args.check and not args.write_all:
+        parser.print_help()
+        return 0
+    if args.check:
+        drift = [relative for relative in TARGETS if not (resource_root / relative).is_file() or (resource_root / relative).read_bytes().replace(b"\r\n", b"\n") != render(relative)]
+        if drift:
+            raise SystemExit("原创元数据与生成器不一致：" + ", ".join(drift))
+        return 0
+    write_all(resource_root)
     for relative in TARGETS:
-        target, expected = RESOURCE_ROOT / relative, render(relative)
-        if args.check:
-            if not target.is_file() or target.read_bytes() != expected:
-                drift.append(relative)
-        else:
-            target.write_bytes(expected)
-            print(target.relative_to(ROOT))
-    if drift:
-        raise SystemExit("原创元数据与生成器不一致：" + ", ".join(drift))
+        print(resource_root / relative)
     if args.update_manifest:
         update_manifest()
     return 0

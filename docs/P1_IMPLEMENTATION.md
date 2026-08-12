@@ -7,7 +7,7 @@
 * 工程：`mod/`，Minecraft Forge `1.20.1-47.4.22`，Java 17。
 * 稳定模组 ID：`blindboxchallenge`。
 * P1 注册：`blind_box`、`packing_tool`、`packing_menu`。资源路径均为小写。
-* 原创占位资源：16×16 `blind_box.png`、`packing_tool.png`，不使用任何参考照片。
+* 正式原创重绘资源：16×16 `blind_box.png`、`packing_tool.png` 已纳入 59 张物品贴图逐项重绘与确定性生成器闭合，不使用任何参考照片。
 
 ## 服务端流程
 

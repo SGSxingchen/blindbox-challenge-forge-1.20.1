@@ -1,0 +1,1185 @@
+[
+  {
+    "id": "adrenaline",
+    "texture": "assets/blindboxchallenge/textures/item/adrenaline.png",
+    "reference_status": "catalog_reference",
+    "subject": "盐酸肾上腺素注射器",
+    "must_show": "一支斜放的透明短针筒，内有红色药液，清楚显示针头、活塞和药筒",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "深红",
+      "透明灰",
+      "银白"
+    ]
+  },
+  {
+    "id": "bath_bucket",
+    "texture": "assets/blindboxchallenge/textures/item/bath_bucket.png",
+    "reference_status": "catalog_reference",
+    "subject": "泡澡桶",
+    "must_show": "一个圆形木质泡澡桶，清楚显示木板桶壁、两道箍带和提手",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "暖棕",
+      "深棕",
+      "铁灰"
+    ]
+  },
+  {
+    "id": "beef_bites",
+    "texture": "assets/blindboxchallenge/textures/item/beef_bites.png",
+    "reference_status": "catalog_reference",
+    "subject": "牛肉粒",
+    "must_show": "三块散放的烤牛肉粒，清楚显示焦褐边缘和红棕肉芯",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "红棕",
+      "焦褐",
+      "米白"
+    ]
+  },
+  {
+    "id": "birthday_candle",
+    "texture": "assets/blindboxchallenge/textures/item/birthday_candle.png",
+    "reference_status": "catalog_reference",
+    "subject": "生日蜡烛",
+    "must_show": "一根点燃的短生日蜡烛，清楚显示彩色蜡杆、灯芯和火焰",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "奶黄",
+      "橙红",
+      "天蓝"
+    ]
+  },
+  {
+    "id": "black_knight_telescopic_knife",
+    "texture": "assets/blindboxchallenge/textures/item/black_knight_telescopic_knife.png",
+    "reference_status": "catalog_reference",
+    "subject": "收缩的黑武士伸缩刀",
+    "must_show": "完全收缩状态的黑色刀柄与短护手，不露出刀刃",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "煤黑",
+      "暗灰",
+      "冷银"
+    ]
+  },
+  {
+    "id": "black_knight_telescopic_knife_extended",
+    "texture": "assets/blindboxchallenge/textures/item/black_knight_telescopic_knife_extended.png",
+    "reference_status": "catalog_reference",
+    "subject": "伸出的黑武士伸缩刀",
+    "must_show": "展开状态的黑色长刀，清楚显示细长银刃、黑色刀柄和护手",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "煤黑",
+      "冷银",
+      "暗红"
+    ]
+  },
+  {
+    "id": "black_truffle_ham_cracker",
+    "texture": "assets/blindboxchallenge/textures/item/black_truffle_ham_cracker.png",
+    "reference_status": "free_design",
+    "subject": "黑松露火腿苏打饼干",
+    "must_show": "一块方形苏打饼干，上方清楚放置火腿片和黑松露碎",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "麦黄",
+      "肉粉",
+      "深褐"
+    ]
+  },
+  {
+    "id": "blind_box",
+    "texture": "assets/blindboxchallenge/textures/item/blind_box.png",
+    "reference_status": "free_design",
+    "subject": "盲盒",
+    "must_show": "一个无标识的方形神秘盒，清楚显示盒盖接缝和抽象问号形色块",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "靛蓝",
+      "紫罗兰",
+      "金黄"
+    ]
+  },
+  {
+    "id": "cat_doll",
+    "texture": "assets/blindboxchallenge/textures/item/cat_doll.png",
+    "reference_status": "catalog_reference",
+    "subject": "猫玩偶",
+    "must_show": "一只原创布艺猫玩偶，清楚显示三角耳、纽扣眼、短尾和缝线",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "奶白",
+      "橘黄",
+      "深棕"
+    ]
+  },
+  {
+    "id": "chainsaw_sword",
+    "texture": "assets/blindboxchallenge/textures/item/chainsaw_sword.png",
+    "reference_status": "catalog_reference",
+    "subject": "原创链锯剑",
+    "must_show": "一把原创重型链锯长剑，清楚显示宽刃、锯齿链条和机械握柄，不采用任何现有IP徽记",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "铁灰",
+      "暗红",
+      "黄铜"
+    ]
+  },
+  {
+    "id": "clockwork_chicken",
+    "texture": "assets/blindboxchallenge/textures/item/clockwork_chicken.png",
+    "reference_status": "catalog_reference",
+    "subject": "发条小黄鸡玩偶",
+    "must_show": "一只原创黄色发条小鸡，清楚显示圆身体、橙色喙、双脚和背部发条钥匙",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "明黄",
+      "橙色",
+      "黄铜"
+    ]
+  },
+  {
+    "id": "death_note",
+    "texture": "assets/blindboxchallenge/textures/item/death_note.png",
+    "reference_status": "catalog_reference",
+    "subject": "死亡笔记",
+    "must_show": "一本闭合的黑色旧笔记本，封面仅有不可读的暗灰抽象符号和磨损书脊",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "墨黑",
+      "暗灰",
+      "旧纸黄"
+    ]
+  },
+  {
+    "id": "decision_coin",
+    "texture": "assets/blindboxchallenge/textures/item/decision_coin.png",
+    "reference_status": "catalog_reference",
+    "subject": "决策币",
+    "must_show": "一枚立起的双色硬币，清楚显示厚边、正反分界和不可读的抽象几何刻纹",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "金黄",
+      "银灰",
+      "深褐"
+    ]
+  },
+  {
+    "id": "deep_sea_fish",
+    "texture": "assets/blindboxchallenge/textures/item/deep_sea_fish.png",
+    "reference_status": "catalog_reference",
+    "subject": "深海小鱼",
+    "must_show": "一条完整的小型深海鱼，清楚显示深蓝鱼身、鱼鳍、尾鳍和亮点眼睛",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "深海蓝",
+      "青蓝",
+      "银白"
+    ]
+  },
+  {
+    "id": "efficient_pig_breeding",
+    "texture": "assets/blindboxchallenge/textures/item/efficient_pig_breeding.png",
+    "reference_status": "catalog_reference",
+    "subject": "养猪技术书",
+    "must_show": "一本绿色硬皮技术书，清楚显示书脊、书页和封面不可读的猪鼻几何符号",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "草绿",
+      "深绿",
+      "米白"
+    ]
+  },
+  {
+    "id": "eggy_eye_mask",
+    "texture": "assets/blindboxchallenge/textures/item/eggy_eye_mask.png",
+    "reference_status": "catalog_reference",
+    "subject": "原创圆蛋眼罩",
+    "must_show": "一个原创圆润造型睡眠眼罩，清楚显示弧形罩面、两侧绑带和两枚抽象椭圆斑点，不复刻角色脸",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "柠檬黄",
+      "白色",
+      "深灰"
+    ]
+  },
+  {
+    "id": "face_mask",
+    "texture": "assets/blindboxchallenge/textures/item/face_mask.png",
+    "reference_status": "catalog_reference",
+    "subject": "口罩",
+    "must_show": "一个折叠式医用口罩，清楚显示浅色罩面、三道褶皱和两侧耳带",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "浅蓝",
+      "白色",
+      "灰蓝"
+    ]
+  },
+  {
+    "id": "fairy_wand",
+    "texture": "assets/blindboxchallenge/textures/item/fairy_wand.png",
+    "reference_status": "catalog_reference",
+    "subject": "仙女棒",
+    "must_show": "一根原创星形魔法棒，清楚显示五角星顶饰、细长握杆和两条短飘带",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "粉红",
+      "金黄",
+      "淡紫"
+    ]
+  },
+  {
+    "id": "flowing_black_flag",
+    "texture": "assets/blindboxchallenge/textures/item/flowing_black_flag.png",
+    "reference_status": "catalog_reference",
+    "subject": "流动黑旗",
+    "must_show": "一面飘动的纯黑布旗，清楚显示旗杆、波浪布边和不可读的暗灰抽象纹样",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "墨黑",
+      "炭灰",
+      "冷银"
+    ]
+  },
+  {
+    "id": "green_soy_milk",
+    "texture": "assets/blindboxchallenge/textures/item/green_soy_milk.png",
+    "reference_status": "catalog_reference",
+    "subject": "绿豆浆",
+    "must_show": "一杯无标识的淡绿色豆浆，清楚显示杯沿、液面、短吸管和一颗绿豆装饰",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "豆绿",
+      "奶白",
+      "深绿"
+    ]
+  },
+  {
+    "id": "ham_sausage",
+    "texture": "assets/blindboxchallenge/textures/item/ham_sausage.png",
+    "reference_status": "catalog_reference",
+    "subject": "火腿肠",
+    "must_show": "一根剥开一小段外皮的火腿肠，清楚显示圆柱肉体、切口和扭结端",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "肉粉",
+      "红棕",
+      "米白"
+    ]
+  },
+  {
+    "id": "headphones",
+    "texture": "assets/blindboxchallenge/textures/item/headphones.png",
+    "reference_status": "catalog_reference",
+    "subject": "头戴式耳机",
+    "must_show": "一副对称头戴耳机，清楚显示弧形头梁、左右耳罩和软垫",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "炭黑",
+      "靛蓝",
+      "银灰"
+    ]
+  },
+  {
+    "id": "kazoo",
+    "texture": "assets/blindboxchallenge/textures/item/kazoo.png",
+    "reference_status": "catalog_reference",
+    "subject": "卡祖笛",
+    "must_show": "一支横放的金属卡祖笛，清楚显示短管、喇叭口和顶部振膜帽",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "黄铜",
+      "金黄",
+      "深褐"
+    ]
+  },
+  {
+    "id": "letter",
+    "texture": "assets/blindboxchallenge/textures/item/letter.png",
+    "reference_status": "free_design",
+    "subject": "信件",
+    "must_show": "一封封口的素色信件，清楚显示折叠信封、三角封舌和无字蜡封",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "羊皮纸色",
+      "暗红",
+      "棕色"
+    ]
+  },
+  {
+    "id": "lighter",
+    "texture": "assets/blindboxchallenge/textures/item/lighter.png",
+    "reference_status": "catalog_reference",
+    "subject": "打火机",
+    "must_show": "一个点燃的金属翻盖打火机，清楚显示机身、开盖、打火轮和小火焰",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "铁灰",
+      "银白",
+      "橙黄"
+    ]
+  },
+  {
+    "id": "long_screwdriver",
+    "texture": "assets/blindboxchallenge/textures/item/long_screwdriver.png",
+    "reference_status": "catalog_reference",
+    "subject": "一米长螺丝刀",
+    "must_show": "一把夸张修长的平口螺丝刀，清楚显示红色握柄、超长金属杆和扁平刀头",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "鲜红",
+      "冷银",
+      "深灰"
+    ]
+  },
+  {
+    "id": "magic_crispy_noodles",
+    "texture": "assets/blindboxchallenge/textures/item/magic_crispy_noodles.png",
+    "reference_status": "catalog_reference",
+    "subject": "干脆面",
+    "must_show": "一小撮散开的香脆卷曲面条，清楚显示面饼碎块和调味颗粒",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "麦黄",
+      "橙褐",
+      "奶白"
+    ]
+  },
+  {
+    "id": "math_exam_paper",
+    "texture": "assets/blindboxchallenge/textures/item/math_exam_paper.png",
+    "reference_status": "catalog_reference",
+    "subject": "数学模拟卷",
+    "must_show": "一张折角的白色试卷，清楚显示纸张轮廓、不可读的算式线条和几何图形",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "纸白",
+      "石墨灰",
+      "浅蓝"
+    ]
+  },
+  {
+    "id": "million_pound_note",
+    "texture": "assets/blindboxchallenge/textures/item/million_pound_note.png",
+    "reference_status": "catalog_reference",
+    "subject": "巨额纸币收藏品",
+    "must_show": "一张横向旧式纸币，清楚显示纸张边框、水印状留白和不可读的抽象花纹，不含肖像",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "墨绿",
+      "米白",
+      "浅金"
+    ]
+  },
+  {
+    "id": "nail_art",
+    "texture": "assets/blindboxchallenge/textures/item/nail_art.png",
+    "reference_status": "catalog_reference",
+    "subject": "美甲",
+    "must_show": "五枚扇形排列的原创装饰甲片，清楚显示不同色块、亮点和细小几何纹",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "玫红",
+      "淡紫",
+      "青绿"
+    ]
+  },
+  {
+    "id": "oil_chestnut",
+    "texture": "assets/blindboxchallenge/textures/item/oil_chestnut.png",
+    "reference_status": "catalog_reference",
+    "subject": "油板栗",
+    "must_show": "三颗油亮的熟板栗，清楚显示棕色硬壳、开口和金黄果肉",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "栗棕",
+      "金黄",
+      "深褐"
+    ]
+  },
+  {
+    "id": "packing_tool",
+    "texture": "assets/blindboxchallenge/textures/item/packing_tool.png",
+    "reference_status": "free_design",
+    "subject": "打包工具",
+    "must_show": "一把无标识的手持封箱器，清楚显示握柄、胶带卷和切割边",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "橙色",
+      "铁灰",
+      "牛皮纸色"
+    ]
+  },
+  {
+    "id": "paper_cup",
+    "texture": "assets/blindboxchallenge/textures/item/paper_cup.png",
+    "reference_status": "catalog_reference",
+    "subject": "纸杯",
+    "must_show": "一个素色一次性纸杯，清楚显示杯口、锥形杯身和少量清水液面",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "纸白",
+      "浅蓝",
+      "灰色"
+    ]
+  },
+  {
+    "id": "pickaxe_hoe",
+    "texture": "assets/blindboxchallenge/textures/item/pickaxe_hoe.png",
+    "reference_status": "catalog_reference",
+    "subject": "镐锄一体工具",
+    "must_show": "一把铁质双头长柄工具，清楚显示一侧镐尖、另一侧锄刃和木柄",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "铁灰",
+      "银白",
+      "木棕"
+    ]
+  },
+  {
+    "id": "pink_butterfly_wings",
+    "texture": "assets/blindboxchallenge/textures/item/pink_butterfly_wings.png",
+    "reference_status": "catalog_reference",
+    "subject": "粉色蝴蝶翅膀",
+    "must_show": "一对对称的原创粉色蝴蝶翼，清楚显示上下翼片、深色脉络和中央连接带",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "桃粉",
+      "淡粉",
+      "紫红"
+    ]
+  },
+  {
+    "id": "potato_chips",
+    "texture": "assets/blindboxchallenge/textures/item/potato_chips.png",
+    "reference_status": "free_design",
+    "subject": "薯片",
+    "must_show": "三片弯曲的金黄薯片，清楚显示薄片轮廓、烘烤斑点和盐粒",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "金黄",
+      "浅黄",
+      "焦褐"
+    ]
+  },
+  {
+    "id": "potato_snack",
+    "texture": "assets/blindboxchallenge/textures/item/potato_snack.png",
+    "reference_status": "catalog_reference",
+    "subject": "土豆零食",
+    "must_show": "几根粗切烤土豆条，清楚显示金黄表面、棕色脆边和少量香料点",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "金黄",
+      "焦棕",
+      "红椒色"
+    ]
+  },
+  {
+    "id": "purple_toy_pickaxe_sword_pickaxe",
+    "texture": "assets/blindboxchallenge/textures/item/purple_toy_pickaxe_sword_pickaxe.png",
+    "reference_status": "catalog_reference",
+    "subject": "紫色玩具镐形态",
+    "must_show": "一把紫色塑料玩具镐，清楚显示双侧镐头、短柄和模具接缝",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "亮紫",
+      "淡紫",
+      "深灰"
+    ]
+  },
+  {
+    "id": "purple_toy_pickaxe_sword_sword",
+    "texture": "assets/blindboxchallenge/textures/item/purple_toy_pickaxe_sword_sword.png",
+    "reference_status": "catalog_reference",
+    "subject": "紫色玩具剑形态",
+    "must_show": "同系列紫色塑料玩具剑，清楚显示短剑刃、护手、握柄和模具接缝",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "亮紫",
+      "淡紫",
+      "深灰"
+    ]
+  },
+  {
+    "id": "quail_egg",
+    "texture": "assets/blindboxchallenge/textures/item/quail_egg.png",
+    "reference_status": "catalog_reference",
+    "subject": "鹌鹑蛋",
+    "must_show": "三枚小鹌鹑蛋，清楚显示奶白蛋壳和不规则棕色斑点",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "奶白",
+      "棕褐",
+      "浅灰"
+    ]
+  },
+  {
+    "id": "rainbow_hoop",
+    "texture": "assets/blindboxchallenge/textures/item/rainbow_hoop.png",
+    "reference_status": "catalog_reference",
+    "subject": "彩虹圈",
+    "must_show": "一只斜放的弹性彩虹圆环，清楚显示完整圆环和连续多色分段",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "红",
+      "橙",
+      "黄",
+      "绿",
+      "蓝",
+      "紫"
+    ]
+  },
+  {
+    "id": "rat_jerky_totem",
+    "texture": "assets/blindboxchallenge/textures/item/rat_jerky_totem.png",
+    "reference_status": "catalog_reference",
+    "subject": "原创鼠形肉干护符",
+    "must_show": "一枚原创风干小鼠轮廓护符，清楚显示肉干质感、细尾和系绳，不复刻任何角色",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "棕褐",
+      "暗红",
+      "麻绳色"
+    ]
+  },
+  {
+    "id": "ration_pack",
+    "texture": "assets/blindboxchallenge/textures/item/ration_pack.png",
+    "reference_status": "catalog_reference",
+    "subject": "军粮",
+    "must_show": "一块拆开的压缩军粮，清楚显示方形谷物块、断面颗粒和素色包布一角",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "卡其",
+      "麦黄",
+      "深棕"
+    ]
+  },
+  {
+    "id": "returning_scissors",
+    "texture": "assets/blindboxchallenge/textures/item/returning_scissors.png",
+    "reference_status": "catalog_reference",
+    "subject": "返航剪刀",
+    "must_show": "一把原创投掷剪刀，清楚显示交叉双刃、圆形握环和双色金属刃",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "冷银",
+      "青蓝",
+      "深灰"
+    ]
+  },
+  {
+    "id": "road_barrier_helmet",
+    "texture": "assets/blindboxchallenge/textures/item/road_barrier_helmet.png",
+    "reference_status": "catalog_reference",
+    "subject": "路障头盔",
+    "must_show": "一个倒扣作头盔的迷你交通锥，清楚显示锥体、白色反光条和方形底座",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "橙色",
+      "白色",
+      "深灰"
+    ]
+  },
+  {
+    "id": "safety_exit_sign_shield",
+    "texture": "assets/blindboxchallenge/textures/item/safety_exit_sign_shield.png",
+    "reference_status": "catalog_reference",
+    "subject": "安全出口盾牌",
+    "must_show": "一面绿色矩形标牌盾，清楚显示金属包边、背带轮廓和不可读的白色方向几何符号",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "安全绿",
+      "白色",
+      "铁灰"
+    ]
+  },
+  {
+    "id": "sesame_rice_noodles",
+    "texture": "assets/blindboxchallenge/textures/item/sesame_rice_noodles.png",
+    "reference_status": "catalog_reference",
+    "subject": "麻酱米线",
+    "must_show": "一碗麻酱米线，清楚显示浅色米线、棕色芝麻酱、青菜和碗沿",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "芝麻棕",
+      "米白",
+      "菜绿"
+    ]
+  },
+  {
+    "id": "shark_dagger_pillow",
+    "texture": "assets/blindboxchallenge/textures/item/shark_dagger_pillow.png",
+    "reference_status": "catalog_reference",
+    "subject": "鲨匕抱枕",
+    "must_show": "一个原创鲨鱼轮廓的软布匕首抱枕，清楚显示尖吻、背鳍、布刃和缝线，不复刻角色",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "鲨蓝",
+      "浅灰",
+      "白色"
+    ]
+  },
+  {
+    "id": "sun_candy",
+    "texture": "assets/blindboxchallenge/textures/item/sun_candy.png",
+    "reference_status": "catalog_reference",
+    "subject": "太阳糖",
+    "must_show": "一颗原创太阳形硬糖，清楚显示圆形糖心、放射尖角和半透明高光",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "金黄",
+      "橙色",
+      "亮黄"
+    ]
+  },
+  {
+    "id": "sweet_sour_turkey_noodles",
+    "texture": "assets/blindboxchallenge/textures/item/sweet_sour_turkey_noodles.png",
+    "reference_status": "catalog_reference",
+    "subject": "糖醋火鸡面",
+    "must_show": "一碗红亮酱汁拌面，清楚显示卷曲面条、火鸡肉片和葱花",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "酱红",
+      "麦黄",
+      "葱绿"
+    ]
+  },
+  {
+    "id": "toy_car",
+    "texture": "assets/blindboxchallenge/textures/item/toy_car.png",
+    "reference_status": "catalog_reference",
+    "subject": "风火轮玩具车",
+    "must_show": "一辆原创小比例竞速玩具车，清楚显示低矮车身、四轮和亮色条纹，不使用品牌造型",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "火焰红",
+      "橙黄",
+      "炭黑"
+    ]
+  },
+  {
+    "id": "toy_knife",
+    "texture": "assets/blindboxchallenge/textures/item/toy_knife.png",
+    "reference_status": "catalog_reference",
+    "subject": "玩具小刀",
+    "must_show": "一把钝头塑料玩具小刀，清楚显示短刃、厚护手和塑料握柄",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "浅灰",
+      "橙色",
+      "深蓝"
+    ]
+  },
+  {
+    "id": "truffle_ham_cracker",
+    "texture": "assets/blindboxchallenge/textures/item/truffle_ham_cracker.png",
+    "reference_status": "catalog_reference",
+    "subject": "黑松露火腿饼干",
+    "must_show": "两块叠放的苏打饼干，清楚显示饼干孔、火腿薄片和黑松露碎",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "麦黄",
+      "肉粉",
+      "黑褐"
+    ]
+  },
+  {
+    "id": "vodka",
+    "texture": "assets/blindboxchallenge/textures/item/vodka.png",
+    "reference_status": "catalog_reference",
+    "subject": "伏特加",
+    "must_show": "一只无标识透明玻璃小瓶，清楚显示瓶塞、清澈液体和冰蓝反光",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "透明白",
+      "冰蓝",
+      "银灰"
+    ]
+  },
+  {
+    "id": "wang_lixin_badge",
+    "texture": "assets/blindboxchallenge/textures/item/wang_lixin_badge.png",
+    "reference_status": "catalog_reference",
+    "subject": "原创纪念徽章",
+    "must_show": "一枚圆形珐琅纪念徽章，清楚显示金属边、别针侧影和不可读抽象几何图案，不含人物肖像",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "金黄",
+      "深蓝",
+      "珐琅红"
+    ]
+  },
+  {
+    "id": "wenxu_standee",
+    "texture": "assets/blindboxchallenge/textures/item/wenxu_standee.png",
+    "reference_status": "catalog_reference",
+    "subject": "原创守护立牌",
+    "must_show": "一个原创抽象人形吉祥物亚克力立牌，清楚显示简化头身轮廓、透明底座，不复刻人物或角色",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "青蓝",
+      "奶白",
+      "透明灰"
+    ]
+  },
+  {
+    "id": "white_rabbit_candy",
+    "texture": "assets/blindboxchallenge/textures/item/white_rabbit_candy.png",
+    "reference_status": "catalog_reference",
+    "subject": "奶糖",
+    "must_show": "一颗打开两端糖纸的白色奶糖，清楚显示乳白糖块和扭结素色糖纸",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "乳白",
+      "浅蓝",
+      "淡粉"
+    ]
+  },
+  {
+    "id": "wind_blown_cake",
+    "texture": "assets/blindboxchallenge/textures/item/wind_blown_cake.png",
+    "reference_status": "catalog_reference",
+    "subject": "风吹饼",
+    "must_show": "两片薄脆圆饼，清楚显示起泡表面、焦斑和破碎缺口",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "麦黄",
+      "焦褐",
+      "奶白"
+    ]
+  },
+  {
+    "id": "yijin_manual",
+    "texture": "assets/blindboxchallenge/textures/item/yijin_manual.png",
+    "reference_status": "catalog_reference",
+    "subject": "武学经书",
+    "must_show": "一本线装古书，清楚显示蓝灰封皮、线装书脊和不可读的抽象墨迹符号",
+    "avoid": [
+      "广告背景",
+      "包装",
+      "品牌",
+      "文字",
+      "水印",
+      "人物手持"
+    ],
+    "palette": [
+      "蓝灰",
+      "旧纸黄",
+      "墨黑"
+    ]
+  }
+]
