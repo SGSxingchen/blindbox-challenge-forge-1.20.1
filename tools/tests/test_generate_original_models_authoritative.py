@@ -7,13 +7,13 @@ from tools import generate_original_models as 被测模块
 
 
 class 权威模型确定性生成测试(unittest.TestCase):
-    def test_权威载荷集合恰为当前旧生成器漂移集合(self):
+    def test_权威载荷全部等于规范模板(self):
         漂移 = {
             relative for relative in 被测模块.TARGETS
             if (被测模块.RESOURCE_ROOT / relative).read_bytes().replace(b"\r\n", b"\n") != 被测模块.render_template(relative)
         }
-        self.assertEqual(95, len(漂移))
-        self.assertEqual(漂移, set(被测模块.AUTHORITATIVE_JSON_PAYLOADS))
+        self.assertEqual(set(), 漂移)
+        self.assertEqual(set(被测模块.TARGETS), set(被测模块.AUTHORITATIVE_JSON_PAYLOADS))
 
     def test_临时重建九十五项与正式文件逐字节一致(self):
         with tempfile.TemporaryDirectory() as 临时目录:
