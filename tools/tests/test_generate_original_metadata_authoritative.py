@@ -7,16 +7,12 @@ from tools import generate_original_metadata as 被测模块
 
 
 class 权威元数据确定性生成测试(unittest.TestCase):
-    def test_仅双语和mods_toml保留与中性模板不同的权威载荷(self):
+    def test_四项权威载荷均与规范模板一致(self):
         漂移 = {
             relative for relative in 被测模块.TARGETS
             if (被测模块.RESOURCE_ROOT / relative).read_bytes() != 被测模块.render_template(relative)
         }
-        self.assertEqual({
-            "assets/blindboxchallenge/lang/zh_cn.json",
-            "assets/blindboxchallenge/lang/en_us.json",
-            "META-INF/mods.toml",
-        }, 漂移)
+        self.assertEqual(set(), 漂移)
         self.assertEqual(set(被测模块.TARGETS), set(被测模块.AUTHORITATIVE_METADATA_PAYLOADS))
 
     def test_临时重建四项与正式文件逐字节一致(self):

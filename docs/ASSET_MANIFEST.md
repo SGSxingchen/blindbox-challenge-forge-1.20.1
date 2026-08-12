@@ -13,7 +13,7 @@
 
 |路径|SHA-256|作者/来源|参考与中性边界|许可证/署名状态|审核日期|
 |---|---|---|---|---|---|
-|`mod/src/main/resources/META-INF/mods.toml`|`9de91807d72c8a8ef7a5349aac1dd9510656627233d120355c576ed6b5058487`|项目内原创定义产物|项目内定义的资源路径、模型、数据、双语或元数据；不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
+|`mod/src/main/resources/META-INF/mods.toml`|`560b60084e526e4b10e9636c000c1b1eb25b36f0ab634d8ade2cd5c0f0a4c3ae`|项目内原创定义产物|项目内定义的资源路径、模型、数据、双语或元数据；不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
 |`mod/src/main/resources/assets/blindboxchallenge/blockstates/abstract_white_figurine.json`|`9c99da0e434f0df35fdbbd0d02e9d116495637290f5a189cf7e0f04f8c326756`|项目内原创定义产物|项目内定义的资源路径、模型、数据、双语或元数据；不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
 |`mod/src/main/resources/assets/blindboxchallenge/blockstates/anywhere_door.json`|`b8b21f243cbfe1f3c4064b23335da531c8ff2006717a7be3bbb453c064500245`|项目内原创定义产物|项目内定义的模型、数据或双语；与原创纹理引用闭合，不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
 |`mod/src/main/resources/assets/blindboxchallenge/blockstates/bml_cheer_stick.json`|`c664db3863a3d9d76b85b2c1ea951f54dd99393d4aede6385c5578e5b85b0ee5`|项目内原创定义产物|项目内定义的模型、数据或双语；与原创纹理引用闭合，不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
@@ -26,8 +26,8 @@
 |`mod/src/main/resources/assets/blindboxchallenge/blockstates/neutral_trophy.json`|`654b7ea91068fe35aa3df126c6a4e0110c6f377fe350d9abaa6fba47af68a6a4`|项目内原创定义产物|项目内定义的资源路径、模型、数据、双语或元数据；不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
 |`mod/src/main/resources/assets/blindboxchallenge/blockstates/safety_landing.json`|`7fbd978c12eb593fb45bdc9756bba6381bfa47ce9cc4301839da0e4fc34c29b7`|项目内原创定义产物|项目内定义的模型、数据或双语；与原创纹理引用闭合，不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
 |`mod/src/main/resources/assets/blindboxchallenge/blockstates/stone_pillow.json`|`45e8ba45508f207d57e1008e4cd6a1752831f5cd3fc9af06feddd926737c7e3d`|项目内原创定义产物|项目内定义的模型、数据或双语；与原创纹理引用闭合，不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
-|`mod/src/main/resources/assets/blindboxchallenge/lang/en_us.json`|`c87b1f5eee269d37f8fad93c236b86fe2ed06cda3ba00b67027b117f5da97437`|项目内原创定义产物|项目内定义的模型、数据或双语；与原创纹理引用闭合，不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
-|`mod/src/main/resources/assets/blindboxchallenge/lang/zh_cn.json`|`aee841bb814e16a88eb1f8652da461c6516e57004b9bea9784360b793797f12c`|项目内原创定义产物|项目内定义的模型、数据或双语；与原创纹理引用闭合，不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
+|`mod/src/main/resources/assets/blindboxchallenge/lang/en_us.json`|`e7abfec879c00122711293160b91b680ad5c71ce1e3b85d3cc0861350dc8b4d4`|项目内原创定义产物|项目内定义的模型、数据或双语；与原创纹理引用闭合，不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
+|`mod/src/main/resources/assets/blindboxchallenge/lang/zh_cn.json`|`6365c789a2402fb6b437885e868d94ccca39d531fb3a2bbff18dc98e5ecef515`|项目内原创定义产物|项目内定义的模型、数据或双语；与原创纹理引用闭合，不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
 |`mod/src/main/resources/assets/blindboxchallenge/models/block/abstract_white_figurine.json`|`205cf66af6d438ce34dc4031dbd45b21959282ede3f63b2c28672da9fae8dc4d`|项目内原创定义产物|项目内定义的资源路径、模型、数据、双语或元数据；不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
 |`mod/src/main/resources/assets/blindboxchallenge/models/block/anywhere_door.json`|`6662c57a23014b4b0e510a498fe9bd8d5e6dc6a2a305010ac90e0d517deef678`|项目内原创定义产物|项目内定义的模型、数据或双语；与原创纹理引用闭合，不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|
 |`mod/src/main/resources/assets/blindboxchallenge/models/block/bml_cheer_stick_off.json`|`1086fa9855ad654ef4069e1a65a9f9583becbec35b13389b8df8ad37fb2ba895`|项目内原创定义产物|项目内定义的模型、数据或双语；与原创纹理引用闭合，不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-11|

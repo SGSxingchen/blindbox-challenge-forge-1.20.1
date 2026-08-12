@@ -151,11 +151,13 @@ class 元数据最低结构校验测试(unittest.TestCase):
             with self.subTest(value=value):
                 self.assert_invalid("pack.mcmeta", value)
 
-    def test_pack_mcmeta权威字节固定使用LF换行(self):
-        data = 元数据.render("pack.mcmeta")
-        self.assertNotIn(b"\r\n", data)
-        self.assertTrue(data.endswith(b"\n"))
-        self.assertEqual(data, 元数据.render_template("pack.mcmeta"))
+    def test_全部权威元数据字节固定使用LF换行(self):
+        for relative in 元数据.TARGETS:
+            data = 元数据.render(relative)
+            with self.subTest(relative=relative):
+                self.assertNotIn(b"\r\n", data)
+                self.assertTrue(data.endswith(b"\n"))
+        self.assertEqual(元数据.render("pack.mcmeta"), 元数据.render_template("pack.mcmeta"))
 
     def test_mods_toml必须有模组与依赖必要结构(self):
         invalid = (

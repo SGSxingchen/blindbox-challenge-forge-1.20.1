@@ -12,4 +12,4 @@ AUTHORITATIVE_METADATA_PAYLOADS = {
 
 
 def decode_authoritative_metadata(relative: str) -> bytes:
-    return zlib.decompress(base64.b64decode(AUTHORITATIVE_METADATA_PAYLOADS[relative], validate=True))
+    return zlib.decompress(base64.b64decode(AUTHORITATIVE_METADATA_PAYLOADS[relative], validate=True)).replace(b'\r\n', b'\n')
