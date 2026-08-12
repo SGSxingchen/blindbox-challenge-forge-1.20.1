@@ -36,6 +36,11 @@ def read(relative: str) -> str:
     return (MOD / relative).read_text(encoding="utf-8")
 
 
+def canonical_resource_bytes(path: Path) -> bytes:
+    data = path.read_bytes()
+    return data if path.suffix.lower() == ".png" else data.replace(b"\r\n", b"\n")
+
+
 def source_without_comments(source: str) -> str:
     source = re.sub(r"/\*.*?\*/", "", source, flags=re.DOTALL)
     return re.sub(r"//[^\n]*", "", source)
@@ -84,7 +89,7 @@ def check_resource_manifest() -> None:
     require(len(rows) == len(recorded) == len(actual), "资源清单存在重复、遗漏或数量不一致")
     require(set(recorded) == set(actual), "资源清单路径与正式资源不一致")
     for path, resource in actual.items():
-        require(recorded[path] == hashlib.sha256(resource.read_bytes()).hexdigest(), f"资源哈希不一致：{path}")
+        require(recorded[path] == hashlib.sha256(canonical_resource_bytes(resource)).hexdigest(), f"资源哈希不一致：{path}")
 
     require("项目内原创重绘" in manifest and "项目方提供" in manifest, "资源清单缺少来源边界")
     require("原版图片仅作需求输入且不进入 Release" in manifest, "资源清单缺少原版图片排除边界")
