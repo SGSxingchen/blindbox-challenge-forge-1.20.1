@@ -1,8 +1,7 @@
-# 盲盒挑战生存（Forge 1.20.1）
-
+﻿# 盲盒挑战生存（Forge 1.20.1）
 ## 版本与范围
 
-当前补丁版本为 **1.0.1**。P1—P5 已覆盖盲盒奖池、持久能力、抱枕/剪刀、信件、死亡笔记、任意门、安全落点、发条小黄鸡、木质手工八音盒、三个中性装饰方块，以及 64 MiB 八音盒缓存压力；`1.0.1` 额外修复了创造模式物品栏入口。动态验证只在 GitHub Hosted Runner 运行；创造栏补丁证据见 [v1.0.1 创造栏记录](docs/V1_0_1_CREATIVE_TAB.md)，完整变更见 [更新日志](CHANGELOG.md)。
+当前补丁版本为 **1.0.2**。P1—P5 已覆盖盲盒奖池、持久能力、抱枕/剪刀、信件、死亡笔记、任意门、安全落点、发条小黄鸡、木质手工八音盒、三个中性装饰方块，以及 64 MiB 八音盒缓存压力；`1.0.1` 额外修复了创造模式物品栏入口。动态验证只在 GitHub Hosted Runner 运行；创造栏补丁证据见 [v1.0.1 创造栏记录](docs/V1_0_1_CREATIVE_TAB.md)，完整变更见 [更新日志](CHANGELOG.md)。
 
 全部 182 项正式资源均为当前项目的原创重绘或定义产物：68 张 PNG 为可复现原创重绘，其余模型、方块状态、战利品、双语与元数据由项目内定义生成器闭合。原版图片只作需求输入，不读取、采样或混合，且不进入 Release。项目方提供素材与需求背景，许可本项目使用、修改与发行；该许可不外推给项目外第三方。逐文件记录见 [资源审计清单](docs/ASSET_MANIFEST.md)。
 
@@ -10,8 +9,8 @@
 
 运行环境：**Java 17、Minecraft 1.20.1、Forge 47.4.22**。
 
-1. 在 [Releases](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/releases) 下载同一版本的 `blindboxchallenge-1.0.1-all.jar` 与其 SHA-256 文件。
-2. 在下载目录执行 `sha256sum -c blindboxchallenge-1.0.1-all.jar.sha256`；结果必须为 `OK`。
+1. 在 [Releases](https://github.com/SGSxingchen/blindbox-challenge-forge-1.20.1/releases) 下载同一版本的 `blindboxchallenge-1.0.2-all.jar` 与其 SHA-256 文件。
+2. 在下载目录执行 `sha256sum -c blindboxchallenge-1.0.2-all.jar.sha256`；结果必须为 `OK`。
 3. 客户端将该 `-all.jar` 放进实例的 `mods/`；专用服务器将同一文件放进服务器的 `mods/`，再按 Forge 常规方式启动。
 4. **绝不能安装或分发 `*-citest.jar`**：它只含 GitHub Hosted Runner 的探针和音频夹具，不是游戏模组。
 
@@ -36,3 +35,4 @@
 * `docs/`：计划、实现、验收、资源审计与边界记录。
 * `source-package/`：原始需求/参考资料，只读保留，不得修改或删除。
 * `archive/`：原始压缩包备份。
+
