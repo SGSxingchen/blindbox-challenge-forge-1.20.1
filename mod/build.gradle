@@ -1,3 +1,13 @@
+buildscript {
+    repositories {
+        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT'
+    }
+}
+
 plugins {
     id 'eclipse'
     id 'idea'
@@ -11,6 +21,8 @@ group = mod_group_id
 base {
     archivesName = mod_id
 }
+
+apply plugin: 'org.spongepowered.mixin'
 
 // JLayer 仅由 client/audio 下的 MP3 解码器引用。保持独立 Jar-in-Jar，不重定位、不修改；
 // 随附 LGPL 文本和 NOTICE。
@@ -77,6 +89,8 @@ minecraft {
             // You can set various levels here.
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
             property 'forge.logging.console.level', 'debug'
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
 
             mods {
                 "${mod_id}" {
@@ -142,6 +156,10 @@ tasks.named('processCiTestResources', ProcessResources).configure {
 }
 
 repositories {
+    maven {
+        name = 'GeckoLib'
+        url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+    }
     // Put repositories for dependencies here
     // ForgeGradle automatically adds the Forge maven and Maven Central for you
 
@@ -159,6 +177,7 @@ dependencies {
     // If the group id is "net.minecraft" and the artifact id is one of ["client", "server", "joined"],
     // then special handling is done to allow a setup of a vanilla dependency without the use of an external repository.
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    implementation fg.deobf("software.bernie.geckolib:geckolib-forge-1.20.1:${geckolib_version}")
     implementation 'javazoom:jlayer:1.0.1'
     // JarJar 只接受 Maven version range；单点范围锁死已审计的 1.0.1，不允许隐式升级。
     jarJar 'javazoom:jlayer:[1.0.1]'

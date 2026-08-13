@@ -26,9 +26,6 @@ RESOURCE_ROOT = ROOT / "mod/src/main/resources"
 MANIFEST = ROOT / "docs/ASSET_MANIFEST.md"
 MODEL_ROOT = RESOURCE_ROOT / "assets/blindboxchallenge/models"
 PROTECTED_MODELS = {
-    "assets/blindboxchallenge/models/block/abstract_white_figurine.json",
-    "assets/blindboxchallenge/models/block/floor_art_panel.json",
-    "assets/blindboxchallenge/models/block/neutral_trophy.json",
     "assets/blindboxchallenge/models/item/abstract_white_figurine.json",
     "assets/blindboxchallenge/models/item/floor_art_panel.json",
     "assets/blindboxchallenge/models/item/neutral_trophy.json",
@@ -86,33 +83,29 @@ def cuboid(from_: list[int], to: list[int], texture: str) -> dict[str, object]:
 
 
 def block_model(identifier: str) -> dict[str, object]:
+    imported = {
+        "abstract_white_figurine", "floor_art_panel", "neutral_trophy",
+        "anywhere_door", "diamond_pillow", "stone_pillow",
+        "bml_cheer_stick_off", "bml_cheer_stick_on",
+        "bml_cheer_stick_wall_off", "bml_cheer_stick_wall_on",
+    }
+    if identifier in imported:
+        relative = f"assets/blindboxchallenge/models/block/{identifier}.json"
+        return json.loads(decode_authoritative_json(relative).decode("utf-8"))
     texture = f"blindboxchallenge:block/{identifier}"
-    if identifier in {"bml_cheer_stick_off", "bml_cheer_stick_on", "glow_stick"}:
+    if identifier == "glow_stick":
         return {"parent": "minecraft:block/torch", "textures": {"torch": texture}}
-    if identifier in {"bml_cheer_stick_wall_off", "bml_cheer_stick_wall_on"}:
-        texture = f"blindboxchallenge:block/bml_cheer_stick_{identifier.rsplit('_', 1)[1]}"
-        return {"parent": "minecraft:block/wall_torch", "textures": {"torch": texture}}
     if identifier == "glow_stick_wall":
         texture = "blindboxchallenge:block/glow_stick"
         return {"parent": "minecraft:block/wall_torch", "textures": {"torch": texture}}
     if identifier in {"music_box", "safety_landing"}:
         return {"parent": "minecraft:block/cube_all", "textures": {"all": texture}}
-    if identifier == "anywhere_door":
-        return {
-            "ambientocclusion": False,
-            "textures": {"all": texture},
-            "elements": [cuboid([1, 0, 6], [15, 16, 10], "#all")],
-        }
-    if identifier in {"diamond_pillow", "stone_pillow"}:
-        return {
-            "ambientocclusion": False,
-            "textures": {"fabric": texture},
-            "elements": [cuboid([1, 0, 1], [15, 7, 15], "#fabric"), cuboid([2, 7, 2], [14, 8, 14], "#fabric")],
-        }
     raise ValueError(f"未知方块模型：{identifier}")
 
 
 def item_model(identifier: str) -> dict[str, object]:
+    if identifier in {"music_box", "road_barrier_helmet"}:
+        return {"parent": "builtin/entity"}
     if identifier in BLOCK_ITEM_MODELS:
         parent = "bml_cheer_stick_off" if identifier == "bml_cheer_stick" else identifier
         return {"parent": f"blindboxchallenge:block/{parent}"}

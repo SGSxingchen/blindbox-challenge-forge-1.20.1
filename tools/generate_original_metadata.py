@@ -144,6 +144,13 @@ mandatory=true
 versionRange="${minecraft_version_range}"
 ordering="NONE"
 side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="geckolib"
+mandatory=true
+versionRange="[4.8.4,5)"
+ordering="AFTER"
+side="BOTH"
 """.encode("utf-8")
 
 
@@ -160,6 +167,8 @@ def render_template(relative: str) -> bytes:
 
 
 def render(relative: str) -> bytes:
+    if relative == "META-INF/mods.toml":
+        return mods_toml()
     if relative in AUTHORITATIVE_METADATA_PAYLOADS:
         return decode_authoritative_metadata(relative)
     return render_template(relative)
@@ -223,8 +232,8 @@ def validate_generated_metadata(relative: str, data: bytes) -> None:
                 if type(dependency.get("mandatory")) is not bool or not all(isinstance(dependency.get(key), str) and dependency[key] for key in ("versionRange", "ordering", "side")):
                     raise ValueError("mods.toml 的依赖属性类型错误或为空")
                 actual_dependencies.add(dependency["modId"])
-            if not {"forge", "minecraft"}.issubset(actual_dependencies):
-                raise ValueError("mods.toml 缺少 Forge 或 Minecraft 依赖")
+            if not {"forge", "minecraft", "geckolib"}.issubset(actual_dependencies):
+                raise ValueError("mods.toml 缺少 Forge、Minecraft 或 GeckoLib 依赖")
     except (UnicodeDecodeError, json.JSONDecodeError, tomllib.TOMLDecodeError, ValueError) as error:
         raise ValueError(f"生成元数据无效：{relative}：{error}") from None
 
