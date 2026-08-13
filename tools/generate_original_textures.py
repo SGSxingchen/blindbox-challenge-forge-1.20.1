@@ -18,9 +18,9 @@ from pathlib import Path
 from PIL import Image
 
 try:
-    from .original_item_pixel_payloads import BLOCK_PNG_PAYLOADS, ITEM_PIXEL_PAYLOADS, decode_block_png, decode_rgba
+    from .original_item_pixel_payloads import BLOCK_PNG_PAYLOADS, ITEM_PIXEL_PAYLOADS, ITEM_PNG_PAYLOADS, decode_block_png, decode_item_png, decode_rgba
 except ImportError:  # 兼容直接执行 tools/generate_original_textures.py
-    from original_item_pixel_payloads import BLOCK_PNG_PAYLOADS, ITEM_PIXEL_PAYLOADS, decode_block_png, decode_rgba
+    from original_item_pixel_payloads import BLOCK_PNG_PAYLOADS, ITEM_PIXEL_PAYLOADS, ITEM_PNG_PAYLOADS, decode_block_png, decode_item_png, decode_rgba
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -96,7 +96,7 @@ TARGETS = (
     "assets/blindboxchallenge/textures/item/yijin_manual.png",
     "assets/blindboxchallenge/textures/models/armor/road_barrier_layer_1.png",
 )
-ITEM_TARGETS = tuple(ITEM_PIXEL_PAYLOADS)
+ITEM_TARGETS = tuple(ITEM_PIXEL_PAYLOADS) + tuple(ITEM_PNG_PAYLOADS)
 
 
 def digest(name: str) -> bytes:
@@ -287,6 +287,8 @@ def render_block_payload(relative: str) -> bytes:
 
 
 def render_item(relative: str) -> bytes:
+    if relative in ITEM_PNG_PAYLOADS:
+        return decode_item_png(relative)
     """只从源码内嵌像素载荷重建正式物品 PNG。"""
     image = Image.frombytes("RGBA", (16, 16), decode_rgba(relative))
     output = io.BytesIO()

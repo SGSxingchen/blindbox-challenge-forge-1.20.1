@@ -33,7 +33,7 @@ TARGETS = (
 )
 
 ITEM_ZH = {
-    "blind_box": "惊喜盒", "packing_tool": "奖池封装器", "letter": "信纸", "death_note": "命运名册",
+    "blind_box": "惊喜盒", "packing_tool": "奖池封装器", "letter": "信纸", "death_note": "死亡笔记",
     "clockwork_chicken": "发条小鸡", "music_box": "木制八音盒", "anywhere_door": "联结门", "safety_landing": "安全基座",
     "black_knight_telescopic_knife": "伸缩训练刀", "purple_toy_pickaxe_sword": "紫晶玩具镐剑", "adrenaline": "活力药剂",
     "rat_jerky_totem": "守护护符", "long_screwdriver": "长柄螺丝刀", "pickaxe_hoe": "组合镐锄", "lighter": "点火器",
@@ -78,7 +78,7 @@ WALL_NAMES = {"zh": {"glow_stick_wall": "墙面冷光棒", "bml_cheer_stick_wall
 SYSTEM = {
     "zh": {
         "itemGroup.blindboxchallenge": "盲盒挑战",
-        "menu.blindboxchallenge.packing": "奖池封装", "menu.blindboxchallenge.letter_edit": "编辑信纸", "menu.blindboxchallenge.death_note": "命运名册", "menu.blindboxchallenge.music_box": "八音盒在线音频",
+        "menu.blindboxchallenge.packing": "奖池封装", "menu.blindboxchallenge.letter_edit": "编辑信纸", "menu.blindboxchallenge.death_note": "死亡笔记", "menu.blindboxchallenge.music_box": "八音盒在线音频",
         "screen.blindboxchallenge.selection": "槽位:数量", "screen.blindboxchallenge.pack": "封装并生成惊喜盒", "screen.blindboxchallenge.help": "输入背包槽位:数量，例如 0:5、12:1", "screen.blindboxchallenge.invalid_selection": "请输入有效且不重复的槽位:数量。",
         "screen.blindboxchallenge.letter_read": "信纸", "screen.blindboxchallenge.letter_line": "第 %s 行", "screen.blindboxchallenge.letter_hint": "正文由服务器保存；最多 %s 个码点、%s 行。", "screen.blindboxchallenge.letter_too_long": "输入超过客户端安全上限。",
         "screen.blindboxchallenge.save": "保存", "screen.blindboxchallenge.music_box_url": "HTTPS 音频地址", "screen.blindboxchallenge.music_box_hint": "只接受公开 HTTPS 的 OGG 或 MP3；仅当前在线玩家接收一次播放。", "screen.blindboxchallenge.music_box_invalid_url": "请输入以 https:// 开头的地址", "screen.blindboxchallenge.close": "关闭",
@@ -144,6 +144,13 @@ mandatory=true
 versionRange="${minecraft_version_range}"
 ordering="NONE"
 side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="geckolib"
+mandatory=true
+versionRange="[4.8.4,5)"
+ordering="AFTER"
+side="BOTH"
 """.encode("utf-8")
 
 
@@ -160,6 +167,8 @@ def render_template(relative: str) -> bytes:
 
 
 def render(relative: str) -> bytes:
+    if relative == "META-INF/mods.toml":
+        return mods_toml()
     if relative in AUTHORITATIVE_METADATA_PAYLOADS:
         return decode_authoritative_metadata(relative)
     return render_template(relative)
@@ -223,8 +232,8 @@ def validate_generated_metadata(relative: str, data: bytes) -> None:
                 if type(dependency.get("mandatory")) is not bool or not all(isinstance(dependency.get(key), str) and dependency[key] for key in ("versionRange", "ordering", "side")):
                     raise ValueError("mods.toml 的依赖属性类型错误或为空")
                 actual_dependencies.add(dependency["modId"])
-            if not {"forge", "minecraft"}.issubset(actual_dependencies):
-                raise ValueError("mods.toml 缺少 Forge 或 Minecraft 依赖")
+            if not {"forge", "minecraft", "geckolib"}.issubset(actual_dependencies):
+                raise ValueError("mods.toml 缺少 Forge、Minecraft 或 GeckoLib 依赖")
     except (UnicodeDecodeError, json.JSONDecodeError, tomllib.TOMLDecodeError, ValueError) as error:
         raise ValueError(f"生成元数据无效：{relative}：{error}") from None
 

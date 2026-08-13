@@ -35,5 +35,5 @@ public final class MusicBoxBlock extends BaseEntityBlock {
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) { return new MusicBoxBlockEntity(pos, state); }
 
     @Override
-    public RenderShape getRenderShape(BlockState state) { return RenderShape.MODEL; }
+    public RenderShape getRenderShape(BlockState state) { return RenderShape.INVISIBLE; }
 }

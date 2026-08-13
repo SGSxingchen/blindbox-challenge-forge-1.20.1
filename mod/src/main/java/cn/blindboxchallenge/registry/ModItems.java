@@ -30,6 +30,7 @@ import cn.blindboxchallenge.item.ReturningScissorsItem;
 import cn.blindboxchallenge.item.LetterItem;
 import cn.blindboxchallenge.item.DeathNoteItem;
 import cn.blindboxchallenge.item.ClockworkChickenItem;
+import cn.blindboxchallenge.item.MusicBoxBlockItem;
 import cn.blindboxchallenge.entity.PillowVariant;
 import net.minecraft.core.Direction;
 import net.minecraft.world.food.FoodProperties;
@@ -77,7 +78,7 @@ public final class ModItems {
     public static final RegistryObject<Item> SAFETY_LANDING = ITEMS.register("safety_landing",
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.SAFETY_LANDING.get(), new Item.Properties()));
     public static final RegistryObject<Item> MUSIC_BOX = ITEMS.register("music_box",
-            () -> new net.minecraft.world.item.BlockItem(ModBlocks.MUSIC_BOX.get(), new Item.Properties().stacksTo(1)));
+            () -> new MusicBoxBlockItem(ModBlocks.MUSIC_BOX.get(), new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> ABSTRACT_WHITE_FIGURINE = ITEMS.register("abstract_white_figurine",
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.ABSTRACT_WHITE_FIGURINE.get(), new Item.Properties()));
     public static final RegistryObject<Item> FLOOR_ART_PANEL = ITEMS.register("floor_art_panel",

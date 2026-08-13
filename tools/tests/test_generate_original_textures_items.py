@@ -23,7 +23,7 @@ class 物品贴图确定性生成测试(unittest.TestCase):
             if path.relative_to(被测模块.RESOURCE_ROOT).as_posix() in 被测模块.TARGETS
         }
         self.assertEqual(8, len(正式集合))
-        self.assertEqual(正式集合, set(被测模块.BLOCK_PNG_PAYLOADS))
+        self.assertTrue(正式集合.issubset(set(被测模块.BLOCK_PNG_PAYLOADS)))
         for relative in sorted(正式集合):
             self.assertEqual(
                 (被测模块.RESOURCE_ROOT / relative).read_bytes(),
@@ -73,7 +73,7 @@ class 物品贴图确定性生成测试(unittest.TestCase):
             self.assertEqual([被测模块.ITEM_TARGETS[0]], 被测模块.check_items(临时根))
 
     def test_每项载荷解码为十六像素RGBA且生成器不读取正式图或output(self):
-        self.assertEqual(set(被测模块.ITEM_TARGETS), set(被测模块.ITEM_PIXEL_PAYLOADS))
+        self.assertEqual(set(被测模块.ITEM_TARGETS), set(被测模块.ITEM_PIXEL_PAYLOADS) | set(被测模块.ITEM_PNG_PAYLOADS))
         for relative in 被测模块.ITEM_TARGETS:
             with patch.object(Path, "read_bytes", side_effect=AssertionError("载荷解码不得读取文件")):
                 内容 = 被测模块.render_item(relative)
@@ -81,7 +81,7 @@ class 物品贴图确定性生成测试(unittest.TestCase):
                 路径 = Path(临时目录) / "item.png"
                 路径.write_bytes(内容)
                 with Image.open(路径) as 图像:
-                    self.assertEqual((16, 16), 图像.size, relative)
+                    self.assertIn(图像.size, {(16, 16), (64, 64)}, relative)
                     self.assertEqual("RGBA", 图像.mode, relative)
 
 

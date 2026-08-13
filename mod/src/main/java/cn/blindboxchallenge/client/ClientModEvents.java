@@ -6,6 +6,7 @@ import cn.blindboxchallenge.item.PurpleToyPickaxeSwordItem;
 import cn.blindboxchallenge.registry.ModItems;
 import cn.blindboxchallenge.registry.ModMenus;
 import cn.blindboxchallenge.registry.ModEntities;
+import cn.blindboxchallenge.registry.ModBlockEntities;
 import cn.blindboxchallenge.client.MusicBoxScreen;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.item.ItemProperties;
@@ -27,6 +28,7 @@ public final class ClientModEvents {
 
     @SubscribeEvent
     public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerBlockEntityRenderer(ModBlockEntities.MUSIC_BOX.get(), MusicBoxRenderer::new);
         event.registerEntityRenderer(ModEntities.THROWN_PILLOW.get(), ThrownItemRenderer::new);
         event.registerEntityRenderer(ModEntities.PILLOW_SEAT.get(), PillowSeatRenderer::new);
         event.registerEntityRenderer(ModEntities.RETURNING_SCISSORS.get(), ThrownItemRenderer::new);

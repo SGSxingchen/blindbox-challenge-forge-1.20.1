@@ -54,7 +54,6 @@ public final class DeathNoteScreen extends AbstractContainerScreen<DeathNoteMenu
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
-        graphics.drawString(font, Component.translatable("screen.blindboxchallenge.death_note_hint"), leftPos + 12, topPos + 82, 0xE5C5D9, false);
         if (!error.equals(Component.empty())) graphics.drawString(font, error, leftPos + 12, topPos + 94, 0xFF7777, false);
         renderTooltip(graphics, mouseX, mouseY);
     }
