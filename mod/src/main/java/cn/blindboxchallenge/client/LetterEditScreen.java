@@ -67,8 +67,6 @@ public final class LetterEditScreen extends AbstractContainerScreen<LetterEditMe
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
-        graphics.drawString(font, Component.translatable("screen.blindboxchallenge.letter_hint", menu.maximumCodePoints(), menu.maximumLines()),
-                leftPos + 12, topPos + 210, 0x5C4730, false);
         if (!error.equals(Component.empty())) graphics.drawString(font, error, leftPos + 12, topPos + 248, 0xB22222, false);
         renderTooltip(graphics, mouseX, mouseY);
     }

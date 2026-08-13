@@ -108,7 +108,14 @@ def item_model(identifier: str) -> dict[str, object]:
         return {"parent": "builtin/entity"}
     if identifier in BLOCK_ITEM_MODELS:
         parent = "bml_cheer_stick_off" if identifier == "bml_cheer_stick" else identifier
-        return {"parent": f"blindboxchallenge:block/{parent}"}
+        result = {"parent": f"blindboxchallenge:block/{parent}"}
+        if identifier in {"stone_pillow", "diamond_pillow"}:
+            result["display"] = {
+                "firstperson_righthand": {"scale": [0.3, 0.3, 0.3]},
+                "firstperson_lefthand": {"scale": [0.3, 0.3, 0.3]},
+                "gui": {"rotation": [25, 135, 0], "scale": [0.5, 0.5, 0.5]},
+            }
+        return result
     texture = identifier
     if identifier == "purple_toy_pickaxe_sword":
         texture = "purple_toy_pickaxe_sword_pickaxe"
