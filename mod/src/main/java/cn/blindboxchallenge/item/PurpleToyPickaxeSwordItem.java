@@ -9,9 +9,9 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Tiers;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.ToolAction;
 import net.minecraftforge.common.ToolActions;
@@ -41,7 +41,7 @@ public final class PurpleToyPickaxeSwordItem extends Item {
     @Override
     public float getDestroySpeed(ItemStack stack, BlockState state) {
         if (isPickaxeForm(stack)) return state.is(BlockTags.MINEABLE_WITH_PICKAXE) ? Tiers.WOOD.getSpeed() : 1.0F;
-        return state.is(Blocks.COBWEB) ? 15.0F : 1.5F;
+        return Items.WOODEN_SWORD.getDestroySpeed(stack, state);
     }
 
     @Override
@@ -51,7 +51,8 @@ public final class PurpleToyPickaxeSwordItem extends Item {
 
     @Override
     public boolean isCorrectToolForDrops(ItemStack stack, BlockState state) {
-        return isPickaxeForm(stack) && isWoodPickaxeCorrectForDrops(state);
+        return isPickaxeForm(stack) ? isWoodPickaxeCorrectForDrops(state)
+                : Items.WOODEN_SWORD.isCorrectToolForDrops(stack, state);
     }
 
     @Override

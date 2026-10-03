@@ -30,14 +30,15 @@ public final class RemoteMusicSoundInstance extends AbstractSoundInstance {
         this.cacheHit = cacheHit;
         this.singleFlightFollower = singleFlightFollower;
         this.source = source.immutable();
-        x = source.getX() + 0.5D;
-        y = source.getY() + 0.5D;
-        z = source.getZ() + 0.5D;
+        // 八音盒向当时全服在线玩家播放；方块位置只作事件来源，不限制距离或维度。
+        x = 0.0D;
+        y = 0.0D;
+        z = 0.0D;
         volume = 1.0F;
         pitch = 1.0F;
         looping = false;
-        attenuation = Attenuation.LINEAR;
-        relative = false;
+        attenuation = Attenuation.NONE;
+        relative = true;
     }
 
     /** 下载、文件读取和 OGG/MP3 解码均在 AUDIO_EXECUTOR 完成；此后音频线程只消费 PCM 内存。 */

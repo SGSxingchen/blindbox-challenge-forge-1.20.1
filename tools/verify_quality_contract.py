@@ -112,7 +112,13 @@ def check_resource_manifest() -> None:
     require(len(targets) == 68, "原创重绘目标数量不是 68")
     for target in targets:
         row = next((line for line in manifest.splitlines() if line.startswith(f"|`mod/src/main/resources/{target}`|")), "")
-        require("项目内原创重绘" in row and "原版图片仅作需求输入且不进入 Release" in row, f"原创重绘清单行错误：{target}")
+        if target in {
+            "assets/blindboxchallenge/textures/item/wenxu_standee.png",
+            "assets/blindboxchallenge/textures/item/rat_jerky_totem.png",
+        }:
+            require(all(text in row for text in ("用户外观参考重绘", "用户提供", "重新绘制", "参考图不直接进入发行包")), f"用户参考重绘清单行错误：{target}")
+        else:
+            require("项目内原创重绘" in row and "原版图片仅作需求输入且不进入 Release" in row, f"原创重绘清单行错误：{target}")
 
 
 def check_original_resource_definitions() -> None:

@@ -10,6 +10,8 @@ import java.nio.file.Path;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.player.LocalPlayer;
@@ -19,6 +21,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * 仅 ciTest Jar 中的真实界面驱动器：它不直接发业务包，而是只在实际收到生产 Screen 后以鼠标和
@@ -31,6 +34,8 @@ public final class CiClientP4TextObservation {
     private static Phase phase = Phase.RIGHT_CLICK_LETTER;
     private static boolean readOnlyScreenObserved;
     private static boolean letterEditClicked;
+    private static boolean letterReadPaged;
+    private static boolean letterResizePreserved;
     private static boolean deathNoteClicked;
     private static boolean normalUseKeyInjected;
     private static boolean sneakUseKeyInjected;
@@ -62,6 +67,17 @@ public final class CiClientP4TextObservation {
             case WAIT_READ -> {
                 if (screen instanceof LetterReadScreen) {
                     readOnlyScreenObserved = true;
+                    Button nextPage = screen.children().stream().filter(child -> child instanceof Button)
+                            .map(child -> (Button) child).filter(button -> button.getMessage().getString().equals("→")).findFirst().orElseThrow();
+                    Button previousPage = screen.children().stream().filter(child -> child instanceof Button)
+                            .map(child -> (Button) child).filter(button -> button.getMessage().getString().equals("←")).findFirst().orElseThrow();
+                    if (!nextPage.active || previousPage.active) throw new IllegalStateException("长信件没有可用翻页控件");
+                    int scrollAttempts = 0;
+                    while (nextPage.active && scrollAttempts++ < 128) screen.mouseScrolled(screen.width / 2.0D, screen.height / 2.0D, -1);
+                    if (nextPage.active || !previousPage.active) throw new IllegalStateException("长信件滚轮无法到达末页");
+                    screen.mouseScrolled(screen.width / 2.0D, screen.height / 2.0D, 1);
+                    if (!nextPage.active) throw new IllegalStateException("长信件无法返回上一页");
+                    letterReadPaged = true;
                     // 点击生产“关闭”按钮，而不是直接切换 Screen，确保信纸界面真实可交互。
                     screen.mouseClicked(screen.width / 2.0D, screen.height - 28.0D, 0);
                     screen.mouseReleased(screen.width / 2.0D, screen.height - 28.0D, 0);
@@ -90,7 +106,17 @@ public final class CiClientP4TextObservation {
                     int left = (screen.width - 244) / 2;
                     int top = (screen.height - 270) / 2;
                     screen.mouseClicked(left + 20.0D, top + 29.0D, 0);
+                    screen.keyPressed(GLFW.GLFW_KEY_HOME, 0, 0);
+                    for (int index = 0; index < P4TextCiScenario.INITIAL_LETTER_BODY.length(); index++) screen.keyPressed(GLFW.GLFW_KEY_DELETE, 0, 0);
                     for (char character : P4TextCiScenario.LETTER_BODY.toCharArray()) screen.charTyped(character, 0);
+                    var draft = screen.children().stream().filter(child -> child instanceof EditBox).map(child -> ((EditBox) child).getValue()).toList();
+                    // 真实窗口重建路径必须保留刚输入的草稿，并且不累计上一轮输入控件。
+                    screen.resize(minecraft, screen.width, screen.height);
+                    var resized = screen.children().stream().filter(child -> child instanceof EditBox).map(child -> ((EditBox) child).getValue()).toList();
+                    if (!draft.equals(resized) || !P4TextCiScenario.LETTER_BODY.equals(resized.get(0))) {
+                        throw new IllegalStateException("信件窗口重建丢失草稿或累计输入控件");
+                    }
+                    letterResizePreserved = true;
                     screen.mouseClicked(left + 122.0D, top + 234.0D, 0);
                     screen.mouseReleased(left + 122.0D, top + 234.0D, 0);
                     letterEditClicked = true;
@@ -161,6 +187,8 @@ public final class CiClientP4TextObservation {
                     + "observer_uuid=" + player.getUUID() + "\n"
                     + "read_only_screen_observed=true\n"
                     + "letter_edit_clicked=true\n"
+                    + "letter_read_paged=" + letterReadPaged + "\n"
+                    + "letter_resize_preserved=" + letterResizePreserved + "\n"
                     + "death_note_clicked=true\n"
                     + "normal_use_key_injected=true\n"
                     + "sneak_use_key_injected=true\n"

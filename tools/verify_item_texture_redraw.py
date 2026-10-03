@@ -36,7 +36,7 @@ from PIL import Image
     'assets/blindboxchallenge/textures/item/decision_coin.png': ('decision_coin', 'catalog_reference', 'f1a1dc9fb9534fc29687057aa8d9e7d08554d16ff18b5babc0c8d723be08ad35'),
     'assets/blindboxchallenge/textures/item/deep_sea_fish.png': ('deep_sea_fish', 'catalog_reference', 'ea875a36698a27f82f0a2bfbace294fe79d5478d719d987805ff9ddd190d8490'),
     'assets/blindboxchallenge/textures/item/efficient_pig_breeding.png': ('efficient_pig_breeding', 'catalog_reference', 'bca218800b1248abff18c600a1f01e54f93dc0de1657d0d8a755031af4f3900f'),
-    'assets/blindboxchallenge/textures/item/eggy_eye_mask.png': ('eggy_eye_mask', 'catalog_reference', '3fd3d4c420c381e6b5413588669cb026825e40594a055a039ad5c3f8ee1db06a'),
+    'assets/blindboxchallenge/textures/item/eggy_eye_mask.png': ('eggy_eye_mask', 'catalog_reference', 'ebf029b29bb8b6ba1af66b08572a4fe88b2961c3b9c4301d352fac3a81574f37'),
     'assets/blindboxchallenge/textures/item/face_mask.png': ('face_mask', 'catalog_reference', 'f691798c346f9a68dfcee25cf0bca6c62406f872efa1c965a91298d115fe79ac'),
     'assets/blindboxchallenge/textures/item/fairy_wand.png': ('fairy_wand', 'catalog_reference', '110fc957812910fa5216eecc212e58218fb6f980c3420cafef7aab17f8ccfe80'),
     'assets/blindboxchallenge/textures/item/flowing_black_flag.png': ('flowing_black_flag', 'catalog_reference', '4d838b42ace4b911aae74be0f317b5daf4aa89cfdca11e72f6e7bd4e7ba611ea'),
@@ -62,7 +62,7 @@ from PIL import Image
     'assets/blindboxchallenge/textures/item/purple_toy_pickaxe_sword_sword.png': ('purple_toy_pickaxe_sword_sword', 'catalog_reference', '06d535bb7ceb94f04d0efc218cdfd53585d546b9b0831cc61d09c916c96b5ff5'),
     'assets/blindboxchallenge/textures/item/quail_egg.png': ('quail_egg', 'catalog_reference', '58eb88d5cb1a59d8759b0e7f991fa0b4b4bbca3616ba76bb32a79c00f643846c'),
     'assets/blindboxchallenge/textures/item/rainbow_hoop.png': ('rainbow_hoop', 'catalog_reference', '81c383b0203160fd4933ad0b71f0dd31728a301866f426cda35939092763fe17'),
-    'assets/blindboxchallenge/textures/item/rat_jerky_totem.png': ('rat_jerky_totem', 'catalog_reference', 'ae016a2d8ed8380a7cdb77ecc652de5c45b7b732b2461dced1a4568c2ed21fcb'),
+    'assets/blindboxchallenge/textures/item/rat_jerky_totem.png': ('rat_jerky_totem', 'catalog_reference', '6868996c52d127f1ed2263c313b8a526f3707f11b077b51ec236cbb733c2d0c9'),
     'assets/blindboxchallenge/textures/item/ration_pack.png': ('ration_pack', 'catalog_reference', 'ac78b71658f3720be935dcc0dd7bbe8a9256e381014f50019d7af193d4176f7a'),
     'assets/blindboxchallenge/textures/item/returning_scissors.png': ('returning_scissors', 'catalog_reference', 'eb6769e7d7f576eccdc4981624608ed8814101d45153ed2068163f8fe2f4c1d0'),
     'assets/blindboxchallenge/textures/item/road_barrier_helmet.png': ('road_barrier_helmet', 'catalog_reference', '1b0c4184ada0007e26535caf1b50906cf1e6cf022cf245ae8844f0dfaf65dc4b'),
@@ -76,10 +76,10 @@ from PIL import Image
     'assets/blindboxchallenge/textures/item/truffle_ham_cracker.png': ('truffle_ham_cracker', 'catalog_reference', '699ad7caa488a2f094da4ec36f17cba60104f6c538cf7a6c99cddd465004b2c2'),
     'assets/blindboxchallenge/textures/item/vodka.png': ('vodka', 'catalog_reference', '51a1ecda5550a45a3c99f98db8befefd2819639e8e9182954cdef53855a99a47'),
     'assets/blindboxchallenge/textures/item/wang_lixin_badge.png': ('wang_lixin_badge', 'catalog_reference', 'cbaf91a46f2f92adcf1dfbfc31eba52e485827d4b4b3e23ee3e254cfe4a1dfdc'),
-    'assets/blindboxchallenge/textures/item/wenxu_standee.png': ('wenxu_standee', 'catalog_reference', 'abccac4a15597204b85ff4b894675d7350d4c1fbf17d87edda6488bdd5d360cb'),
+    'assets/blindboxchallenge/textures/item/wenxu_standee.png': ('wenxu_standee', 'catalog_reference', '9201060ce655a039c7b6978ea3ced8bcac8f2be2d5e6015e250e055be5fd5504'),
     'assets/blindboxchallenge/textures/item/white_rabbit_candy.png': ('white_rabbit_candy', 'catalog_reference', 'b7332e5ce9581606bb5d2680117512fa9f0e2a5f941150f6da7327773c60451f'),
     'assets/blindboxchallenge/textures/item/wind_blown_cake.png': ('wind_blown_cake', 'catalog_reference', 'cbdf4833453c3d5527ed3219eeeff114dc1710411c412f689e64501e4a34105a'),
-    'assets/blindboxchallenge/textures/item/yijin_manual.png': ('yijin_manual', 'catalog_reference', '443f04095b2f2a77c253f8a5e7d1842b06523baa8f650b128ae012534f808d93'),
+    'assets/blindboxchallenge/textures/item/yijin_manual.png': ('yijin_manual', 'catalog_reference', '68c683fbfd08f5ec0196d077e4e78b066c002da80139cbbda9995470c0675743'),
 }
 
 # 这些类别契约是逐项列举的明确规则，不尝试依赖通用中文语义推断。
@@ -97,7 +97,7 @@ from PIL import Image
 书纸币徽章旗关键词 = {
     "death_note": ("笔记本", "封面", "不可读", "抽象符号"),
     "efficient_pig_breeding": ("技术书", "书脊", "书页", "不可读"),
-    "yijin_manual": ("线装古书", "封皮", "书脊", "不可读"),
+    "yijin_manual": ("线装古书", "封皮", "书脊", "无文字题签"),
     "math_exam_paper": ("试卷", "纸张轮廓", "不可读"),
     "million_pound_note": ("纸币", "纸张边框", "不可读", "不含肖像"),
     "wang_lixin_badge": ("徽章", "金属边", "不可读", "不含人物肖像"),
@@ -105,8 +105,12 @@ from PIL import Image
 }
 原创防复刻关键词 = {
     "chainsaw_sword": ("原创", "不采用任何现有IP"), "eggy_eye_mask": ("原创", "不复刻角色脸"),
-    "rat_jerky_totem": ("原创", "不复刻任何角色"), "shark_dagger_pillow": ("原创", "不复刻角色"),
-    "toy_car": ("原创", "不使用品牌造型"), "wenxu_standee": ("原创", "不复刻人物或角色"),
+    "shark_dagger_pillow": ("原创", "不复刻角色"),
+    "toy_car": ("原创", "不使用品牌造型"),
+}
+用户参考外观关键词 = {
+    "wenxu_standee": ("用户提供两张外观参考", "重新绘制", "白发兽耳", "蓝眼", "粉色围巾", "浅蓝衣服", "透明底座", "不直接拼贴"),
+    "rat_jerky_totem": ("用户提供商品外观参考", "重新绘制", "黄色长手长脚", "白肚皮", "布偶", "褐色手脚", "不直接拼贴"),
 }
 状态变体编号 = {
     "assets/blindboxchallenge/textures/item/black_knight_telescopic_knife.png": "black_knight_telescopic_knife",
@@ -151,11 +155,16 @@ def 校验类别关键词(项: dict, 序号: int) -> list[str]:
         ("食品本体", 食品本体关键词),
         ("书/纸币/徽章/旗外形材质与抽象符号", 书纸币徽章旗关键词),
         ("人物/IP原创防复刻", 原创防复刻关键词),
+        ("用户提供外观参考", 用户参考外观关键词),
     ):
         if 编号 in 契约:
             缺失 = [关键词 for 关键词 in 契约[编号] if 关键词 not in 语义]
             if 缺失:
                 错误.append(f"第 {序号} 项不符合{类别}契约，缺少：{', '.join(缺失)}")
+    if 编号 in 用户参考外观关键词:
+        参考依据 = 项.get("reference_basis")
+        if not isinstance(参考依据, str) or "用户提供" not in 参考依据 or "不直接进入发行包" not in 参考依据:
+            错误.append(f"第 {序号} 项必须记录用户提供外观参考及参考图不直接进入发行包的边界")
     if 编号 in 食品本体关键词 and ("只画包装" in 语义 or "不画" in 语义 and "本体" in 语义):
         错误.append(f"第 {序号} 项食品规格禁止只画包装或排除食物本体")
     return 错误

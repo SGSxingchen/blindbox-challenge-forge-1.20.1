@@ -304,7 +304,7 @@
     "texture": "assets/blindboxchallenge/textures/item/eggy_eye_mask.png",
     "reference_status": "catalog_reference",
     "subject": "原创圆蛋眼罩",
-    "must_show": "一个原创圆润造型睡眠眼罩，清楚显示弧形罩面、两侧绑带和两枚抽象椭圆斑点，不复刻角色脸",
+    "must_show": "一个原创圆润造型睡眠眼罩，清楚显示完整柔软罩面、两侧绑带和两枚抽象闭眼弧线，不复刻角色脸",
     "avoid": [
       "广告背景",
       "包装",
@@ -315,8 +315,8 @@
     ],
     "palette": [
       "柠檬黄",
-      "白色",
-      "深灰"
+      "金黄",
+      "深棕"
     ]
   },
   {
@@ -826,8 +826,8 @@
     "id": "rat_jerky_totem",
     "texture": "assets/blindboxchallenge/textures/item/rat_jerky_totem.png",
     "reference_status": "catalog_reference",
-    "subject": "原创鼠形肉干护符",
-    "must_show": "一枚原创风干小鼠轮廓护符，清楚显示肉干质感、细尾和系绳，不复刻任何角色",
+    "subject": "奶龙老鼠干长肢布偶",
+    "must_show": "依据本轮用户提供商品外观参考重新绘制的黄色长手长脚布偶，清楚显示白肚皮、褐色手脚和简洁笑脸；不直接拼贴参考图",
     "avoid": [
       "广告背景",
       "包装",
@@ -837,10 +837,11 @@
       "人物手持"
     ],
     "palette": [
-      "棕褐",
-      "暗红",
-      "麻绳色"
-    ]
+      "明黄",
+      "奶白",
+      "棕黄"
+    ],
+    "reference_basis": "2026-10-04 用户提供商品外观参考；图像生成工具重新绘制，参考图不直接进入发行包"
   },
   {
     "id": "ration_pack",
@@ -1106,8 +1107,8 @@
     "id": "wenxu_standee",
     "texture": "assets/blindboxchallenge/textures/item/wenxu_standee.png",
     "reference_status": "catalog_reference",
-    "subject": "原创守护立牌",
-    "must_show": "一个原创抽象人形吉祥物亚克力立牌，清楚显示简化头身轮廓、透明底座，不复刻人物或角色",
+    "subject": "文绪亚克力立牌",
+    "must_show": "依据本轮用户提供两张外观参考重新绘制的文绪亚克力立牌，清楚显示白发兽耳、蓝眼、粉色围巾、浅蓝衣服与透明底座；不直接拼贴参考图",
     "avoid": [
       "广告背景",
       "包装",
@@ -1117,10 +1118,12 @@
       "人物手持"
     ],
     "palette": [
-      "青蓝",
-      "奶白",
+      "雪白",
+      "浅蓝",
+      "粉色",
       "透明灰"
-    ]
+    ],
+    "reference_basis": "2026-10-04 用户提供两张外观参考；图像生成工具重新绘制，参考图不直接进入发行包"
   },
   {
     "id": "white_rabbit_candy",
@@ -1166,8 +1169,8 @@
     "id": "yijin_manual",
     "texture": "assets/blindboxchallenge/textures/item/yijin_manual.png",
     "reference_status": "catalog_reference",
-    "subject": "武学经书",
-    "must_show": "一本线装古书，清楚显示蓝灰封皮、线装书脊和不可读的抽象墨迹符号",
+    "subject": "易筋经线装古书",
+    "must_show": "一本线装古书，清楚显示深蓝封皮、线装书脊、旧纸书页和无文字题签",
     "avoid": [
       "广告背景",
       "包装",
@@ -1177,9 +1180,9 @@
       "人物手持"
     ],
     "palette": [
-      "蓝灰",
+      "深蓝",
       "旧纸黄",
-      "墨黑"
+      "米白"
     ]
   }
 ]

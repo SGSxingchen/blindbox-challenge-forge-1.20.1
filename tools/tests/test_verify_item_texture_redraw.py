@@ -47,6 +47,16 @@ class 物品贴图重绘验证测试(unittest.TestCase):
         结果 = self.运行验证(self.有效清单)
         self.assertEqual(0, 结果.returncode, 结果.stdout + 结果.stderr)
 
+    def test_文绪与奶龙必须保留用户外观参考记录(self):
+        for 编号 in ("wenxu_standee", "rat_jerky_totem"):
+            with self.subTest(编号=编号):
+                清单 = copy.deepcopy(self.有效清单)
+                目标 = next(项 for 项 in 清单 if 项["id"] == 编号)
+                del 目标["reference_basis"]
+                结果 = self.运行验证(清单)
+                self.assertNotEqual(0, 结果.returncode)
+                self.assertIn("必须记录用户提供外观参考", 结果.stderr)
+
     def test_缺少字段失败(self):
         清单 = copy.deepcopy(self.有效清单)
         del 清单[0]["subject"]

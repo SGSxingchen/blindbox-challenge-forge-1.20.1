@@ -324,10 +324,21 @@ def update_manifest() -> None:
             relative = target_paths.get(path)
             if relative is not None:
                 checksum = hashlib.sha256((RESOURCE_ROOT / relative).read_bytes()).hexdigest()
+                if relative in {
+                    "assets/blindboxchallenge/textures/item/wenxu_standee.png",
+                    "assets/blindboxchallenge/textures/item/rat_jerky_totem.png",
+                }:
+                    rows.append(
+                        f"|`{path}`|`{checksum}`|用户外观参考重绘|"
+                        "依据本轮用户提供外观参考重新绘制；参考图不直接进入发行包|"
+                        "项目方提供外观参考；发行使用重新绘制 PNG，不外推第三方授权|2026-10-04|"
+                    )
+                    updated.add(path)
+                    continue
                 rows.append(
                     f"|`{path}`|`{checksum}`|项目内原创重绘|"
                     "原版图片仅作需求输入且不进入 Release；不读取、采样或混合原图|"
-                    "项目方提供需求背景；发行使用项目内原创重绘 PNG|2026-08-07|"
+                    f"项目方提供需求背景；发行使用项目内原创重绘 PNG|{line.split('|')[-2]}|"
                 )
                 updated.add(path)
                 continue

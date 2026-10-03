@@ -27,6 +27,12 @@ from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 最大单元宽 = 4096
 最大单元高 = 4096
 默认最大总像素 = 100_000_000
+# 文绪、奶龙保留外观细节与细长肢体；路障是人工模型 UV，不按平面图标缩小。
+特殊贴图尺寸 = {
+    "assets/blindboxchallenge/textures/item/wenxu_standee.png": (32, 32),
+    "assets/blindboxchallenge/textures/item/rat_jerky_totem.png": (32, 32),
+    "assets/blindboxchallenge/textures/item/road_barrier_helmet.png": (64, 64),
+}
 
 
 def 文件哈希(路径: Path) -> str:
@@ -153,8 +159,9 @@ def 渲染联系表(输入: Path, 清单路径: Path, 输出: Path, 复核输出
         if 候选路径.is_file():
             try:
                 with Image.open(候选路径) as 图:
-                    if 图.size != (16, 16):
-                        raise ValueError(f"{项['id']} 候选图必须是 16x16，实际为 {图.width}x{图.height}")
+                    期望尺寸 = 特殊贴图尺寸.get(项["texture"], (16, 16))
+                    if 图.size != 期望尺寸:
+                        raise ValueError(f"{项['id']} 候选图必须是 {期望尺寸[0]}x{期望尺寸[1]}，实际为 {图.width}x{图.height}")
                     图标 = 图.convert("RGBA").resize((图标尺寸, 图标尺寸), Image.Resampling.NEAREST)
             except (UnidentifiedImageError, OSError) as 异常:
                 raise ValueError(f"{项['id']} 候选图无法读取：{异常}") from 异常

@@ -72,7 +72,27 @@ class 物品贴图确定性生成测试(unittest.TestCase):
             被改路径.write_bytes(被改路径.read_bytes() + b"tampered")
             self.assertEqual([被测模块.ITEM_TARGETS[0]], 被测模块.check_items(临时根))
 
-    def test_每项载荷解码为十六像素RGBA且生成器不读取正式图或output(self):
+    def test_更新清单保留文绪奶龙用户外观参考来源(self):
+        项目 = tuple(f"assets/blindboxchallenge/textures/item/{编号}.png" for 编号 in ("wenxu_standee", "rat_jerky_totem", "yijin_manual"))
+        with tempfile.TemporaryDirectory() as 临时目录:
+            临时根 = Path(临时目录)
+            清单 = 临时根 / "manifest.md"
+            for 相对 in 项目:
+                路径 = 临时根 / 相对
+                路径.parent.mkdir(parents=True, exist_ok=True)
+                路径.write_bytes(b"new-texture")
+            清单.write_text("\n".join(f"|`mod/src/main/resources/{相对}`|`{'0' * 64}`|旧来源|" for 相对 in 项目) + "\n保留其他审计说明\n", encoding="utf-8")
+            with patch.object(被测模块, "TARGETS", 项目), patch.object(被测模块, "RESOURCE_ROOT", 临时根), patch.object(被测模块, "MANIFEST", 清单):
+                被测模块.update_manifest()
+            行 = 清单.read_text(encoding="utf-8").splitlines()
+            for 来源行 in 行[:2]:
+                self.assertIn("用户外观参考重绘", 来源行)
+                self.assertIn("参考图不直接进入发行包", 来源行)
+                self.assertNotIn("不读取、采样或混合原图", 来源行)
+            self.assertIn("项目内原创重绘", 行[2])
+            self.assertEqual("保留其他审计说明", 行[3])
+
+    def test_每项载荷解码符合逐项尺寸且生成器不读取正式图或output(self):
         self.assertEqual(set(被测模块.ITEM_TARGETS), set(被测模块.ITEM_PIXEL_PAYLOADS) | set(被测模块.ITEM_PNG_PAYLOADS))
         for relative in 被测模块.ITEM_TARGETS:
             with patch.object(Path, "read_bytes", side_effect=AssertionError("载荷解码不得读取文件")):
@@ -81,7 +101,12 @@ class 物品贴图确定性生成测试(unittest.TestCase):
                 路径 = Path(临时目录) / "item.png"
                 路径.write_bytes(内容)
                 with Image.open(路径) as 图像:
-                    self.assertIn(图像.size, {(16, 16), (64, 64)}, relative)
+                    期望尺寸 = {
+                        "assets/blindboxchallenge/textures/item/wenxu_standee.png": (32, 32),
+                        "assets/blindboxchallenge/textures/item/rat_jerky_totem.png": (32, 32),
+                        "assets/blindboxchallenge/textures/item/road_barrier_helmet.png": (64, 64),
+                    }.get(relative, (16, 16))
+                    self.assertEqual(期望尺寸, 图像.size, relative)
                     self.assertEqual("RGBA", 图像.mode, relative)
 
 

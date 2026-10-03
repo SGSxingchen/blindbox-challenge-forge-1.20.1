@@ -1,5 +1,6 @@
 package cn.blindboxchallenge.entity;
 
+import cn.blindboxchallenge.config.ModServerConfig;
 import cn.blindboxchallenge.registry.ModBlocks;
 import cn.blindboxchallenge.registry.ModItems;
 import net.minecraft.world.item.Item;
@@ -8,15 +9,13 @@ import net.minecraft.world.level.block.Block;
 
 /** 008、016 共用的受同步抱枕变体；数值稳定保存到实体 NBT。 */
 public enum PillowVariant {
-    STONE(0, 3.0F),
-    DIAMOND(1, 5.0F);
+    STONE(0),
+    DIAMOND(1);
 
     private final int serializedId;
-    private final float impactDamage;
 
-    PillowVariant(int serializedId, float impactDamage) {
+    PillowVariant(int serializedId) {
         this.serializedId = serializedId;
-        this.impactDamage = impactDamage;
     }
 
     public int serializedId() {
@@ -24,7 +23,8 @@ public enum PillowVariant {
     }
 
     public float impactDamage() {
-        return impactDamage;
+        return (this == DIAMOND ? ModServerConfig.DIAMOND_PILLOW_IMPACT_DAMAGE
+                : ModServerConfig.STONE_PILLOW_IMPACT_DAMAGE).get().floatValue();
     }
 
     public Item item() {

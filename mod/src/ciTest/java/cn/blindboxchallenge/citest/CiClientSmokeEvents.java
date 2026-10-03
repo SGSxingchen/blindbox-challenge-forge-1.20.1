@@ -2,15 +2,18 @@ package cn.blindboxchallenge.citest;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ConnectScreen;
+import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
+import net.minecraft.network.Connection;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -29,6 +32,10 @@ public final class CiClientSmokeEvents {
     private static int recoveryJoinedTicks;
     private static boolean recoveryConnectAttempted;
     private static boolean recoveryCompleted;
+    private static Connection observedLoginConnection;
+    private static String lastConnectionState;
+    private static boolean firstConnectionFailureLogged;
+    private static boolean connectionDiagnosticFailed;
 
     private CiClientSmokeEvents() {
     }
@@ -59,6 +66,7 @@ public final class CiClientSmokeEvents {
     }
 
     private static void runMultiplayerSmoke(Minecraft minecraft) {
+        observeFirstConnection(minecraft);
         if (!connectStarted && minecraft.screen instanceof TitleScreen && minecraft.getOverlay() == null) {
             String address = System.getProperty("blindbox.ci.serverAddress", "127.0.0.1:25565");
             ServerData data = new ServerData("BlindBox CI", address, false);
@@ -113,6 +121,47 @@ public final class CiClientSmokeEvents {
         if (joinedTicks >= 40 && releaseValue != null && Files.isRegularFile(Path.of(releaseValue).toAbsolutePath())) {
             completed = true;
             minecraft.stop();
+        }
+    }
+
+    /** 只读首连状态；不插入网络处理器、不改变读取开关，也不自动重试失败连接。 */
+    private static void observeFirstConnection(Minecraft minecraft) {
+        if (!Boolean.getBoolean("blindbox.ci.connectionDiagnostics") || everJoined || connectionDiagnosticFailed) return;
+        try {
+            if (minecraft.screen instanceof ConnectScreen screen) {
+                // 按唯一字段类型读取，避免开发名称与运行映射名称不一致；不修改屏幕或连接。
+                for (Field field : ConnectScreen.class.getDeclaredFields()) {
+                    if (field.getType() == Connection.class) {
+                        field.setAccessible(true);
+                        Connection connection = (Connection) field.get(screen);
+                        if (connection != null) observedLoginConnection = connection;
+                        break;
+                    }
+                }
+            }
+            String state = "screen=" + (minecraft.screen == null ? "none" : minecraft.screen.getClass().getSimpleName());
+            Connection connection = observedLoginConnection;
+            if (connection != null && connection.channel() != null) {
+                state += ", active=" + connection.channel().isActive()
+                        + ", protocol=" + connection.channel().attr(Connection.ATTRIBUTE_PROTOCOL).get()
+                        + ", auto_read=" + connection.channel().config().isAutoRead()
+                        + ", listener=" + (connection.getPacketListener() == null ? "none" : connection.getPacketListener().getClass().getSimpleName())
+                        + ", disconnect_reason=" + (connection.getDisconnectedReason() == null ? "none" : connection.getDisconnectedReason().getString());
+            } else {
+                state += ", connection=not-created";
+            }
+            if (!state.equals(lastConnectionState)) {
+                CiTestProbe.LOGGER.info("首连只读状态：{}", state);
+                lastConnectionState = state;
+            }
+            if (connectStarted && minecraft.screen instanceof DisconnectedScreen screen && !firstConnectionFailureLogged) {
+                firstConnectionFailureLogged = true;
+                CiTestProbe.LOGGER.error("BLINDBOX_CITEST_CONNECT_FAILED：{}，{}", screen.getNarrationMessage().getString(), state);
+            }
+        } catch (ReflectiveOperationException | RuntimeException exception) {
+            // 诊断不可用不能掩盖真实连接结果；只记录一次后停用该只读观察。
+            connectionDiagnosticFailed = true;
+            CiTestProbe.LOGGER.warn("首连只读诊断不可用，继续等待真实连接结果", exception);
         }
     }
 

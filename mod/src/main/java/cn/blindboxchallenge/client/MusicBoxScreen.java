@@ -35,8 +35,10 @@ public final class MusicBoxScreen extends AbstractContainerScreen<MusicBoxMenu> 
     }
 
     private void submit() {
-        String value = url.getValue();
-        if (value.length() > AudioUrlPolicy.MAX_URL_LENGTH || !value.startsWith("https://")) {
+        String value;
+        try {
+            value = AudioUrlPolicy.normalizeHttpsUrl(url.getValue());
+        } catch (IllegalArgumentException ignored) {
             error = Component.translatable("screen.blindboxchallenge.music_box_invalid_url");
             return;
         }

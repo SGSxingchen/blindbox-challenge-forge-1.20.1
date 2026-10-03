@@ -33,7 +33,9 @@ public final class AudioUrlPolicy {
             if (port != -1 && port != HTTPS_PORT) throw new IllegalArgumentException("只允许标准 HTTPS 端口");
             String path = input.getRawPath();
             if (path == null || path.isEmpty()) path = "/";
-            URI normalized = new URI("https", null, asciiHost, -1, path, input.getRawQuery(), null).normalize();
+            // 路径和查询已经是原始转义内容；多参数 URI 构造器会把 % 再转义，破坏签名与文件名。
+            String query = input.getRawQuery();
+            URI normalized = new URI("https://" + asciiHost + path + (query == null ? "" : "?" + query)).normalize();
             return normalized.toASCIIString();
         } catch (URISyntaxException | IllegalArgumentException exception) {
             throw new IllegalArgumentException("在线音频 URL 不安全或格式错误", exception);

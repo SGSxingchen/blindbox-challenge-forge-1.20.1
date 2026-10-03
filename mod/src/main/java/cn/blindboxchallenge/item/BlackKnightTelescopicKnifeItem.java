@@ -1,5 +1,6 @@
 package cn.blindboxchallenge.item;
 
+import cn.blindboxchallenge.config.ModServerConfig;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -14,7 +15,7 @@ import net.minecraft.world.level.Level;
 /** 001：服务端维护伸缩状态的木剑基线近战物品。 */
 public final class BlackKnightTelescopicKnifeItem extends SwordItem {
     public static final String EXTENDED_KEY = "Extended";
-    /** 默认 20%，仅在已经伸出的刀命中后由逻辑服务端掷骰。 */
+    /** 默认 20%；实际概率由服务端有限范围配置决定。 */
     public static final float AUTO_RETRACT_CHANCE = 0.20F;
 
     public BlackKnightTelescopicKnifeItem() {
@@ -52,7 +53,7 @@ public final class BlackKnightTelescopicKnifeItem extends SwordItem {
      * 等于概率阈值或处于收缩状态时均不收缩。
      */
     public static boolean applyAutoRetractAfterHit(ItemStack stack, float roll) {
-        if (!isExtended(stack) || !(roll < AUTO_RETRACT_CHANCE)) return false;
+        if (!isExtended(stack) || !(roll < ModServerConfig.TELESCOPIC_KNIFE_RETRACT_CHANCE.get().floatValue())) return false;
         setExtended(stack, false);
         return true;
     }

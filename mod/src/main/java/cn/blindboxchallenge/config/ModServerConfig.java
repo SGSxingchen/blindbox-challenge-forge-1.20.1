@@ -2,11 +2,17 @@ package cn.blindboxchallenge.config;
 
 import net.minecraftforge.common.ForgeConfigSpec;
 
-/** 仅由逻辑服务端读取的 P3 养猪保护阈值；客户端不保存、不决定目标或冷却。 */
+/** 物品效果和保护阈值只由逻辑服务端读取；客户端不决定伤害、速度或繁殖目标。 */
 public final class ModServerConfig {
     private static final ForgeConfigSpec.Builder SERVER_BUILDER = new ForgeConfigSpec.Builder();
     public static final ForgeConfigSpec.IntValue EFFICIENT_PIG_COOLDOWN_TICKS;
     public static final ForgeConfigSpec.IntValue EFFICIENT_PIG_MAX_SCANNED;
+    public static final ForgeConfigSpec.DoubleValue YIJIN_MAX_HEALTH_BONUS;
+    public static final ForgeConfigSpec.DoubleValue YIJIN_ATTACK_DAMAGE_BONUS;
+    public static final ForgeConfigSpec.DoubleValue YIJIN_DOUBLE_JUMP_VELOCITY;
+    public static final ForgeConfigSpec.DoubleValue TELESCOPIC_KNIFE_RETRACT_CHANCE;
+    public static final ForgeConfigSpec.DoubleValue STONE_PILLOW_IMPACT_DAMAGE;
+    public static final ForgeConfigSpec.DoubleValue DIAMOND_PILLOW_IMPACT_DAMAGE;
     public static final ForgeConfigSpec.IntValue LETTER_MAX_CODE_POINTS;
     public static final ForgeConfigSpec.IntValue LETTER_MAX_LINES;
     public static final ForgeConfigSpec.IntValue DEATH_NOTE_DELAY_TICKS;
@@ -16,6 +22,24 @@ public final class ModServerConfig {
     public static final ForgeConfigSpec SERVER_SPEC;
 
     static {
+        SERVER_BUILDER.push("yijin_manual");
+        YIJIN_MAX_HEALTH_BONUS = SERVER_BUILDER.comment("易筋经永久增加的最大生命值，2 点等于 1 颗心")
+                .defineInRange("maximum_health_bonus", 2.0D, 0.0D, 40.0D);
+        YIJIN_ATTACK_DAMAGE_BONUS = SERVER_BUILDER.comment("易筋经永久增加的近战攻击伤害")
+                .defineInRange("attack_damage_bonus", 1.0D, 0.0D, 20.0D);
+        YIJIN_DOUBLE_JUMP_VELOCITY = SERVER_BUILDER.comment("易筋经二段跳的向上初速度")
+                .defineInRange("double_jump_velocity", 0.42D, 0.1D, 1.5D);
+        SERVER_BUILDER.pop();
+        SERVER_BUILDER.push("telescopic_knife");
+        TELESCOPIC_KNIFE_RETRACT_CHANCE = SERVER_BUILDER.comment("伸出的黑武士伸缩刀命中后自动收缩的概率")
+                .defineInRange("retract_chance", 0.20D, 0.0D, 1.0D);
+        SERVER_BUILDER.pop();
+        SERVER_BUILDER.push("pillow");
+        STONE_PILLOW_IMPACT_DAMAGE = SERVER_BUILDER.comment("石墩子抱枕投掷命中的伤害")
+                .defineInRange("stone_impact_damage", 3.0D, 0.0D, 40.0D);
+        DIAMOND_PILLOW_IMPACT_DAMAGE = SERVER_BUILDER.comment("钻石抱枕投掷命中的伤害")
+                .defineInRange("diamond_impact_damage", 5.0D, 0.0D, 40.0D);
+        SERVER_BUILDER.pop();
         SERVER_BUILDER.push("efficient_pig_breeding");
         EFFICIENT_PIG_COOLDOWN_TICKS = SERVER_BUILDER.comment("高效养猪技术成功后的服务端冷却（tick）")
                 .defineInRange("cooldown_ticks", 200, 1, 12000);

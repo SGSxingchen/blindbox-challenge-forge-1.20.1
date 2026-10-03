@@ -70,6 +70,11 @@ public final class CiTestCommands {
                         .executes(context -> P4DoorRecoveryCiScenario.prepare(context.getSource())))
                 .then(Commands.literal("run_multi_business").executes(context -> runMultiBusiness(context.getSource())))
                 .then(Commands.literal("run_p2_business").executes(context -> runP2Business(context.getSource())))
+                .then(Commands.literal("start_eye_mask").executes(context -> EyeMaskCiScenario.start(context.getSource())))
+                .then(Commands.literal("verify_eye_mask").executes(context -> EyeMaskCiScenario.verify(context.getSource())))
+                .then(Commands.literal("start_packing_clients").executes(context -> PackingCiScenario.start(context.getSource())))
+                .then(Commands.literal("verify_packing_clients").executes(context -> PackingCiScenario.verify(context.getSource())))
+                .then(Commands.literal("cleanup_packing_clients").executes(context -> PackingCiScenario.cleanup(context.getSource())))
                 .then(Commands.literal("run_p3_business").executes(context -> runP3Business(context.getSource())))
                 .then(Commands.literal("run_p4_text_negative")
                         .executes(context -> P4TextNegativeCiAssertions.run(context.getSource())))
@@ -531,7 +536,7 @@ public final class CiTestCommands {
             if (!PlayerAbilityService.requestDoubleJump(player)
                     || !approximately(player.getDeltaMovement().x, 0.12D)
                     || !approximately(player.getDeltaMovement().z, -0.08D)
-                    || !approximately(player.getDeltaMovement().y, PlayerAbilityService.DOUBLE_JUMP_VELOCITY)
+                    || !approximately(player.getDeltaMovement().y, ModServerConfig.YIJIN_DOUBLE_JUMP_VELOCITY.get())
                     || PlayerAbilityService.requestDoubleJump(player)) {
                 throw new IllegalStateException("server double-jump permission, velocity or one-air-use limit mismatch");
             }
@@ -548,6 +553,7 @@ public final class CiTestCommands {
             if (!PlayerAbilityService.requestDoubleJump(player)) {
                 throw new IllegalStateException("server grounding did not reset one-air double-jump permission after cooldown");
             }
+            assertConfigurableItemValues(player);
 
             ItemStack roadBarrier = new ItemStack(ModItems.ROAD_BARRIER_HELMET.get());
             ItemStack ironHelmet = new ItemStack(Items.IRON_HELMET);
@@ -604,10 +610,72 @@ public final class CiTestCommands {
         if (health == null || attack == null || health.getModifier(PlayerAbilityService.YIJIN_MAX_HEALTH_UUID) == null
                 || attack.getModifier(PlayerAbilityService.YIJIN_ATTACK_DAMAGE_UUID) == null
                 || !approximately(health.getModifier(PlayerAbilityService.YIJIN_MAX_HEALTH_UUID).getAmount(),
-                        PlayerAbilityService.YIJIN_MAX_HEALTH_BONUS)
+                        ModServerConfig.YIJIN_MAX_HEALTH_BONUS.get())
                 || !approximately(attack.getModifier(PlayerAbilityService.YIJIN_ATTACK_DAMAGE_UUID).getAmount(),
-                        PlayerAbilityService.YIJIN_ATTACK_DAMAGE_BONUS)) {
+                        ModServerConfig.YIJIN_ATTACK_DAMAGE_BONUS.get())) {
             throw new IllegalStateException("Yi Jin capability did not reconcile its fixed UUID attributes");
+        }
+    }
+
+    /** 临时设为非默认值，通过生产属性、跳跃和收缩入口验证配置生效，结束后精确还原。 */
+    private static void assertConfigurableItemValues(ServerPlayer player) {
+        double originalHealthBonus = ModServerConfig.YIJIN_MAX_HEALTH_BONUS.get();
+        double originalAttackBonus = ModServerConfig.YIJIN_ATTACK_DAMAGE_BONUS.get();
+        double originalJumpVelocity = ModServerConfig.YIJIN_DOUBLE_JUMP_VELOCITY.get();
+        double originalRetractChance = ModServerConfig.TELESCOPIC_KNIFE_RETRACT_CHANCE.get();
+        double originalStoneDamage = ModServerConfig.STONE_PILLOW_IMPACT_DAMAGE.get();
+        double originalDiamondDamage = ModServerConfig.DIAMOND_PILLOW_IMPACT_DAMAGE.get();
+        var data = player.getCapability(ModCapabilities.PLAYER_ABILITY).resolve().orElseThrow();
+        boolean originalUsed = data.hasUsedDoubleJump();
+        long originalNextJump = data.nextDoubleJumpTick();
+        net.minecraft.world.phys.Vec3 originalVelocity = player.getDeltaMovement();
+        try {
+            ModServerConfig.YIJIN_MAX_HEALTH_BONUS.set(4.0D);
+            ModServerConfig.YIJIN_ATTACK_DAMAGE_BONUS.set(2.0D);
+            ModServerConfig.YIJIN_DOUBLE_JUMP_VELOCITY.set(0.6D);
+            PlayerAbilityService.reconcileAttributes(player, data);
+            assertYiJinAttributes(player);
+            data.setUsedDoubleJump(false);
+            data.setNextDoubleJumpTick(0L);
+            if (!PlayerAbilityService.requestDoubleJump(player) || !approximately(player.getDeltaMovement().y, 0.6D)) {
+                throw new IllegalStateException("易筋经非默认二段跳速度没有由服务端配置生效");
+            }
+
+            ItemStack knife = new ItemStack(ModItems.BLACK_KNIGHT_TELESCOPIC_KNIFE.get());
+            ModServerConfig.TELESCOPIC_KNIFE_RETRACT_CHANCE.set(0.5D);
+            BlackKnightTelescopicKnifeItem.setExtended(knife, true);
+            if (!BlackKnightTelescopicKnifeItem.applyAutoRetractAfterHit(knife, 0.49F)) {
+                throw new IllegalStateException("伸缩刀非默认收缩概率没有生效");
+            }
+            BlackKnightTelescopicKnifeItem.setExtended(knife, true);
+            if (BlackKnightTelescopicKnifeItem.applyAutoRetractAfterHit(knife, 0.5F)) {
+                throw new IllegalStateException("伸缩刀配置概率阈值边界错误");
+            }
+            ModServerConfig.TELESCOPIC_KNIFE_RETRACT_CHANCE.set(0.0D);
+            if (BlackKnightTelescopicKnifeItem.applyAutoRetractAfterHit(knife, 0.0F)) {
+                throw new IllegalStateException("伸缩刀零概率仍发生自动收缩");
+            }
+            ModServerConfig.TELESCOPIC_KNIFE_RETRACT_CHANCE.set(1.0D);
+            if (!BlackKnightTelescopicKnifeItem.applyAutoRetractAfterHit(knife, 0.999F)) {
+                throw new IllegalStateException("伸缩刀全概率没有自动收缩");
+            }
+            ModServerConfig.STONE_PILLOW_IMPACT_DAMAGE.set(3.25D);
+            ModServerConfig.DIAMOND_PILLOW_IMPACT_DAMAGE.set(7.0D);
+            if (!approximately(cn.blindboxchallenge.entity.PillowVariant.STONE.impactDamage(), 3.25D)
+                    || !approximately(cn.blindboxchallenge.entity.PillowVariant.DIAMOND.impactDamage(), 7.0D)) {
+                throw new IllegalStateException("抱枕投掷伤害未读取服务端的两个独立变体配置");
+            }
+        } finally {
+            ModServerConfig.YIJIN_MAX_HEALTH_BONUS.set(originalHealthBonus);
+            ModServerConfig.YIJIN_ATTACK_DAMAGE_BONUS.set(originalAttackBonus);
+            ModServerConfig.YIJIN_DOUBLE_JUMP_VELOCITY.set(originalJumpVelocity);
+            ModServerConfig.TELESCOPIC_KNIFE_RETRACT_CHANCE.set(originalRetractChance);
+            ModServerConfig.STONE_PILLOW_IMPACT_DAMAGE.set(originalStoneDamage);
+            ModServerConfig.DIAMOND_PILLOW_IMPACT_DAMAGE.set(originalDiamondDamage);
+            data.setUsedDoubleJump(originalUsed);
+            data.setNextDoubleJumpTick(originalNextJump);
+            player.setDeltaMovement(originalVelocity);
+            PlayerAbilityService.reconcileAttributes(player, data);
         }
     }
 
@@ -642,12 +710,21 @@ public final class CiTestCommands {
                     fixtureCenter.getY(), fixtureCenter.getZ() + 0.5D);
             fixturePigs.add(first.getUUID());
             fixturePigs.add(second.getUUID());
+            net.minecraft.world.entity.animal.Pig juvenile = spawnFixturePig(level, fixtureCenter.getX() + 0.5D,
+                    fixtureCenter.getY(), fixtureCenter.getZ() + 2.5D);
+            juvenile.setAge(-100);
+            fixturePigs.add(juvenile.getUUID());
+            net.minecraft.world.entity.animal.Pig cooling = spawnFixturePig(level, fixtureCenter.getX() + 0.5D,
+                    fixtureCenter.getY(), fixtureCenter.getZ() - 1.5D);
+            cooling.setAge(300);
+            fixturePigs.add(cooling.getUUID());
             // +10.1 仍落在玩家 AABB inflate(10) 的粗筛边缘，但必在精确 10 格球形之外。
             net.minecraft.world.entity.animal.Pig outsideSphere = spawnFixturePig(level, fixtureCenter.getX() + 10.6D,
                     fixtureCenter.getY(), fixtureCenter.getZ() + 0.5D);
             fixturePigs.add(outsideSphere.getUUID());
             PigBreedingService.BreedingResult spherical = PigBreedingService.breedNearby(player);
-            if (spherical.scannedPigCount() != 2 || spherical.eligiblePigCount() != 2 || spherical.bredPairCount() != 1
+            if (spherical.scannedPigCount() != 4 || spherical.eligiblePigCount() != 2 || spherical.bredPairCount() != 1
+                    || juvenile.isInLove() || cooling.isInLove() || juvenile.getAge() != -100 || cooling.getAge() != 300
                     || !outsideSphere.canFallInLove()) {
                 throw new IllegalStateException("pig breeding sphere mismatch: scanned=" + spherical.scannedPigCount()
                         + ", eligible=" + spherical.eligiblePigCount() + ", pairs=" + spherical.bredPairCount()
@@ -765,9 +842,7 @@ public final class CiTestCommands {
                 || BlackKnightTelescopicKnifeItem.isExtended(knife)) {
             throw new IllegalStateException("黑武士伸缩刀的服务端右键未收缩刀刃");
         }
-        if (Float.compare(BlackKnightTelescopicKnifeItem.AUTO_RETRACT_CHANCE, 0.20F) != 0) {
-            throw new IllegalStateException("黑武士伸缩刀未使用约定的保守固定收缩概率");
-        }
+        float retractChance = ModServerConfig.TELESCOPIC_KNIFE_RETRACT_CHANCE.get().floatValue();
         ItemStack trialKnife = new ItemStack(ModItems.BLACK_KNIGHT_TELESCOPIC_KNIFE.get());
         BlackKnightTelescopicKnifeItem.setExtended(trialKnife, true);
         // 一次真实服务端命中钩子保留木剑耐久；固定随机规则另以确定性边界值验证，不能引入随机门禁。
@@ -776,13 +851,13 @@ public final class CiTestCommands {
             throw new IllegalStateException("黑武士伸缩刀未保留原版木剑命中耐久");
         }
         BlackKnightTelescopicKnifeItem.setExtended(trialKnife, true);
-        if (!BlackKnightTelescopicKnifeItem.applyAutoRetractAfterHit(trialKnife, 0.0F)
-                || BlackKnightTelescopicKnifeItem.isExtended(trialKnife)) {
-            throw new IllegalStateException("黑武士伸缩刀未按服务端固定概率收缩");
+        if (BlackKnightTelescopicKnifeItem.applyAutoRetractAfterHit(trialKnife, 0.0F) != (retractChance > 0.0F)
+                || BlackKnightTelescopicKnifeItem.isExtended(trialKnife) != (retractChance == 0.0F)) {
+            throw new IllegalStateException("黑武士伸缩刀未按服务端配置概率收缩");
         }
         BlackKnightTelescopicKnifeItem.setExtended(trialKnife, true);
         if (BlackKnightTelescopicKnifeItem.applyAutoRetractAfterHit(trialKnife,
-                BlackKnightTelescopicKnifeItem.AUTO_RETRACT_CHANCE)
+                retractChance)
                 || !BlackKnightTelescopicKnifeItem.isExtended(trialKnife)) {
             throw new IllegalStateException("黑武士伸缩刀错误处理了概率阈值边界");
         }
@@ -809,6 +884,12 @@ public final class CiTestCommands {
                 || !purpleToy.canPerformAction(net.minecraftforge.common.ToolActions.SWORD_DIG)
                 || !purpleToy.canPerformAction(net.minecraftforge.common.ToolActions.SWORD_SWEEP)
                 || purpleToy.getDestroySpeed(net.minecraft.world.level.block.Blocks.COBWEB.defaultBlockState()) != 15.0F
+                || !purpleToy.isCorrectToolForDrops(net.minecraft.world.level.block.Blocks.COBWEB.defaultBlockState())
+                || purpleToy.isCorrectToolForDrops(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState())
+                || purpleToy.getDestroySpeed(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState())
+                    != new ItemStack(Items.WOODEN_SWORD).getDestroySpeed(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState())
+                || purpleToy.getDestroySpeed(net.minecraft.world.level.block.Blocks.OAK_LEAVES.defaultBlockState())
+                    != new ItemStack(Items.WOODEN_SWORD).getDestroySpeed(net.minecraft.world.level.block.Blocks.OAK_LEAVES.defaultBlockState())
                 || !approximately(stackAttributeTotal(purpleToy, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE), 3.0D)
                 || !approximately(stackAttributeTotal(purpleToy, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED), -2.4D)) {
             throw new IllegalStateException("紫色玩具钻石剑缺少原版木剑的栈敏感近战语义");
@@ -1194,6 +1275,21 @@ public final class CiTestCommands {
             alice.closeContainer();
             if (CommitPackingPacket.isAuthorized(alice, validShape)) throw new IllegalStateException("closed menu replay accepted");
 
+            // 空选择的业务失败必须关闭已消费菜单；重开之后取得的新会话仍可提交。
+            PackingMenu emptySelectionMenu = new PackingMenu(92, alice.getInventory(), UUID.randomUUID());
+            alice.containerMenu = emptySelectionMenu;
+            CommitPackingPacket emptySelection = new CommitPackingPacket(92, emptySelectionMenu.sessionId(), List.of());
+            if (CommitPackingPacket.commit(alice, emptySelection) || alice.containerMenu == emptySelectionMenu
+                    || !emptySelectionMenu.submissionConsumed() || CommitPackingPacket.isAuthorized(alice, emptySelection)) {
+                throw new IllegalStateException("空选择失败后菜单未关闭或仍接受重放");
+            }
+            PackingMenu retryMenu = new PackingMenu(93, alice.getInventory(), UUID.randomUUID());
+            alice.containerMenu = retryMenu;
+            if (!CommitPackingPacket.isAuthorized(alice, new CommitPackingPacket(93, retryMenu.sessionId(), List.of()))) {
+                throw new IllegalStateException("打包失败后重开菜单未恢复提交权");
+            }
+            alice.closeContainer();
+
             // 换手/松开走原版 releaseUsing；死亡走 Forge 事件入口。两条真实路径都必须同时清理使用态和减速。
             ItemStack swappedBox = BlindBoxService.createBlindBox(UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
             alice.setItemInHand(InteractionHand.MAIN_HAND, swappedBox);
@@ -1238,11 +1334,29 @@ public final class CiTestCommands {
 
             clearInventory(alice);
             clearInventory(bob);
-            ItemStack prize = uniqueStack("citest-last-bundle-prize", 1, 13);
+            ItemStack prize = uniqueStack("citest-last-bundle-prize", 2, 13);
             alice.getInventory().setItem(0, prize.copy());
+            ItemStack unselectedTool = new ItemStack(ModItems.PACKING_TOOL.get());
+            alice.getInventory().setItem(1, unselectedTool.copy());
+            alice.getInventory().setItem(2, new ItemStack(Items.COBBLESTONE, 7));
+            PackingMenu selectedMenu = new PackingMenu(94, alice.getInventory(), UUID.randomUUID());
+            alice.containerMenu = selectedMenu;
+            selectedMenu.clicked(27, 0, net.minecraft.world.inventory.ClickType.PICKUP, alice);
+            if (!selectedMenu.getCarried().isEmpty() || alice.getInventory().getItem(0).getCount() != 2) {
+                throw new IllegalStateException("打包界面的原版点击移动了真实库存");
+            }
             BlindBoxService.Selection packSelection = new BlindBoxService.Selection(0, 1, StackFingerprint.of(alice.getInventory().getItem(0)));
-            if (!BlindBoxService.pack(alice, List.of(packSelection))) {
-                throw new IllegalStateException("production pack failed");
+            CommitPackingPacket selectedPacket = new CommitPackingPacket(94, selectedMenu.sessionId(), List.of(packSelection));
+            if (!CommitPackingPacket.commit(alice, selectedPacket) || alice.containerMenu == selectedMenu
+                    || CommitPackingPacket.isAuthorized(alice, selectedPacket)) {
+                throw new IllegalStateException("打包成功未关闭菜单或仍接受旧会话");
+            }
+            if (alice.getInventory().getItem(0).getCount() != 1
+                    || !alice.getInventory().getItem(1).is(ModItems.PACKING_TOOL.get())
+                    || alice.getInventory().getItem(1).getCount() != 1
+                    || !alice.getInventory().getItem(2).is(Items.COBBLESTONE) || alice.getInventory().getItem(2).getCount() != 7
+                    || data.bundles().stream().anyMatch(bundle -> bundle.stacks().size() != 1 || bundle.stacks().get(0).getCount() != 1)) {
+                throw new IllegalStateException("打包数量不符或消耗了未选物品、工具");
             }
             // 同一 C2S 请求即使因重发再次进入服务端业务层，也必须被旧指纹拒绝，不能重复生成 bundle/token。
             if (BlindBoxService.pack(alice, List.of(packSelection))) {
@@ -1257,7 +1371,7 @@ public final class CiTestCommands {
             bob.getInventory().setItem(0, bobBox);
             if (!BlindBoxService.open(alice, aliceBox)) throw new IllegalStateException("first open failed");
             if (BlindBoxService.open(bob, bobBox)) throw new IllegalStateException("second player opened exhausted pool");
-            if (data.bundleCount() != 0 || countMarker(alice, "citest-last-bundle-prize") != 1 || countMarker(bob, "citest-last-bundle-prize") != 0) {
+            if (data.bundleCount() != 0 || countMarker(alice, "citest-last-bundle-prize") != 2 || countMarker(bob, "citest-last-bundle-prize") != 0) {
                 throw new IllegalStateException("last bundle competition violated asset conservation");
             }
             if (!bob.getInventory().getItem(0).is(ModItems.BLIND_BOX.get()) || bob.getInventory().getItem(0).getCount() != 1) {

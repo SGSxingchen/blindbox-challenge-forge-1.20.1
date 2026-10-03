@@ -24,9 +24,10 @@ public final class ClientAbilityKeyEvents {
 
     @SubscribeEvent
     public static void clientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || !DOUBLE_JUMP.consumeClick()) return;
+        // 原版玩家运动尚未处理本次跳跃；地面首跳不能因刻末已离地而误发二段跳请求。
+        if (event.phase != TickEvent.Phase.START || !DOUBLE_JUMP.consumeClick()) return;
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.player == null || minecraft.player.onGround() || minecraft.player.isFallFlying()
+        if (minecraft.screen != null || minecraft.player == null || minecraft.player.onGround() || minecraft.player.isFallFlying()
                 || !ClientPlayerAbilityState.hasLearnedYiJin(minecraft.player.getId())) return;
         ModNetwork.CHANNEL.sendToServer(new RequestDoubleJumpPacket());
     }

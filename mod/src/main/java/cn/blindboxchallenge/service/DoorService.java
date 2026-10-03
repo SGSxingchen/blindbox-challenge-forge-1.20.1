@@ -74,6 +74,12 @@ public final class DoorService {
             player.displayClientMessage(Component.translatable("message.blindboxchallenge.door_first_invalid"), true);
             return;
         }
+        // 唯一安全点的检查会读门下方及四个邻格；区块边缘的未知邻格不能借读取被强加载。
+        if (!hasLoadedSafetyNeighborhood(firstLevel, selected.pos()) || !hasLoadedSafetyNeighborhood(sourceLevel, clicked)) {
+            SELECTED_DOORS.remove(player.getUUID());
+            player.displayClientMessage(Component.translatable("message.blindboxchallenge.door_safety_required"), true);
+            return;
+        }
         List<BlockPos> firstSafety = adjacentSafety(firstLevel, selected.pos());
         List<BlockPos> secondSafety = adjacentSafety(sourceLevel, clicked);
         if (firstSafety.size() != 1 || secondSafety.size() != 1) {
@@ -141,6 +147,8 @@ public final class DoorService {
         if (targetDoorGlobal == null || targetSafetyGlobal == null || targetDoorId == null
                 || targetDoorGlobal.equals(sourceGlobal)
                 || !targetDoorGlobal.dimension().equals(targetSafetyGlobal.dimension())) return;
+        // 未加载邻格只表示当前无法确认安全点唯一性，不能据此删除原有配对。
+        if (!hasLoadedSafetyNeighborhood(sourceLevel, sourcePos)) return;
         List<BlockPos> sourceSafety = adjacentSafety(sourceLevel, sourcePos);
         if (sourceSafety.size() != 1) {
             invalidateDoor(sourceLevel, sourcePos);
@@ -154,6 +162,7 @@ public final class DoorService {
         if (!(targetLevel.getBlockEntity(targetDoorGlobal.pos()) instanceof AnywhereDoorBlockEntity target)) return;
         reconcileInvalidatedDoor(targetLevel, target);
         if (!target.linked()) return;
+        if (!hasLoadedSafetyNeighborhood(targetLevel, targetDoorGlobal.pos())) return;
         List<BlockPos> targetSafety = adjacentSafety(targetLevel, targetDoorGlobal.pos());
         if (targetSafety.size() != 1) {
             invalidateDoor(targetLevel, targetDoorGlobal.pos());
@@ -261,7 +270,9 @@ public final class DoorService {
             // 无论被拆的是本门的安全点还是伙伴门的安全点，双向关联都已不再满足
             // “双方各有唯一安全点”的不变量。立即清理本门并在已加载时反向清理伙伴门，
             // 避免只让一个方向因目标缺块而拒绝、另一个方向仍残留过期关联。
-            if (serverLevel.getBlockEntity(candidate) instanceof AnywhereDoorBlockEntity) invalidateDoor(serverLevel, candidate);
+            if (serverLevel.hasChunkAt(candidate) && serverLevel.getBlockEntity(candidate) instanceof AnywhereDoorBlockEntity) {
+                invalidateDoor(serverLevel, candidate);
+            }
         }
     }
 
@@ -291,6 +302,15 @@ public final class DoorService {
         if (DoorInvalidationSavedData.get(level).consume(door.doorId())) door.clearLink();
     }
 
+    private static boolean hasLoadedSafetyNeighborhood(ServerLevel level, BlockPos doorPos) {
+        if (!level.hasChunkAt(doorPos.below())) return false;
+        for (Direction direction : Direction.Plane.HORIZONTAL) {
+            if (!level.hasChunkAt(doorPos.relative(direction))) return false;
+        }
+        return true;
+    }
+
+    /** 调用前须确认所有邻格已加载，避免 getBlockState 在区块边界创建远端区块。 */
     private static List<BlockPos> adjacentSafety(ServerLevel level, BlockPos doorPos) {
         List<BlockPos> found = new ArrayList<>();
         BlockPos below = doorPos.below();

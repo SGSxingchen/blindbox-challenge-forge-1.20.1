@@ -33,6 +33,10 @@ public final class CiClientAbilityObservation {
     private static int initialEntityId = -1;
     private static int learnedSelfSyncCount;
     private static boolean selfSyncMarkerWritten;
+    private static boolean groundFirstJumpInjected;
+    private static boolean groundFirstJumpKeyReleased;
+    private static boolean groundFirstJumpRose;
+    private static double groundFirstJumpY;
     private static boolean keyInjected;
     private static boolean serverVelocityObserved;
     private static double lastObservedY = Double.NaN;
@@ -73,12 +77,7 @@ public final class CiClientAbilityObservation {
                 learnedSelfSyncCount++;
                 CiTestProbe.LOGGER.info("P3 易筋经客户端收到自身能力同步，次数={}，实体={}", learnedSelfSyncCount, player.getId());
                 if (initialEntityId < 0) initialEntityId = player.getId();
-                // 平台只能在客户端实际收到本次 true S2C 后由服务端撤去；这个标记只记录
-                // 已收到的网络事实，不能代表按键、C2S 或服务器速度成功。
-                if (!selfSyncMarkerWritten) {
-                    writeSelfSyncMarker(player);
-                    selfSyncMarkerWritten = true;
-                }
+                // 平台保留到客户端完成原版地面首跳并落地，服务端同时检查额外跳未被消耗。
                 if (clientCloneEvent && learnedSelfSyncCount >= 2) learnedAfterClone = true;
                 if (isNether(minecraft) && learnedSelfSyncCount >= 3) dimensionSyncObserved = true;
                 // 断线标志仅由 ClientPlayerNetworkEvent.LoggingOut 写入；因此这里证明的是
@@ -106,6 +105,10 @@ public final class CiClientAbilityObservation {
         initialEntityId = -1;
         learnedSelfSyncCount = 0;
         selfSyncMarkerWritten = false;
+        groundFirstJumpInjected = false;
+        groundFirstJumpKeyReleased = false;
+        groundFirstJumpRose = false;
+        groundFirstJumpY = Double.NaN;
         keyInjected = false;
         serverVelocityObserved = false;
         lastObservedY = Double.NaN;
@@ -140,12 +143,26 @@ public final class CiClientAbilityObservation {
         if (ALICE.equals(role()) && observedDisconnectAfterLifecycle) recoveryLogin = true;
     }
 
-    // 必须早于正式 ClientAbilityKeyEvents 的同一 END tick 执行，让生产 consumeClick() 消费这次真实映射点击。
+    // START 首跳注入早于生产处理；END 空中点击交由下一个生产 START 消费。
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
+        if (event.phase == TickEvent.Phase.START) {
+            if (!ALICE.equals(role()) || !initialSelfSync || player == null || minecraft.screen != null) return;
+            if (!groundFirstJumpInjected && player.onGround()
+                    && ClientPlayerAbilityState.hasLearnedYiJin(player.getId())) {
+                groundFirstJumpY = player.getY();
+                minecraft.options.keyJump.setDown(true);
+                KeyMapping.click(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_SPACE));
+                groundFirstJumpInjected = true;
+            } else if (groundFirstJumpInjected && !groundFirstJumpKeyReleased) {
+                minecraft.options.keyJump.setDown(false);
+                groundFirstJumpKeyReleased = true;
+            }
+            return;
+        }
+        if (event.phase != TickEvent.Phase.END) return;
         if (BOB.equals(role())) {
             observeTrackedAlice(minecraft, player);
             return;
@@ -153,9 +170,17 @@ public final class CiClientAbilityObservation {
         if (!ALICE.equals(role())) return;
         if (player == null || minecraft.level == null || minecraft.getConnection() == null) return;
 
+        if (groundFirstJumpInjected && !player.onGround() && player.getY() > groundFirstJumpY + 0.03D) {
+            groundFirstJumpRose = true;
+        }
+        if (groundFirstJumpRose && groundFirstJumpKeyReleased && player.onGround() && !selfSyncMarkerWritten) {
+            writeSelfSyncMarker(player);
+            selfSyncMarkerWritten = true;
+        }
+
         // 调用 KeyMapping.click 而不是直接发送网络包。下一个（或本）客户端 Tick 只能由生产
         // ClientAbilityKeyEvents.consumeClick() 取走该点击并发送无参数 C2S 请求。
-        if (initialSelfSync && !keyInjected && !player.onGround()
+        if (initialSelfSync && selfSyncMarkerWritten && !keyInjected && !player.onGround()
                 && ClientPlayerAbilityState.hasLearnedYiJin(player.getId())) {
             KeyMapping.click(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_SPACE));
             keyInjected = true;
@@ -230,7 +255,9 @@ public final class CiClientAbilityObservation {
                 + "role=alice\n"
                 + "self_uuid=" + player.getUUID() + "\n"
                 + "self_entity_id=" + initialEntityId + "\n"
-                + "received_self_sync=true\n");
+                + "received_self_sync=true\n"
+                + "ground_first_jump_rose=true\n"
+                + "ground_first_jump_landed=true\n");
     }
 
     private static void writeTrackingMarker(java.util.UUID selfUuid, java.util.UUID trackedUuid, int trackedEntityId) {

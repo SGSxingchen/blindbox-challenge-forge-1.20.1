@@ -104,10 +104,22 @@ public final class P4TextNegativeCiAssertions {
             throw new IllegalStateException("非法或越长的死亡笔记目标名被接受");
         }
         int schedulesBefore = DeathNoteSavedData.get(alice.serverLevel()).entries().size();
-        if (DeathNoteService.schedule(alice, "OfflineCiTarget")
-                || DeathNoteSavedData.get(alice.serverLevel()).entries().size() != schedulesBefore) {
-            throw new IllegalStateException("离线死亡笔记目标意外建立排程");
+        alice.setItemInHand(InteractionHand.MAIN_HAND, note);
+        DeathNoteMenu offlineMenu = new DeathNoteMenu(704, alice.getInventory(), UUID.randomUUID(), slot, instance, 0);
+        alice.containerMenu = offlineMenu;
+        CommitDeathNotePacket offlinePacket = new CommitDeathNotePacket(704, offlineMenu.sessionId(), slot, instance, 0, "OfflineCiTarget");
+        if (CommitDeathNotePacket.commit(alice, offlinePacket)
+                || DeathNoteSavedData.get(alice.serverLevel()).entries().size() != schedulesBefore
+                || alice.containerMenu == offlineMenu || !offlineMenu.submissionConsumed()
+                || CommitDeathNotePacket.isAuthorized(alice, offlinePacket) || LetterService.revision(note) != 0) {
+            throw new IllegalStateException("离线死亡笔记未安全关闭、修改了物品或意外建立排程");
         }
+        DeathNoteMenu retryMenu = new DeathNoteMenu(705, alice.getInventory(), UUID.randomUUID(), slot, instance, 0);
+        alice.containerMenu = retryMenu;
+        if (!CommitDeathNotePacket.isAuthorized(alice, new CommitDeathNotePacket(705, retryMenu.sessionId(), slot, instance, 0, "OfflineCiTarget"))) {
+            throw new IllegalStateException("离线目标失败后重开死亡笔记无法重新提交");
+        }
+        alice.closeContainer();
     }
 
     private static void assertBodyRejected(String body) {

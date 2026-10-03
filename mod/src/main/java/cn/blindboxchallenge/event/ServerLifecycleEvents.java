@@ -13,6 +13,7 @@ import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent;
+import net.minecraftforge.event.entity.living.MobEffectEvent;
 import net.minecraftforge.event.entity.living.ShieldBlockEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import cn.blindboxchallenge.registry.ModItems;
@@ -22,6 +23,8 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber(modid = BlindBoxChallenge.MOD_ID)
@@ -65,7 +68,10 @@ public final class ServerLifecycleEvents {
     /** 门传送必须等本 tick 的入站位置包完全返回后再执行，避免旧坐标在同一调用栈回写。 */
     @SubscribeEvent
     public static void serverTick(TickEvent.ServerTickEvent event) {
-        if (event.phase == TickEvent.Phase.END) DoorService.processPendingTeleports(event.getServer());
+        if (event.phase == TickEvent.Phase.END) {
+            DoorService.processPendingTeleports(event.getServer());
+            EggyEyeMaskItem.processPendingBlindness();
+        }
     }
 
     @SubscribeEvent
@@ -131,6 +137,30 @@ public final class ServerLifecycleEvents {
         boolean isEyeMask = event.getTo().is(ModItems.EGGY_EYE_MASK.get());
         if (!wasEyeMask && isEyeMask) EggyEyeMaskItem.onEquipped(event.getEntity());
         if (wasEyeMask && !isEyeMask) EggyEyeMaskItem.onUnequipped(event.getEntity());
+    }
+
+    /** 外部失明先接管效果表；取下眼罩时不能删除外部来源，也不能留下隐藏的无限效果。 */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void blindnessApplicable(MobEffectEvent.Applicable event) {
+        if (event.getEntity().level().isClientSide || event.getResult() == Event.Result.DENY
+                || event.getEffectInstance().getEffect() != MobEffects.BLINDNESS) return;
+        EggyEyeMaskItem.beforeExternalBlindness(event.getEntity());
+    }
+
+    /** 牛奶/图腾不能清除仍戴着的眼罩自身失明；外部效果正常移除，刻末才补眼罩效果。 */
+    @SubscribeEvent
+    public static void blindnessRemoved(MobEffectEvent.Remove event) {
+        if (event.getEntity().level().isClientSide || event.getEffect() != MobEffects.BLINDNESS
+                || !EggyEyeMaskItem.isWearing(event.getEntity())) return;
+        if (EggyEyeMaskItem.ownsCurrentBlindness(event.getEntity())) event.setCanceled(true);
+        else EggyEyeMaskItem.queueBlindnessMaintenance(event.getEntity());
+    }
+
+    @SubscribeEvent
+    public static void blindnessExpired(MobEffectEvent.Expired event) {
+        if (event.getEffectInstance() != null && event.getEffectInstance().getEffect() == MobEffects.BLINDNESS) {
+            EggyEyeMaskItem.queueBlindnessMaintenance(event.getEntity());
+        }
     }
 
     private static boolean isCustomTotem(ItemStack stack) {

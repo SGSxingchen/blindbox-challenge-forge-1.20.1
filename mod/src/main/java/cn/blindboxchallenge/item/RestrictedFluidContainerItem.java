@@ -1,8 +1,11 @@
 package cn.blindboxchallenge.item;
 
 import javax.annotation.Nullable;
+import java.util.List;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -11,6 +14,7 @@ import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BucketPickup;
@@ -37,6 +41,14 @@ public abstract class RestrictedFluidContainerItem extends Item {
         // 物品耐久会自行锁定为不可堆叠；不得在 durability() 之后再次 stacksTo()，
         // 否则 Forge 1.20.1 会在注册期抛出“Unable to have damage AND stack”。
         super(properties);
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, level, tooltip, flag);
+        Fluid fluid = getContainedFluid(stack);
+        String state = fluid == Fluids.WATER ? "water" : fluid == Fluids.LAVA ? "lava" : "empty";
+        tooltip.add(Component.translatable("tooltip.blindboxchallenge.fluid_" + state).withStyle(ChatFormatting.GRAY));
     }
 
     @Override

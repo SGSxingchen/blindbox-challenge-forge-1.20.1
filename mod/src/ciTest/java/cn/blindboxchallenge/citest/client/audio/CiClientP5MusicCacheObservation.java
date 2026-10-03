@@ -360,7 +360,7 @@ public final class CiClientP5MusicCacheObservation {
         @Override public double getZ() { return ((SoundInstance) delegate).getZ(); }
         @Override public Attenuation getAttenuation() { return ((SoundInstance) delegate).getAttenuation(); }
         @Override public CompletableFuture<AudioStream> getStream(SoundBufferLibrary buffers, Sound sound, boolean looping) {
-            return delegate.getStream(buffers, sound, looping).thenApply(stream -> new ObservedAudioStream(stream, delegate, directory, observer, prefix));
+            return ((SoundInstance) delegate).getStream(buffers, sound, looping).thenApply(stream -> new ObservedAudioStream(stream, delegate, directory, observer, prefix));
         }
     }
 

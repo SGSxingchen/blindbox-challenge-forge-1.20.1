@@ -79,6 +79,22 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 grep -q 'BLINDBOX_CITEST_P2_BUSINESS=success' "${SERVER_DIR}/server.log"
+# 眼罩探针跨真实服务端 tick 等待外部效果自然到期，并验证牛奶、真实伤害图腾和卸装。
+printf 'blindboxcitest start_eye_mask\n' >&3
+for _ in $(seq 1 60); do
+  if grep -q 'BLINDBOX_CITEST_EYE_MASK=failed' "${SERVER_DIR}/server.log"; then cat "${SERVER_DIR}/server.log"; exit 1; fi
+  grep -q 'BLINDBOX_CITEST_EYE_MASK_FINISHED=success' "${SERVER_DIR}/server.log" && break
+  kill -0 "${SERVER_PID}" 2>/dev/null || { cat "${SERVER_DIR}/server.log"; exit 1; }
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_EYE_MASK_STARTED=success' "${SERVER_DIR}/server.log"
+grep -q 'BLINDBOX_CITEST_EYE_MASK_FINISHED=success' "${SERVER_DIR}/server.log"
+printf 'blindboxcitest verify_eye_mask\n' >&3
+for _ in $(seq 1 60); do
+  grep -q 'BLINDBOX_CITEST_EYE_MASK=success' "${SERVER_DIR}/server.log" && break
+  sleep 1
+done
+grep -q 'BLINDBOX_CITEST_EYE_MASK=success' "${SERVER_DIR}/server.log"
 printf 'blindboxcitest run_p3_business\n' >&3
 for _ in $(seq 1 60); do
   grep -q 'BLINDBOX_CITEST_P3_BUSINESS=success' "${SERVER_DIR}/server.log" && break

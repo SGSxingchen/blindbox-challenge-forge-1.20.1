@@ -109,6 +109,8 @@ public final class DoorCiScenario {
             assertRejectedAtSource(level, alice, firstDoor, "未加载目标门仍发生传送");
             if (level.hasChunkAt(unloaded)) throw new IllegalStateException("拒绝未加载门时错误强加载了远端区块");
 
+            assertUnloadedSafetyNeighborhood(level, alice, firstDoor, currentFirst, before);
+
             level.setBlock(firstSafety, Blocks.AIR.defaultBlockState(), 3);
             level.setBlock(secondSafety, Blocks.AIR.defaultBlockState(), 3);
             level.setBlock(firstSideSafety, ModBlocks.SAFETY_LANDING.get().defaultBlockState(), 3);
@@ -160,6 +162,68 @@ public final class DoorCiScenario {
         player.teleportTo(level, source.getX() + 0.5D, source.getY() + 0.1D, source.getZ() + 0.5D, 0.0F, 0.0F);
         enterDoorAtTickEnd(level, source, player);
         if (player.blockPosition().distSqr(source) > 4.0D) throw new IllegalStateException(message);
+    }
+
+    /** 只由夹具显式加载边缘门所在区块；生产配对、传送与拆安全点都不得加载西侧邻区块。 */
+    private static void assertUnloadedSafetyNeighborhood(ServerLevel level, ServerPlayer player, BlockPos source,
+                                                        AnywhereDoorBlockEntity first, Map<BlockPos, BlockState> before) {
+        BlockPos edgeDoor = new BlockPos(2_000_000, Math.min(source.getY(), level.getMaxBuildHeight() - 4), 2_000_008);
+        BlockPos unknownNeighbor = edgeDoor.west();
+        BlockPos removableSafety = edgeDoor.south(2);
+        if (level.hasChunkAt(edgeDoor) || level.hasChunkAt(unknownNeighbor)) {
+            throw new IllegalStateException("边缘门回归夹具区块意外已加载");
+        }
+        level.getChunkAt(edgeDoor);
+        if (level.hasChunkAt(unknownNeighbor)) throw new IllegalStateException("夹具加载门区块时西侧邻区块意外已加载");
+        for (BlockPos position : java.util.List.of(edgeDoor, edgeDoor.below(), removableSafety)) {
+            BlockState state = level.getBlockState(position);
+            if (!state.isAir()) throw new IllegalStateException("边缘门夹具拒绝覆盖已有方块");
+            before.put(position, state);
+        }
+        if (!level.getBlockState(edgeDoor.above()).isAir()) throw new IllegalStateException("边缘门出口头部不是空气");
+        // 2 仅取消普通邻块通知；还需 16 禁止原版形状更新读取西侧邻格。LevelChunk 仍先执行真实 onRemove。
+        int fixtureUpdates = 2 | 16;
+        level.setBlock(removableSafety, ModBlocks.SAFETY_LANDING.get().defaultBlockState(), fixtureUpdates);
+        if (level.hasChunkAt(unknownNeighbor)) throw new IllegalStateException("布置安全点夹具错误加载了相邻区块");
+        level.setBlock(removableSafety, Blocks.AIR.defaultBlockState(), fixtureUpdates);
+        if (level.hasChunkAt(unknownNeighbor)) throw new IllegalStateException("拆安全点错误强加载了相邻区块");
+        level.setBlock(edgeDoor.below(), ModBlocks.SAFETY_LANDING.get().defaultBlockState(), fixtureUpdates);
+        level.setBlock(edgeDoor, ModBlocks.ANYWHERE_DOOR.get().defaultBlockState(), fixtureUpdates);
+        if (level.hasChunkAt(unknownNeighbor)) throw new IllegalStateException("布置边缘门夹具错误加载了相邻区块");
+        if (!(level.getBlockEntity(edgeDoor) instanceof AnywhereDoorBlockEntity target)) {
+            throw new IllegalStateException("边缘门方块实体缺失");
+        }
+        first.clearLink();
+        pairWithProductionUse(level, player, source, edgeDoor);
+        if (first.linked() || target.linked() || level.hasChunkAt(unknownNeighbor)) {
+            throw new IllegalStateException("未知安全点邻域仍被配对或强加载");
+        }
+        // 模拟原本已存在的持久配对；邻区块暂未加载不能删除这组门或关联。
+        first.link(target.doorId(), net.minecraft.core.GlobalPos.of(level.dimension(), edgeDoor),
+                net.minecraft.core.GlobalPos.of(level.dimension(), edgeDoor.below()));
+        target.link(first.doorId(), net.minecraft.core.GlobalPos.of(level.dimension(), source),
+                net.minecraft.core.GlobalPos.of(level.dimension(), source.below()));
+        assertRejectedAtSource(level, player, source, "目标安全点邻域未加载时仍发生传送");
+        assertBidirectionallyLinked(first, target);
+        if (level.hasChunkAt(unknownNeighbor) || !level.getBlockState(edgeDoor).is(ModBlocks.ANYWHERE_DOOR.get())
+                || !level.getBlockState(source).is(ModBlocks.ANYWHERE_DOOR.get())) {
+            throw new IllegalStateException("暂拒传送时强加载邻区块或删除门方块");
+        }
+        level.getChunkAt(unknownNeighbor);
+        DoorService.clearSelection(player);
+        player.teleportTo(level, source.getX() + 0.5D, source.getY() + 0.1D, source.getZ() + 0.5D, 0.0F, 0.0F);
+        enterDoorAtTickEnd(level, source, player);
+        if (player.position().distanceToSqr(Vec3.atBottomCenterOf(edgeDoor)) > 1.0E-6D) {
+            throw new IllegalStateException("邻区块正常加载后原配对仍不可传送");
+        }
+        assertBidirectionallyLinked(first, target);
+        first.clearLink();
+        target.clearLink();
+        pairWithProductionUse(level, player, source, edgeDoor);
+        assertBidirectionallyLinked(first, target);
+        first.clearLink();
+        target.clearLink();
+        CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P4_DOOR_UNLOADED_NEIGHBOR=success");
     }
 
     /** 命令夹具直接调用 Block#entityInside 后，显式推进到生产 ServerTick.END 消费点；不在回调内传送。 */

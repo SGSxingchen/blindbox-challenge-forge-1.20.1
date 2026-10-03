@@ -35,6 +35,7 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = CiTestProbe.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class P4TextCiScenario {
     public static final String LETTER_BODY = "P4 letter";
+    public static final String INITIAL_LETTER_BODY = "信件原文".repeat(100) + "正文末尾";
     private static ActiveScenario active;
     /**
      * P3 强杀恢复保留的高空坐标不能直接交给小黄鸡 cleanup。由下一场景预先拥有并保存的短期平台
@@ -207,6 +208,8 @@ public final class P4TextCiScenario {
 
         private void giveLetterForRealClientUse() {
             ItemStack letter = new ItemStack(ModItems.LETTER.get());
+            // 初始信件超过一页，必须通过真实只读界面翻页后再编辑；初始夹具不增加修订。
+            letter.getOrCreateTag().putString(LetterService.LETTER_BODY_KEY, INITIAL_LETTER_BODY);
             alice.setItemInHand(InteractionHand.MAIN_HAND, letter);
             alice.containerMenu.broadcastChanges();
             // 此后只能由 Alice 真实客户端的 KeyMapping 右键进入 LetterItem#use；服务端不伪造 use/潜行。
@@ -288,6 +291,7 @@ public final class P4TextCiScenario {
             if (!Files.isRegularFile(marker)) throw new IllegalStateException("缺少真实客户端 GUI marker");
             String value = Files.readString(marker, StandardCharsets.UTF_8);
             if (!value.contains("read_only_screen_observed=true") || !value.contains("letter_edit_clicked=true")
+                    || !value.contains("letter_read_paged=true") || !value.contains("letter_resize_preserved=true")
                     || !value.contains("death_note_clicked=true") || !value.contains("normal_use_key_injected=true")
                     || !value.contains("sneak_use_key_injected=true") || !value.contains("server_close_observed=true")
                     || !value.contains("observer_uuid=" + alice.getUUID())) {

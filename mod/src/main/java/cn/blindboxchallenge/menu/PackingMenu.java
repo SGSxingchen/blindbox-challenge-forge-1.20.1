@@ -4,6 +4,7 @@ import cn.blindboxchallenge.registry.ModMenus;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.ItemStack;
@@ -44,7 +45,11 @@ public final class PackingMenu extends AbstractContainerMenu {
     @Override
     public boolean stillValid(Player player) { return !player.isSpectator(); }
 
-    /** P1 的数量选择由受校验的文本提交完成，禁止 Shift+点击制造另一个临时库存副本。 */
+    /** 选择界面只读；包括伪造的原版点击包在内，都不能移动或丢弃真实库存。 */
+    @Override
+    public void clicked(int slotId, int button, ClickType clickType, Player player) {}
+
+    /** 不建立临时库存副本，打包只通过受校验的槽位和数量提交完成。 */
     @Override
     public ItemStack quickMoveStack(Player player, int index) { return ItemStack.EMPTY; }
 }

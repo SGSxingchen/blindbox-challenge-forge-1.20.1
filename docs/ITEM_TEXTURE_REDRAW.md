@@ -1,5 +1,7 @@
 # 59 张物品贴图原创重绘交付记录
 
+> 本文记录 2026 年 8 月的历史批次，以下尺寸、来源和哈希不代表当前工作树。2026 年 10 月的定向重绘及用户提供的文绪、奶龙外观参考见 [物品修正记录](ITEM_CORRECTIONS_2026-10-03.html)；当前逐文件哈希以 [资源清单](ASSET_MANIFEST.md) 为准。
+
 ## 范围与结论
 
 本批覆盖正式资源目录中的 59 张物品 PNG，全部为 16×16 RGBA。54 项仅以项目台账中的文字语义作为参考，5 项（`blind_box`、`packing_tool`、`letter`、`potato_chips`、`black_truffle_ham_cracker`）按自由设计处理。59 项人工视觉复核均通过；其中 5 项定向重试：`chainsaw_sword`、`flowing_black_flag`、`rat_jerky_totem`、`road_barrier_helmet`、`safety_exit_sign_shield`。

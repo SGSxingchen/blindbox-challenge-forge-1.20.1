@@ -47,13 +47,13 @@ class BufferedAudioStream implements AudioStream {
         return new BufferedAudioStream(format, output.toByteArray());
     }
 
-    void setCloseCallback(Runnable closeCallback) { this.closeCallback = closeCallback; }
+    synchronized void setCloseCallback(Runnable closeCallback) { this.closeCallback = closeCallback; }
 
     @Override
     public AudioFormat getFormat() { return format; }
 
     @Override
-    public ByteBuffer read(int requestedBytes) {
+    public synchronized ByteBuffer read(int requestedBytes) {
         if (closed || !remaining.hasRemaining()) return ByteBuffer.allocateDirect(0).order(ByteOrder.LITTLE_ENDIAN);
         int length = Math.min(Math.max(1, requestedBytes), remaining.remaining());
         ByteBuffer output = ByteBuffer.allocateDirect(length).order(ByteOrder.LITTLE_ENDIAN);
@@ -66,7 +66,7 @@ class BufferedAudioStream implements AudioStream {
     }
 
     @Override
-    public void close() {
+    public synchronized void close() {
         if (closed) return;
         closed = true;
         remaining = ByteBuffer.allocateDirect(0);

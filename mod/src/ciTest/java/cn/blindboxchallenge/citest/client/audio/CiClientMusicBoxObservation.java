@@ -134,6 +134,10 @@ public final class CiClientMusicBoxObservation {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void wrapProductionMusicStream(PlaySoundEvent event) {
         if (!(event.getOriginalSound() instanceof RemoteMusicSoundInstance remote)) return;
+        SoundInstance productionSound = remote;
+        if (!productionSound.isRelative() || productionSound.getAttenuation() != SoundInstance.Attenuation.NONE) {
+            throw new IllegalStateException("全服八音盒仍受方块距离衰减或世界坐标限制");
+        }
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
         Path directory = markerDirectory();
@@ -394,7 +398,7 @@ public final class CiClientMusicBoxObservation {
         @Override public double getZ() { return ((SoundInstance) delegate).getZ(); }
         @Override public Attenuation getAttenuation() { return ((SoundInstance) delegate).getAttenuation(); }
         @Override public CompletableFuture<AudioStream> getStream(SoundBufferLibrary buffers, Sound sound, boolean looping) {
-            return delegate.getStream(buffers, sound, looping).thenApply(stream -> new ObservedAudioStream(stream, delegate, directory, observer, prefix));
+            return ((SoundInstance) delegate).getStream(buffers, sound, looping).thenApply(stream -> new ObservedAudioStream(stream, delegate, directory, observer, prefix));
         }
     }
 

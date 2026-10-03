@@ -2,6 +2,7 @@ package cn.blindboxchallenge.service;
 
 import cn.blindboxchallenge.capability.ModCapabilities;
 import cn.blindboxchallenge.capability.PlayerAbilityData;
+import cn.blindboxchallenge.config.ModServerConfig;
 import cn.blindboxchallenge.network.ModNetwork;
 import cn.blindboxchallenge.network.SyncPlayerAbilityPacket;
 import java.util.UUID;
@@ -43,7 +44,8 @@ public final class PlayerAbilityService {
                     || player.isPassenger() || player.isInWaterOrBubble() || player.isInLava() || player.onClimbable()) return false;
             data.setUsedDoubleJump(true);
             data.setNextDoubleJumpTick(gameTime + DOUBLE_JUMP_COOLDOWN_TICKS);
-            player.setDeltaMovement(player.getDeltaMovement().x, DOUBLE_JUMP_VELOCITY, player.getDeltaMovement().z);
+            player.setDeltaMovement(player.getDeltaMovement().x, ModServerConfig.YIJIN_DOUBLE_JUMP_VELOCITY.get(),
+                    player.getDeltaMovement().z);
             player.hurtMarked = true;
             return true;
         }).orElse(false);
@@ -57,9 +59,9 @@ public final class PlayerAbilityService {
 
     /** 克隆、登录、换维后按 Capability 事实源重建属性，固定 UUID 避免重复叠加。 */
     public static void reconcileAttributes(ServerPlayer player, PlayerAbilityData data) {
-        reconcile(player.getAttribute(Attributes.MAX_HEALTH), YIJIN_MAX_HEALTH_UUID, "易筋经最大生命", YIJIN_MAX_HEALTH_BONUS,
+        reconcile(player.getAttribute(Attributes.MAX_HEALTH), YIJIN_MAX_HEALTH_UUID, "易筋经最大生命", ModServerConfig.YIJIN_MAX_HEALTH_BONUS.get(),
                 data.hasLearnedYiJin());
-        reconcile(player.getAttribute(Attributes.ATTACK_DAMAGE), YIJIN_ATTACK_DAMAGE_UUID, "易筋经攻击伤害", YIJIN_ATTACK_DAMAGE_BONUS,
+        reconcile(player.getAttribute(Attributes.ATTACK_DAMAGE), YIJIN_ATTACK_DAMAGE_UUID, "易筋经攻击伤害", ModServerConfig.YIJIN_ATTACK_DAMAGE_BONUS.get(),
                 data.hasLearnedYiJin());
         player.setHealth(Math.min(player.getHealth(), player.getMaxHealth()));
     }

@@ -25,6 +25,8 @@ import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -41,8 +43,9 @@ public final class P3AbilityCiScenario {
     /** 等待客户端由真实 true S2C 写出观察标记的上限；不以固定 tick 猜测网络已到达。 */
     private static final int SELF_SYNC_MARKER_TIMEOUT_TICKS = 180;
     private static final int TRACKING_REQUEST_TICKS = 40;
-    /** 20 格真实下落窗口；干草块保证失败时不以摔死掩盖 C2S 物理校验。 */
-    private static final int AIR_JUMP_DROP_BLOCKS = 20;
+    /** 近地真实下落窗口；不施加人工缓降，也不放宽原版反飞行规则。 */
+    private static final int AIR_JUMP_DROP_BLOCKS = 4;
+    private static final int POST_JUMP_STABLE_TICKS = 120;
     /** C2S/速度同步超时只生成真实服务端物理快照，不得以超时当成功。 */
     private static final int CLIENT_KEY_RESULT_TIMEOUT_TICKS = 140;
     private static ActiveScenario active;
@@ -192,6 +195,8 @@ public final class P3AbilityCiScenario {
         private final boolean originalKeepInventory;
         private final int initialAliceEntityId;
         private final int originalAliceSelectedSlot;
+        private final Vec3 originalAlicePosition;
+        private final Vec3 originalBobPosition;
         private BlockPos aliceSupport;
         private BlockPos bobSupport;
         private BlockState originalAliceSupport;
@@ -202,6 +207,7 @@ public final class P3AbilityCiScenario {
         private int phaseTicks;
         private boolean clientPathVerified;
         private boolean clientKeyAcceptedByServer;
+        private int groundedOnlineTicks;
         private boolean startTrackingEventSeen;
         private boolean cloneEventSeen;
         private ServerPlayer cloneReplacement;
@@ -221,6 +227,8 @@ public final class P3AbilityCiScenario {
             this.origin = alice.serverLevel();
             this.initialAliceEntityId = alice.getId();
             this.originalAliceSelectedSlot = alice.getInventory().selected;
+            this.originalAlicePosition = alice.position();
+            this.originalBobPosition = bob.position();
             this.originalImmediateRespawn = server.getGameRules().getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).get();
             this.originalKeepInventory = server.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).get();
         }
@@ -231,6 +239,7 @@ public final class P3AbilityCiScenario {
             if (alice.serverLevel() != bob.serverLevel()) {
                 throw new IllegalStateException("P3 易筋经客户端场景要求 Alice 与 Bob 初始同维度");
             }
+            if (!alice.isAlive() || !bob.isAlive()) throw new IllegalStateException("P3 按键场景要求两名玩家存活");
             markerDirectory();
             ActiveScenario scenario = new ActiveScenario(server, alice, bob);
             scenario.setupClientPath(alice, bob);
@@ -247,12 +256,13 @@ public final class P3AbilityCiScenario {
             // 先让 Bob 离开追踪范围并等待服务器实际撤销追踪，再学习；因此 Bob 的 true 快照只能来自随后真实 StartTracking。
             double x = Math.floor(alice.getX()) + 0.5D;
             double z = Math.floor(alice.getZ()) + 0.5D;
-            // 平台移除后需要覆盖真实 S2C、KeyMapping 和 C2S 往返的腾空窗口；使用干草安全着陆，
-            // 即使按键链路异常也不会以摔死或反飞行断线掩盖真实 C2S 拒绝原因。
-            aliceSupport = BlockPos.containing(x, 120.0D, z);
-            bobSupport = BlockPos.containing(x + 512.0D, 120.0D, z);
-            // 先让两名真实客户端站在高空临时平台，避免等待撤销追踪/同步时被专服的
-            // anti-fly 机制踢出；只在学习后移除 Alice 平台以走合法的腾空 C2S 路径。
+            int groundY = origin.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(x), (int) Math.floor(z));
+            aliceSupport = BlockPos.containing(x, groundY + AIR_JUMP_DROP_BLOCKS, z);
+            // 远处区块若尚未加载，Level#getHeight 只返回最低建造高度；先取得真实区块再找地面。
+            origin.getChunkAt(BlockPos.containing(x + 512.0D, 0.0D, z));
+            int bobGroundY = origin.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(x + 512.0D), (int) Math.floor(z));
+            bobSupport = BlockPos.containing(x + 512.0D, bobGroundY, z);
+            // 等待真实同步时站在有碰撞的地面；收到首跳、落地观察后才撤去近地平台。
             originalAliceSupport = origin.getBlockState(aliceSupport);
             originalBobSupport = origin.getBlockState(bobSupport);
             origin.setBlock(aliceSupport, Blocks.STONE.defaultBlockState(), 3);
@@ -268,10 +278,11 @@ public final class P3AbilityCiScenario {
             bob.stopRiding();
             MobEffectInstance slowFalling = alice.getEffect(MobEffects.SLOW_FALLING);
             originalSlowFalling = slowFalling == null ? null : new MobEffectInstance(slowFalling);
-            alice.teleportTo(origin, x, 121.0D, z, 0.0F, 0.0F);
+            alice.removeEffect(MobEffects.SLOW_FALLING);
+            alice.teleportTo(origin, x, aliceSupport.getY() + 1.0D, z, 0.0F, 0.0F);
             alice.setDeltaMovement(0.0D, 0.0D, 0.0D);
             alice.hurtMarked = true;
-            bob.teleportTo(origin, x + 512.0D, 121.0D, z, 0.0F, 0.0F);
+            bob.teleportTo(origin, x + 512.0D, bobSupport.getY() + 1.0D, z, 0.0F, 0.0F);
             bob.setDeltaMovement(0.0D, 0.0D, 0.0D);
             bob.hurtMarked = true;
         }
@@ -282,7 +293,12 @@ public final class P3AbilityCiScenario {
             if (phase == Phase.CLONE_READY || phase == Phase.DIMENSION_READY) return;
             if (phase == Phase.WAITING_FOR_CLIENT_KEY) {
                 ServerPlayer alice = player(server, "BlindBoxAlice");
+                ServerPlayer bob = player(server, "BlindBoxBob");
+                if (!alice.isAlive() || !bob.isAlive()) throw new IllegalStateException("真实按键后的玩家未安全存活");
                 alice.getCapability(ModCapabilities.PLAYER_ABILITY).ifPresent(data -> {
+                    if (!airJumpReleased && data.hasUsedDoubleJump()) {
+                        throw new IllegalStateException("地面首跳错误消耗了额外跳；平台尚未撤去");
+                    }
                     if (data.hasUsedDoubleJump()) clientKeyAcceptedByServer = true;
                     if (airJumpReleased) {
                         lastClientKeyPhysics = "phaseTick=" + phaseTicks + ", y=" + alice.getY()
@@ -296,6 +312,20 @@ public final class P3AbilityCiScenario {
                 }
                 if (airJumpReleased && phaseTicks - airJumpReleasePhaseTick > CLIENT_KEY_RESULT_TIMEOUT_TICKS && !clientKeyAcceptedByServer) {
                     throw new IllegalStateException("真实 KeyMapping 注入后服务端未接受二段跳 C2S：" + lastClientKeyPhysics);
+                }
+                if (airJumpReleased && clientKeyAcceptedByServer && alice.onGround()) {
+                    groundedOnlineTicks++;
+                    if (groundedOnlineTicks == POST_JUMP_STABLE_TICKS) {
+                        CiTestProbe.LOGGER.info("BLINDBOX_CITEST_P3_ABILITY_LANDED_STABLE=success ticks={} alice={}",
+                                groundedOnlineTicks, aliceUuid);
+                    }
+                } else {
+                    groundedOnlineTicks = 0;
+                }
+                if (airJumpReleased && !clientPathVerified
+                        && phaseTicks - airJumpReleasePhaseTick > CLIENT_KEY_RESULT_TIMEOUT_TICKS + POST_JUMP_STABLE_TICKS + 40
+                        && groundedOnlineTicks < POST_JUMP_STABLE_TICKS) {
+                    throw new IllegalStateException("二段跳后没有在有限窗口内正常落地并持续在线：" + lastClientKeyPhysics);
                 }
             }
             phaseTicks++;
@@ -340,6 +370,9 @@ public final class P3AbilityCiScenario {
             }
             if (!selfSyncMarkerVerified) {
                 throw new IllegalStateException("平台撤去前未核验客户端真实 true S2C 标记");
+            }
+            if (!alice.onGround() || groundedOnlineTicks < POST_JUMP_STABLE_TICKS) {
+                throw new IllegalStateException("二段跳后尚未安全落地并持续在线 120 刻");
             }
             Path directory = markerDirectory();
             Map<String, String> aliceMarker = readMarker(directory.resolve("client-1-p3-ability-key.marker"), 8);
@@ -495,10 +528,6 @@ public final class P3AbilityCiScenario {
 
         /** 平台只在客户端已收到自身 S2C 后移除，留出小于 anti-fly 阈值的真实腾空窗口。 */
         private void releaseAliceForAirJump(ServerPlayer alice) {
-            // Hosted Runner 偶发的服务端追帧会在网络包抵达前一次推进多个物理 tick；只对
-            // 这段隔离夹具施加原版缓降，保留真实腾空/onGround 校验并避免短落差被追帧耗尽。
-            alice.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING,
-                    CLIENT_KEY_RESULT_TIMEOUT_TICKS + 40, 0, false, false, false));
             if (aliceSupport != null) origin.setBlock(aliceSupport, Blocks.AIR.defaultBlockState(), 3);
             alice.setOnGround(false);
             alice.setDeltaMovement(0.0D, -0.08D, 0.0D);
@@ -510,8 +539,19 @@ public final class P3AbilityCiScenario {
             if (alice != null) {
                 resetAbility(alice);
                 restoreSlowFalling(alice);
+                alice.teleportTo(origin, originalAlicePosition.x, originalAlicePosition.y, originalAlicePosition.z,
+                        alice.getYRot(), alice.getXRot());
+                alice.setDeltaMovement(0.0D, 0.0D, 0.0D);
+                alice.fallDistance = 0.0F;
                 alice.getInventory().selected = originalAliceSelectedSlot;
                 alice.containerMenu.broadcastChanges();
+            }
+            ServerPlayer bob = server.getPlayerList().getPlayer(bobUuid);
+            if (bob != null) {
+                bob.teleportTo(origin, originalBobPosition.x, originalBobPosition.y, originalBobPosition.z,
+                        bob.getYRot(), bob.getXRot());
+                bob.setDeltaMovement(0.0D, 0.0D, 0.0D);
+                bob.fallDistance = 0.0F;
             }
             if (aliceSupport != null && originalAliceSupport != null) origin.setBlock(aliceSupport, originalAliceSupport, 3);
             if (bobSupport != null && originalBobSupport != null) origin.setBlock(bobSupport, originalBobSupport, 3);
@@ -543,11 +583,13 @@ public final class P3AbilityCiScenario {
             if (selfSyncMarkerVerified) return true;
             Path markerPath = markerDirectory().resolve("client-1-p3-ability-self-sync.marker");
             if (!Files.isRegularFile(markerPath)) return false;
-            Map<String, String> marker = readMarker(markerPath, 5);
+            Map<String, String> marker = readMarker(markerPath, 7);
             if (!"1".equals(marker.get("schema")) || !"alice".equals(marker.get("role"))
                     || !aliceUuid.toString().equals(marker.get("self_uuid"))
                     || !Integer.toString(initialAliceEntityId).equals(marker.get("self_entity_id"))
-                    || !"true".equals(marker.get("received_self_sync"))) {
+                    || !"true".equals(marker.get("received_self_sync"))
+                    || !"true".equals(marker.get("ground_first_jump_rose"))
+                    || !"true".equals(marker.get("ground_first_jump_landed"))) {
                 throw new IllegalStateException("Alice true S2C 观察 marker 与当前服务端实体不一致");
             }
             selfSyncMarkerVerified = true;

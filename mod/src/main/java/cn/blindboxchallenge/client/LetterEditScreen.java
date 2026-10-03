@@ -25,9 +25,12 @@ public final class LetterEditScreen extends AbstractContainerScreen<LetterEditMe
 
     @Override
     protected void init() {
+        // 重新布局前保存当前草稿；清除旧控件引用，避免窗口缩放后重复拼接旧正文。
+        String[] original = lines.isEmpty() ? menu.originalBody().split("\\n", -1)
+                : lines.stream().map(EditBox::getValue).toArray(String[]::new);
+        lines.clear();
         super.init();
         titleLabelX = 10;
-        String[] original = menu.originalBody().split("\\n", -1);
         for (int index = 0; index < menu.maximumLines(); index++) {
             EditBox line = new EditBox(font, leftPos + 12, topPos + 24 + index * 12, 220, 11,
                     Component.translatable("screen.blindboxchallenge.letter_line", index + 1));

@@ -86,10 +86,16 @@ public final class CiClientCreativeTabObservation {
         assertExactItems(expected, tabItems, "标签页显示集合");
         assertExactItems(expected, screenItems, "已打开创造物品栏菜单");
 
-        writeMarker(requiredMarker(), expected, tabItems, screenItems, player);
+        String menuBeforeClose = player.containerMenu.getClass().getName();
+        // 原版创造栏把玩家菜单切为 ItemPickerMenu；只清屏会让后续背包同步仍写入该菜单。
+        // 通过玩家的真实关闭路径归还 InventoryMenu，再允许脚本进入后续生存交互。
+        player.closeContainer();
+        if (minecraft.screen != null) minecraft.setScreen(null);
+        if (player.containerMenu != player.inventoryMenu) {
+            throw new IllegalStateException("创造物品栏关闭后没有恢复玩家背包菜单：" + player.containerMenu.getClass().getName());
+        }
+        writeMarker(requiredMarker(), expected, tabItems, screenItems, player, menuBeforeClose);
         markerWritten = true;
-        // 观察完成即关闭屏幕，随后脚本把玩家切回生存并进入原有 P5 单客户端回归；不让 GUI 状态干扰真实交互。
-        minecraft.setScreen(null);
         CiTestProbe.LOGGER.info("创造模式标签页 CI：真实屏幕已验证 {} 个条目并关闭", expected.size());
     }
 
@@ -188,7 +194,7 @@ public final class CiClientCreativeTabObservation {
     }
 
     private static void writeMarker(Path marker, List<ResourceLocation> expected, List<ResourceLocation> tabItems,
-                                    List<ResourceLocation> screenItems, LocalPlayer player) {
+                                    List<ResourceLocation> screenItems, LocalPlayer player, String menuBeforeClose) {
         int middle = expected.size() / 2;
         String value = "schema=1\n"
                 + "observer_uuid=" + player.getUUID() + "\n"
@@ -200,6 +206,9 @@ public final class CiClientCreativeTabObservation {
                 + "screen_count=" + screenItems.size() + "\n"
                 + "duplicates=false\n"
                 + "order_matches=true\n"
+                + "before_close_menu=" + menuBeforeClose + "\n"
+                + "after_close_menu=" + player.containerMenu.getClass().getName() + "\n"
+                + "inventory_menu_restored=true\n"
                 + "first=" + expected.get(0) + "\n"
                 + "middle=" + expected.get(middle) + "\n"
                 + "last=" + expected.get(expected.size() - 1) + "\n";

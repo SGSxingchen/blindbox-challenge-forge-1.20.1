@@ -27,7 +27,7 @@ public final class PigBreedingService {
                         && pig.distanceToSqr(player) <= RADIUS_BLOCKS * RADIUS_BLOCKS,
                 scanned, maximum);
         scanned.sort(Comparator.comparing(pig -> pig.getUUID().toString()));
-        List<Pig> eligible = scanned.stream().filter(Pig::canFallInLove).toList();
+        List<Pig> eligible = scanned.stream().filter(pig -> pig.getAge() == 0 && pig.canFallInLove()).toList();
         int bredPairs = 0;
         for (int index = 0; index + 1 < eligible.size(); index += 2) {
             Pig first = eligible.get(index);
