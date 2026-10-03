@@ -27,8 +27,15 @@ from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 最大单元宽 = 4096
 最大单元高 = 4096
 默认最大总像素 = 100_000_000
-# 文绪、奶龙保留外观细节与细长肢体；路障是人工模型 UV，不按平面图标缩小。
+# 明确列出需保留轮廓细节的 32 像素图标；路障沿用人工模型 UV 尺寸。
 特殊贴图尺寸 = {
+    "assets/blindboxchallenge/textures/item/chainsaw_sword.png": (32, 32),
+    "assets/blindboxchallenge/textures/item/shark_dagger_pillow.png": (32, 32),
+    "assets/blindboxchallenge/textures/item/fairy_wand.png": (32, 32),
+    "assets/blindboxchallenge/textures/item/pickaxe_hoe.png": (32, 32),
+    "assets/blindboxchallenge/textures/item/nail_art.png": (32, 32),
+    "assets/blindboxchallenge/textures/item/rainbow_hoop.png": (32, 32),
+
     "assets/blindboxchallenge/textures/item/wenxu_standee.png": (32, 32),
     "assets/blindboxchallenge/textures/item/rat_jerky_totem.png": (32, 32),
     "assets/blindboxchallenge/textures/item/road_barrier_helmet.png": (64, 64),

@@ -803,8 +803,8 @@
     "id": "rainbow_hoop",
     "texture": "assets/blindboxchallenge/textures/item/rainbow_hoop.png",
     "reference_status": "catalog_reference",
-    "subject": "彩虹圈",
-    "must_show": "一只斜放的弹性彩虹圆环，清楚显示完整圆环和连续多色分段",
+    "subject": "彩虹弹簧圈",
+    "must_show": "用户确认的可伸缩彩虹弹簧玩具；清楚显示多层连续螺旋线圈、透明中空开口及红橙黄绿蓝紫渐变，不能画成单个圆环或实心圆盘",
     "avoid": [
       "广告背景",
       "包装",
@@ -820,7 +820,8 @@
       "绿",
       "蓝",
       "紫"
-    ]
+    ],
+    "reference_basis": "2026-10-04 用户文字确认：彩虹弹簧圈（可伸缩的弹簧玩具）；未使用原参考图片"
   },
   {
     "id": "rat_jerky_totem",

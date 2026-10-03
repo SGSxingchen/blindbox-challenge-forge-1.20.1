@@ -102,6 +102,13 @@ class 物品贴图确定性生成测试(unittest.TestCase):
                 路径.write_bytes(内容)
                 with Image.open(路径) as 图像:
                     期望尺寸 = {
+                        "assets/blindboxchallenge/textures/item/chainsaw_sword.png": (32, 32),
+                        "assets/blindboxchallenge/textures/item/shark_dagger_pillow.png": (32, 32),
+                        "assets/blindboxchallenge/textures/item/fairy_wand.png": (32, 32),
+                        "assets/blindboxchallenge/textures/item/pickaxe_hoe.png": (32, 32),
+                        "assets/blindboxchallenge/textures/item/nail_art.png": (32, 32),
+                        "assets/blindboxchallenge/textures/item/rainbow_hoop.png": (32, 32),
+
                         "assets/blindboxchallenge/textures/item/wenxu_standee.png": (32, 32),
                         "assets/blindboxchallenge/textures/item/rat_jerky_totem.png": (32, 32),
                         "assets/blindboxchallenge/textures/item/road_barrier_helmet.png": (64, 64),

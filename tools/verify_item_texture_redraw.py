@@ -61,7 +61,7 @@ from PIL import Image
     'assets/blindboxchallenge/textures/item/purple_toy_pickaxe_sword_pickaxe.png': ('purple_toy_pickaxe_sword_pickaxe', 'catalog_reference', '5dd58c61f9d0b85417aeac590b5b6064c2f8f0cdc979bcdb17685ba488a9e645'),
     'assets/blindboxchallenge/textures/item/purple_toy_pickaxe_sword_sword.png': ('purple_toy_pickaxe_sword_sword', 'catalog_reference', '06d535bb7ceb94f04d0efc218cdfd53585d546b9b0831cc61d09c916c96b5ff5'),
     'assets/blindboxchallenge/textures/item/quail_egg.png': ('quail_egg', 'catalog_reference', '58eb88d5cb1a59d8759b0e7f991fa0b4b4bbca3616ba76bb32a79c00f643846c'),
-    'assets/blindboxchallenge/textures/item/rainbow_hoop.png': ('rainbow_hoop', 'catalog_reference', '81c383b0203160fd4933ad0b71f0dd31728a301866f426cda35939092763fe17'),
+    'assets/blindboxchallenge/textures/item/rainbow_hoop.png': ('rainbow_hoop', 'catalog_reference', 'b54b8273d74e3869f42c3490107497442b04c91ffa896ae5de2054cd047ac69d'),
     'assets/blindboxchallenge/textures/item/rat_jerky_totem.png': ('rat_jerky_totem', 'catalog_reference', '6868996c52d127f1ed2263c313b8a526f3707f11b077b51ec236cbb733c2d0c9'),
     'assets/blindboxchallenge/textures/item/ration_pack.png': ('ration_pack', 'catalog_reference', 'ac78b71658f3720be935dcc0dd7bbe8a9256e381014f50019d7af193d4176f7a'),
     'assets/blindboxchallenge/textures/item/returning_scissors.png': ('returning_scissors', 'catalog_reference', 'eb6769e7d7f576eccdc4981624608ed8814101d45153ed2068163f8fe2f4c1d0'),

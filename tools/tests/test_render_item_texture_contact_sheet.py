@@ -83,12 +83,14 @@ class 联系表测试(unittest.TestCase):
             模块.渲染联系表(self.候选, self.清单, self.输出, self.复核)
         self.assertFalse(self.输出.exists())
 
-    def test_仅文绪奶龙三十二像素与路障六十四像素允许例外(self):
-        self.写清单("wenxu_standee", "rat_jerky_totem", "road_barrier_helmet")
-        for 编号, 尺寸 in (("wenxu_standee", 32), ("rat_jerky_totem", 32), ("road_barrier_helmet", 64)):
+    def test_仅明确列举的八项三十二像素与路障六十四像素允许例外(self):
+        允许项 = ("wenxu_standee", "rat_jerky_totem", "chainsaw_sword", "shark_dagger_pillow",
+               "fairy_wand", "pickaxe_hoe", "nail_art", "rainbow_hoop")
+        self.写清单(*允许项, "road_barrier_helmet")
+        for 编号, 尺寸 in tuple((编号, 32) for 编号 in 允许项) + (("road_barrier_helmet", 64),):
             Image.new("RGBA", (尺寸, 尺寸), (1, 2, 3, 255)).save(self.候选 / f"{编号}.png")
         模块.渲染联系表(self.候选, self.清单, self.输出, self.复核)
-        self.assertEqual(3, len(json.loads(self.复核.read_text(encoding="utf-8"))))
+        self.assertEqual(9, len(json.loads(self.复核.read_text(encoding="utf-8"))))
         self.写清单("other_item")
         Image.new("RGBA", (32, 32)).save(self.候选 / "other_item.png")
         with self.assertRaisesRegex(ValueError, "16x16"):
