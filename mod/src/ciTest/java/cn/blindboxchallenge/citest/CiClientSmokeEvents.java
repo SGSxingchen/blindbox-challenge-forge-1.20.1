@@ -124,7 +124,7 @@ public final class CiClientSmokeEvents {
         }
     }
 
-    /** 只读首连状态；不插入网络处理器、不改变读取开关，也不自动重试失败连接。 */
+    /** 只读首连状态；不改变读取开关，也不自动重试失败连接。 */
     private static void observeFirstConnection(Minecraft minecraft) {
         if (!Boolean.getBoolean("blindbox.ci.connectionDiagnostics") || everJoined || connectionDiagnosticFailed) return;
         try {
@@ -142,6 +142,7 @@ public final class CiClientSmokeEvents {
             String state = "screen=" + (minecraft.screen == null ? "none" : minecraft.screen.getClass().getSimpleName());
             Connection connection = observedLoginConnection;
             if (connection != null && connection.channel() != null) {
+                CiLoginTransportObservation.observe(connection, "client:" + minecraft.getUser().getName());
                 state += ", active=" + connection.channel().isActive()
                         + ", protocol=" + connection.channel().attr(Connection.ATTRIBUTE_PROTOCOL).get()
                         + ", auto_read=" + connection.channel().config().isAutoRead()

@@ -1,0 +1,9 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "cn.blindboxchallenge.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "blindboxchallenge.refmap.json",
+  "client": ["ClientLoginConnectionMixin"],
+  "injectors": {"defaultRequire": 1}
+}

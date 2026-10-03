@@ -2,7 +2,7 @@
 
 ## 当前范围
 
-* 正式资源共 189 项，逐文件记录 SHA-256。其中 PNG 为 74 张，71 张由确定性生成器重建，另外 3 张为既有人工模型配套贴图；包含 2 个几何模型和 2 个动画文件。
+* 正式资源共 190 项，逐文件记录 SHA-256。其中 PNG 为 74 张，71 张由确定性生成器重建，另外 3 张为既有人工模型配套贴图；包含 2 个几何模型和 2 个动画文件。
 * 文绪立牌、奶龙老鼠干按用户本轮外观图片重新绘制；其余资源沿用下表记录的来源。参考图片本身不进入发行包。
 * 人工模型的映射与授权边界见 [道具人工模型导入记录](PROP_MODEL_IMPORT.md)。原压缩包内约 30 MiB 的广告图未进入正式资源。
 
@@ -198,3 +198,4 @@
 |`mod/src/main/resources/assets/blindboxchallenge/textures/entity/pink_butterfly_wings.png`|`8eff9e8ebc87d20e6f3f15eb7416b98852af178f014dcea95028370c3a0a7d4a`|项目内原创重绘|原版图片仅作需求输入且不进入 Release；由本轮生成图案机械裁切并按原版 UV 排版，不读取、采样或混合原图|项目方提供需求背景；发行使用项目内原创重绘 PNG|2026-10-04|
 |`mod/src/main/resources/assets/blindboxchallenge/textures/models/armor/eggy_eye_mask_layer_1.png`|`b25a78ee057cf1a8fdc99d42599cac30a4db075018fff5c838e01cb5e9801c0a`|项目内原创重绘|原版图片仅作需求输入且不进入 Release；由本轮生成图案机械裁切并按原版 UV 排版，不读取、采样或混合原图|项目方提供需求背景；发行使用项目内原创重绘 PNG|2026-10-04|
 |`mod/src/main/resources/assets/blindboxchallenge/textures/models/armor/face_mask_layer_1.png`|`e21e1204ba90113592eba94eb3a45958f209092e8bd9a022c8adce2df59498e5`|项目内原创重绘|原版图片仅作需求输入且不进入 Release；由本轮生成图案机械裁切并按原版 UV 排版，不读取、采样或混合原图|项目方提供需求背景；发行使用项目内原创重绘 PNG|2026-10-04|
+|`mod/src/main/resources/blindboxchallenge.mixins.json`|`feae1e3fa2288f3b6e0719deae47413fd562c1bbb9e232ed52639b4adc154b35`|项目内兼容修正配置|仅客户端登录握手线程串行化，排除服务器列表查询；映射文件由构建生成|项目内代码配套定义，不含外部素材|2026-10-04|

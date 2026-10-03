@@ -274,6 +274,36 @@ def check_network_and_isolation() -> None:
     require(set(leaks).issubset(gecko_item_exceptions), f"服务端包泄漏客户端类：{', '.join(leaks)}")
 
 
+def check_client_login_mixin() -> None:
+    """登录补丁只能在客户端加载，且运行映射必须由正式构建生成。"""
+    config_name = "blindboxchallenge.mixins.json"
+    refmap_name = "blindboxchallenge.refmap.json"
+    try:
+        config = json.loads(read(f"src/main/resources/{config_name}"))
+        build = source_without_comments(read("build.gradle"))
+    except (OSError, ValueError) as error:
+        fail(f"无法读取登录补丁配置或构建入口：{error}")
+    require(isinstance(config, dict), "登录补丁配置必须是对象")
+    require(config.get("client") == ["ClientLoginConnectionMixin"], "登录补丁必须且只能登记在客户端列表")
+    require(config.get("mixins", []) == [] and config.get("server", []) == [],
+            "登录补丁禁止登记公共或服务端补丁")
+    require(config.get("package") == "cn.blindboxchallenge.mixin", "登录补丁包路径错误")
+    require(config.get("refmap") == refmap_name, "登录补丁运行映射名称错误")
+    require((MOD / "src/main/java/cn/blindboxchallenge/mixin/ClientLoginConnectionMixin.java").is_file(),
+            "登录补丁缺少正式客户端实现")
+
+    block = re.search(r"\bmixin\s*\{([^{}]*)\}", build, flags=re.DOTALL)
+    require(block is not None, "登录补丁缺少正式构建配置块")
+    require(re.search(r"\badd\s+sourceSets\.main\s*,\s*['\"]" + re.escape(refmap_name) + r"['\"]", block[1]) is not None,
+            "登录补丁缺少 main 运行映射生成入口")
+    require(re.search(r"\bconfig\s+['\"]" + re.escape(config_name) + r"['\"]", block[1]) is not None,
+            "登录补丁缺少正式配置打包入口")
+    require(re.search(r"\bapply\s+plugin\s*:\s*['\"]org\.spongepowered\.mixin['\"]", build) is not None,
+            "登录补丁未启用构建插件")
+    require(re.search(r"\bannotationProcessor\s+['\"]org\.spongepowered:mixin:[^'\"]+:processor['\"]", build) is not None,
+            "登录补丁缺少运行映射注解处理器")
+
+
 def check_p5_safety() -> None:
     decor_server = read("src/ciTest/java/cn/blindboxchallenge/citest/P5DecorCiScenario.java")
     decor_client = read("src/ciTest/java/cn/blindboxchallenge/citest/CiClientP5DecorObservation.java")
@@ -306,6 +336,7 @@ def main() -> None:
     check_original_resource_definitions()
     check_creative_inventory()
     check_network_and_isolation()
+    check_client_login_mixin()
     check_p5_safety()
     print("质量静态契约通过：资源闭合、双端隔离和反绕过安全边界均成立。")
 

@@ -1,0 +1,297 @@
+{
+  "日期": "2026-10-04",
+  "候选版本": "1.0.5",
+  "状态": "登录修正与任意门恢复通过；音频压力未通过，非正式发行",
+  "正式包SHA-256": "20f44daad144f3a2bc2fc4ff3b823ae1bc0f52d59a305a0121d636a74c76a109",
+  "探针SHA-256": "3f5ed20ff73e30d6c2668fe20066e1397f6b8dd7b5d617e8ba322e4bbd96c155",
+  "工具测试": 147,
+  "静态资源数": 190,
+  "本次正式包差异": {
+    "新增": [
+      "blindboxchallenge.mixins.json",
+      "blindboxchallenge.refmap.json",
+      "cn/blindboxchallenge/mixin/ClientLoginConnectionMixin.class"
+    ],
+    "删除": [],
+    "修改": [
+      "META-INF/MANIFEST.MF"
+    ]
+  },
+  "首连诊断": {
+    "修正前": "服务端向 Bob 写入136129字节，提前安装的客户端观察器接收0字节；另一失败轮持续25秒自动读取开启但选择键interest_ops=0。",
+    "根因判断": "Forge 协议切换开启读取与原版发送线程关闭读取交错，过期清读任务会移除底层读取监听。字节码、选择键状态与修正后实测相互印证。",
+    "修正范围": "仅客户端LOGIN握手意图与Hello报文的原发送流程移至所属事件循环；服务器列表STATUS、其余报文、超时和首次连接重试均不改变。",
+    "最终同包验证": "门恢复及音频两组共4次独立首次连接全部成功，门强杀后2次真实恢复连接成功；不据此承诺所有网络环境零超时。"
+  },
+  "任意门": {
+    "状态": "success",
+    "检查": [
+      "第 1 次专服真实启动完成",
+      "BlindBoxAlice 首次真实连接成功",
+      "BlindBoxBob 首次真实连接成功",
+      "任意门服务端边界回归通过",
+      "未知邻区块拒绝且恢复后原链接可用",
+      "杀前跨维门持久夹具准备完成",
+      "杀前实际门关联证据已生成",
+      "本次显式 flush 已完成",
+      "第 2 次专服真实启动完成",
+      "客户端 1 已经真实重连并稳定 40 tick",
+      "客户端 2 已经真实重连并稳定 40 tick",
+      "杀后持久关联复验与跨维场景启动",
+      "服务端已确认双方输入前站位",
+      "Alice 客户端实际观察源门起点",
+      "服务端复验第一份客户端同步证据",
+      "Alice 客户端完成无输入稳定观察",
+      "服务端复验第二份客户端稳定证据",
+      "Alice 真实前进键穿门并观察下界到达",
+      "Bob 真实观察下界同步后的 Alice",
+      "服务端最终核验双端到达、安全落点、速度和持久反链",
+      "安全交接平台准备完成",
+      "任意门恢复场景已归还",
+      "实际服务端状态已导出",
+      "安全交接平台已归还",
+      "重启后最终 flush 已完成"
+    ],
+    "强杀退出码": -9,
+    "重启后退出码": 0,
+    "客户端退出码": [
+      0,
+      0
+    ],
+    "双端观察": {
+      "client-1-p4-door-fixture-settled.marker": {
+        "schema": "1",
+        "observer_uuid": "caf161df-c456-3202-bef1-439e4d5eb913",
+        "dimension": "minecraft:overworld",
+        "source": "64,241,0",
+        "standing": "64.5,241.0,1.5",
+        "input_free_server_phase_observed": "true"
+      },
+      "client-1-p4-door-arrived.marker": {
+        "schema": "1",
+        "observer_uuid": "caf161df-c456-3202-bef1-439e4d5eb913",
+        "dimension": "minecraft:the_nether",
+        "arrival": "64,180,64",
+        "source_and_target_synced": "true"
+      },
+      "client-1-p4-door-fixture-ready.marker": {
+        "schema": "1",
+        "observer_uuid": "caf161df-c456-3202-bef1-439e4d5eb913",
+        "dimension": "minecraft:overworld",
+        "source": "64,241,0",
+        "standing": "64.5,241.0,1.5",
+        "source_door_and_safety_synced": "true"
+      },
+      "client-2-p4-door-observed.marker": {
+        "schema": "1",
+        "observer_uuid": "157530ea-e51d-3187-bbe7-35a144ea8641",
+        "alice_uuid": "caf161df-c456-3202-bef1-439e4d5eb913",
+        "dimension": "minecraft:the_nether",
+        "arrival": "64,180,64",
+        "target_door_and_safety_synced": "true",
+        "observer_near_target": "true"
+      }
+    },
+    "边界": [
+      "仅本地真实专服和两客户端，不代表 Hosted Runner 或发布门禁",
+      "仅固定两门、已 save-all flush、目标区块由 Bob 正常加载的同世界恢复",
+      "恢复夹具直接写生产方块实体关联；配对入口另由服务端边界回归覆盖",
+      "不覆盖未 flush 掉电、未加载伙伴传送或任意门拓扑恢复"
+    ]
+  },
+  "音频压力": {
+    "状态": "失败",
+    "阶段": [
+      {
+        "名称": "专服本轮入口就绪",
+        "开始时间": "2026-10-03T19:19:12.203798+00:00",
+        "上限秒数": 150,
+        "状态": "通过",
+        "耗时秒数": 16.779
+      },
+      {
+        "名称": "alice 首次真实联机",
+        "开始时间": "2026-10-03T19:19:28.985950+00:00",
+        "上限秒数": 180,
+        "状态": "通过",
+        "耗时秒数": 20.511
+      },
+      {
+        "名称": "bob 首次真实联机",
+        "开始时间": "2026-10-03T19:19:49.502494+00:00",
+        "上限秒数": 180,
+        "状态": "通过",
+        "耗时秒数": 21.678
+      },
+      {
+        "名称": "BLINDBOX_CITEST_P4_MUSIC_NEGATIVE=success",
+        "开始时间": "2026-10-03T19:20:11.185403+00:00",
+        "上限秒数": 60,
+        "状态": "通过",
+        "耗时秒数": 0.258
+      },
+      {
+        "名称": "BLINDBOX_CITEST_P5_MUSIC_CACHE_STARTED=success",
+        "开始时间": "2026-10-03T19:20:11.444923+00:00",
+        "上限秒数": 60,
+        "状态": "通过",
+        "耗时秒数": 0.263
+      },
+      {
+        "名称": "BLINDBOX_CITEST_P5_MUSIC_CACHE_FILL_1=success",
+        "开始时间": "2026-10-03T19:20:11.708416+00:00",
+        "上限秒数": 240,
+        "状态": "失败",
+        "耗时秒数": 10.778,
+        "错误": "RuntimeError: alice 客户端已报告启动、下载或运行失败"
+      },
+      {
+        "名称": "BLINDBOX_CITEST_P5_MUSIC_CACHE_CLEANUP=success",
+        "开始时间": "2026-10-03T19:20:22.487908+00:00",
+        "上限秒数": 60,
+        "状态": "通过",
+        "耗时秒数": 0.253
+      }
+    ],
+    "最终客户端退出码": [
+      0,
+      0
+    ],
+    "专服退出码": 0,
+    "完成": "双端首次联机、音频权限与地址负例通过；Bob 对第一个14,064,854字节OGG下载成功，声音引擎读取22050字节PCM，非缓存命中。",
+    "失败": "Alice 正文阶段BODY/IOException，场景开始后10.778秒失败；夹具归还、两客户端与专服正常退出。",
+    "传输复核": "curl: (28) Operation timed out after 10000 milliseconds with 233911 out of 14064854 bytes received\nhttp=200\nbytes=233911\nseconds=10.000069\nfirst_byte_seconds=9.497425\nbytes_per_second=23390",
+    "判断边界": "独立同地址GET在10秒内仅收到233911字节、首字节9.497秒，支持当前下载链路无法稳定满足10秒总预算的判断；未放宽生产超时，未把单端PCM当双端压力通过。",
+    "未执行通过": [
+      "五轮填充",
+      "64MiB淘汰重下",
+      "并发同址下载合并",
+      "损坏缓存重下"
+    ]
+  },
+  "纯正式专服": {
+    "日期": "2026-10-04",
+    "环境": "本地隔离正式映射 Jar + Forge 47.4.22 + Java 17 专服",
+    "范围": "专服加载、全部物品命令解析与奖池保存重启；没有 Minecraft 客户端参与",
+    "正式Jar": "mod/build/libs/blindboxchallenge-1.0.5-all.jar",
+    "正式Jar SHA-256": "20f44daad144f3a2bc2fc4ff3b823ae1bc0f52d59a305a0121d636a74c76a109",
+    "物品数": 67,
+    "结果": "通过",
+    "启动记录": [
+      {
+        "日志": "mod/build/local-validation-2026-10-04/server/login-stability/专服第1次启动.log",
+        "退出码": 0,
+        "SHA-256": "0f1470259619a267dd19a663c09b490736442230f2ebc2dc6697390429c4932a",
+        "异常级日志": []
+      },
+      {
+        "日志": "mod/build/local-validation-2026-10-04/server/login-stability/专服第2次启动.log",
+        "退出码": 0,
+        "SHA-256": "bca7847d572e3b850d53897d6771c67243d86ddebee69005fdfe735c89c48a58",
+        "异常级日志": []
+      }
+    ],
+    "安装": "复用当前隔离目录的已安装 Forge",
+    "专服生成配置": {
+      "文件": "mod/build/local-validation-2026-10-04/server/login-stability/基础专服生成配置.toml",
+      "SHA-256": "40ed0aa65b8af4e0792dcbe9767e16bbfe193f78914786e740cc0e0850f5cd99"
+    },
+    "验证事实": [
+      "两次正常启动并正常停止",
+      "67 项物品均被正式 Jar 注册且可解析",
+      "67 条奖池数据保存后重启保留",
+      "嵌入 GeckoLib 与 JLayer 加载，没有专服客户端类加载崩溃"
+    ]
+  },
+  "保留失败": [
+    "门第1轮：测试解释器解析符号链接导致缺少模块，未启动游戏客户端；已修正脚本。",
+    "门第2、3轮及音频第1轮：修正前首连超时。",
+    "门第4轮：初稿补丁两端恢复通过；最终收窄到LOGIN后以门第5轮重新完成同包验证。",
+    "音频第2轮：联机已正常，但大文件正文下载失败。"
+  ],
+  "限制": [
+    "王立新徽章等待照片",
+    "游戏内实际手持、穿戴和放置画面及人工听感仍待验收",
+    "音频压力未通过；取消、静音、重载等完整声音生命周期仍缺真实运行覆盖",
+    "生存获取和历史事务保留规则仍有未定项",
+    "仅本地验证和提交；远程工作流、推送、标签及发行暂停"
+  ],
+  "原始证据": [
+    {
+      "路径": "mod/build/stability-2026-10-04/最终联机修正构建.log",
+      "SHA-256": "3a3f098a40425c7176653daa1ee21d401514f58f002f5e2b108fb65db414b5ad"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/工具回归.log",
+      "SHA-256": "be7e1f15ebe3cb5ef746b9e6ffce09e842c765c7ca4675f5b78d322d9637a2f2"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/资源质量.log",
+      "SHA-256": "cddae8b6a5ff08fb01e36711f4d68182e8f04c0e8e52af2ec982d878e2f61112"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/door-recovery-1/result.json",
+      "SHA-256": "3f66ae5bb38580b8482c578b12fac2d674b6a2e9f7db8cbc01db3db666fb2681"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/door-recovery-2/result.json",
+      "SHA-256": "4a86e01e3120a2c453931a2971aae837e3f94c30856b4eca32b2ba26d93758ee"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/door-recovery-3/result.json",
+      "SHA-256": "2d4be29c233c5693a3b859c62ba7108fd5bc7b1e0bb794057a59b07e0a3446f5"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/door-recovery-4/result.json",
+      "SHA-256": "7ab97ada0550cf316f7f01e281b5f1c6b0366773f542da82180e62ae7aa29653"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/door-recovery-5/result.json",
+      "SHA-256": "ee8461027c69573d800ee1841187716305f9d2b0d892c0a02a294ba95aa3d4be"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/door-recovery-2/server-before-kill.log",
+      "SHA-256": "748f5cf957438af7ac55bb0a727a4abc971b0a06e89ca009339b812592815ccf"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/door-recovery-2/client-bob/console.log",
+      "SHA-256": "5d3782b596beb1e64914e762f27c4fbec1fc7aa92dda0e1beaebc62239ceb59f"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/door-recovery-3/client-alice/console.log",
+      "SHA-256": "9703478a7a4a3331931d237e57732e9a1e3c1ab2b09be3f86e8d59513f402540"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/audio-pressure-1/音频压力结果.json",
+      "SHA-256": "2542ef339f21b8ef2225b72f27f56ae4098d127a034983439c4f392dcf1191fd"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/audio-pressure-2/音频压力结果.json",
+      "SHA-256": "785f207ecbb53a6bf7255467b6de70734c285277c5f7c61ef43fea249a32981d"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/音频正文传输核对.log",
+      "SHA-256": "585c2990015a2bd440492e87456f5df9cd15557275b7248d4bc5b1d9199b8af1"
+    },
+    {
+      "路径": "mod/build/local-validation-2026-10-04/server/login-stability/验证结果.json",
+      "SHA-256": "2680124219589ac3d6db3017c142784ad528325adae571b180d5165a9a1aebd2"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/door-recovery-5/client-alice/console.log",
+      "SHA-256": "ce36a9108eee03d5cd5210f2e4987c9efdd6588bcf8a941f9fd70831f7cb03b6"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/door-recovery-5/client-bob/console.log",
+      "SHA-256": "205788f7e5e83ab4a7c25300f05daa24b335eb1800abc9fffd1bca49305f0b16"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/audio-pressure-2/alice/console.log",
+      "SHA-256": "eb2e9ed6918d58a815389cecdf4ad9a5f7d51a593f9f318a57b728f721aaf767"
+    },
+    {
+      "路径": "mod/build/stability-2026-10-04/audio-pressure-2/bob/console.log",
+      "SHA-256": "c73e9cd853f608eb2c6b8e1f9defb63fd78ee3c1cc7f6e8f905572806be4cb51"
+    }
+  ]
+}

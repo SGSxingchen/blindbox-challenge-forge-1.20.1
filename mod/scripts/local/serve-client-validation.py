@@ -82,6 +82,7 @@ def main():
         with log_path.open("w", encoding="utf-8") as log:
             process = subprocess.Popen(
                 [str(validation.JAVA), "-Xms512m", "-Xmx2g",
+                 "-Dblindbox.ci.connectionDiagnostics=true",
                  "-Dblindbox.ci.packingStageDir=" + str(client_evidence / "packing"),
                  "-Dblindbox.ci.packingMarker=" + str(client_evidence / "packing/alice-packing.properties"),
                  "@user_jvm_args.txt", "@" + str(validation.RUN_ARGS), "nogui"],
