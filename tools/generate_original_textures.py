@@ -18,9 +18,9 @@ from pathlib import Path
 from PIL import Image
 
 try:
-    from .original_item_pixel_payloads import BLOCK_PNG_PAYLOADS, ITEM_PIXEL_PAYLOADS, ITEM_PNG_PAYLOADS, decode_block_png, decode_item_png, decode_rgba
+    from .original_item_pixel_payloads import BLOCK_PNG_PAYLOADS, EQUIPMENT_PNG_PAYLOADS, ITEM_PIXEL_PAYLOADS, ITEM_PNG_PAYLOADS, decode_block_png, decode_equipment_png, decode_item_png, decode_rgba
 except ImportError:  # 兼容直接执行 tools/generate_original_textures.py
-    from original_item_pixel_payloads import BLOCK_PNG_PAYLOADS, ITEM_PIXEL_PAYLOADS, ITEM_PNG_PAYLOADS, decode_block_png, decode_item_png, decode_rgba
+    from original_item_pixel_payloads import BLOCK_PNG_PAYLOADS, EQUIPMENT_PNG_PAYLOADS, ITEM_PIXEL_PAYLOADS, ITEM_PNG_PAYLOADS, decode_block_png, decode_equipment_png, decode_item_png, decode_rgba
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,6 +35,7 @@ TARGETS = (
     "assets/blindboxchallenge/textures/block/music_box.png",
     "assets/blindboxchallenge/textures/block/safety_landing.png",
     "assets/blindboxchallenge/textures/block/stone_pillow.png",
+    "assets/blindboxchallenge/textures/entity/pink_butterfly_wings.png",
     "assets/blindboxchallenge/textures/item/adrenaline.png",
     "assets/blindboxchallenge/textures/item/bath_bucket.png",
     "assets/blindboxchallenge/textures/item/beef_bites.png",
@@ -94,6 +95,8 @@ TARGETS = (
     "assets/blindboxchallenge/textures/item/white_rabbit_candy.png",
     "assets/blindboxchallenge/textures/item/wind_blown_cake.png",
     "assets/blindboxchallenge/textures/item/yijin_manual.png",
+    "assets/blindboxchallenge/textures/models/armor/eggy_eye_mask_layer_1.png",
+    "assets/blindboxchallenge/textures/models/armor/face_mask_layer_1.png",
     "assets/blindboxchallenge/textures/models/armor/road_barrier_layer_1.png",
 )
 ITEM_TARGETS = tuple(ITEM_PIXEL_PAYLOADS) + tuple(ITEM_PNG_PAYLOADS)
@@ -274,6 +277,8 @@ def png(canvas: list[list[tuple[int, int, int, int]]]) -> bytes:
 
 
 def render(relative: str) -> bytes:
+    if relative in EQUIPMENT_PNG_PAYLOADS:
+        return decode_equipment_png(relative)
     if "/textures/models/armor/" in relative:
         return png(armor(relative))
     if "/textures/block/" in relative:

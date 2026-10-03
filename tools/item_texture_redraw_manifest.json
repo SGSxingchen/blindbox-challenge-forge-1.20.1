@@ -123,8 +123,8 @@
     "id": "black_truffle_ham_cracker",
     "texture": "assets/blindboxchallenge/textures/item/black_truffle_ham_cracker.png",
     "reference_status": "free_design",
-    "subject": "黑松露火腿苏打饼干",
-    "must_show": "一块方形苏打饼干，上方清楚放置火腿片和黑松露碎",
+    "subject": "松露火腿风味苏打饼干（单块图标）",
+    "must_show": "一块方形松露火腿风味苏打饼干本体，清楚显示饼干孔、焦黄边和少量深褐调味点；与两块图标仅为摆放与数量变体，不代表口味不同，不放置整片火腿或松露块",
     "avoid": [
       "广告背景",
       "包装",
@@ -135,7 +135,7 @@
     ],
     "palette": [
       "麦黄",
-      "肉粉",
+      "焦黄",
       "深褐"
     ]
   },
@@ -263,8 +263,8 @@
     "id": "deep_sea_fish",
     "texture": "assets/blindboxchallenge/textures/item/deep_sea_fish.png",
     "reference_status": "catalog_reference",
-    "subject": "深海小鱼",
-    "must_show": "一条完整的小型深海鱼，清楚显示深蓝鱼身、鱼鳍、尾鳍和亮点眼睛",
+    "subject": "熟制深海小鱼零食",
+    "must_show": "一条暖褐色熟制完整小鱼零食，清楚显示干燥鱼身、细小鱼鳍、尾鳍和烘烤边，不画深蓝活鱼",
     "avoid": [
       "广告背景",
       "包装",
@@ -274,9 +274,9 @@
       "人物手持"
     ],
     "palette": [
-      "深海蓝",
-      "青蓝",
-      "银白"
+      "暖褐",
+      "焦棕",
+      "浅金"
     ]
   },
   {
@@ -703,8 +703,8 @@
     "id": "potato_chips",
     "texture": "assets/blindboxchallenge/textures/item/potato_chips.png",
     "reference_status": "free_design",
-    "subject": "薯片",
-    "must_show": "三片弯曲的金黄薯片，清楚显示薄片轮廓、烘烤斑点和盐粒",
+    "subject": "呀土豆膨化土豆条（平铺图标）",
+    "must_show": "三根同系列金黄膨化土豆条分散平铺，清楚显示条状轮廓、少量可见中空断面和烘烤斑点；与成堆图标仅为摆放与数量变体，不代表口味不同",
     "avoid": [
       "广告背景",
       "包装",
@@ -723,8 +723,8 @@
     "id": "potato_snack",
     "texture": "assets/blindboxchallenge/textures/item/potato_snack.png",
     "reference_status": "catalog_reference",
-    "subject": "土豆零食",
-    "must_show": "几根粗切烤土豆条，清楚显示金黄表面、棕色脆边和少量香料点",
+    "subject": "呀土豆膨化土豆条（成堆图标）",
+    "must_show": "五根同系列金黄膨化土豆条交错成堆，清楚显示条状轮廓、少量可见中空断面和烘烤斑点；与平铺图标仅为摆放与数量变体，不代表口味不同",
     "avoid": [
       "广告背景",
       "包装",
@@ -735,8 +735,8 @@
     ],
     "palette": [
       "金黄",
-      "焦棕",
-      "红椒色"
+      "浅黄",
+      "焦褐"
     ]
   },
   {
@@ -989,7 +989,7 @@
     "texture": "assets/blindboxchallenge/textures/item/sweet_sour_turkey_noodles.png",
     "reference_status": "catalog_reference",
     "subject": "糖醋火鸡面",
-    "must_show": "一碗红亮酱汁拌面，清楚显示卷曲面条、火鸡肉片和葱花",
+    "must_show": "一碗红酱拌面，清楚显示卷曲面条、红亮糖醋酱汁和碗沿，不根据口味名称添加火鸡肉片",
     "avoid": [
       "广告背景",
       "包装",
@@ -1048,8 +1048,8 @@
     "id": "truffle_ham_cracker",
     "texture": "assets/blindboxchallenge/textures/item/truffle_ham_cracker.png",
     "reference_status": "catalog_reference",
-    "subject": "黑松露火腿饼干",
-    "must_show": "两块叠放的苏打饼干，清楚显示饼干孔、火腿薄片和黑松露碎",
+    "subject": "松露火腿风味苏打饼干（两块图标）",
+    "must_show": "两块叠放的松露火腿风味苏打饼干本体，清楚显示饼干孔、焦黄边和少量深褐调味点；与单块图标仅为摆放与数量变体，不代表口味不同，不放置整片火腿或松露块",
     "avoid": [
       "广告背景",
       "包装",
@@ -1060,8 +1060,8 @@
     ],
     "palette": [
       "麦黄",
-      "肉粉",
-      "黑褐"
+      "焦黄",
+      "深褐"
     ]
   },
   {

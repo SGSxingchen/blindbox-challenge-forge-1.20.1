@@ -1,17 +1,23 @@
 {
   "日期": "2026-10-04",
   "候选版本": "1.0.5",
-  "正式包SHA-256": "fe115e187889f352e3ff27500170765fac03de5b1e411979dec28c91221b0da9",
-  "状态": "第二批九张贴图重绘与本地加载验证通过，尚非正式发行",
-  "工具测试": 128,
-  "静态资源数": 186,
+  "正式包SHA-256": "60549bcb4d8f71bbf549f9449230017b82b3a93eb1750bd29d61aa5e6a74fd23",
+  "状态": "第三批材质重构和本地验证通过；王立新徽章等待用户大头照，尚非正式发行",
+  "工具测试": 141,
+  "静态资源数": 189,
+  "PNG数": 74,
+  "生成器可重建PNG": 71,
+  "累计本轮物品重绘": 57,
+  "本次物品重绘": 39,
+  "本次方块重绘": 2,
+  "本次新增穿戴贴图": 3,
   "本轮通过": [
-    "九张最终图标及32屏幕像素预览视觉复核",
-    "确定性载荷与资源清单一致",
-    "九十九个模型及动画JSON字节保持不变",
-    "一百二十八项工具测试与资源质量检查通过",
-    "正式包构建通过，包内只有九张PNG及构建时间戳改变",
-    "真实客户端图集构建及主菜单稳定加载，正常退出"
+    "39个最终图标、2个方块贴图、3个穿戴UV视觉复核",
+    "141项工具测试及189项资源质量检查通过",
+    "生成器逐字节一致，9组人工模型配套资源保留",
+    "正式包构建，资源变更准确等于44张PNG与2项荧光棒模型",
+    "真实客户端图集和主菜单加载，default/slim实际渲染层注册与物品互斥检查通过",
+    "同包纯专服两次正常启动退出，67项物品注册和奖池保存重启通过"
   ],
   "当前客户端": {
     "schema": 1,
@@ -20,103 +26,308 @@
     "platform": "macOS arm64",
     "forge": "1.20.1-forge-47.4.22",
     "username": "BlindBoxClient",
-    "formal_sha256": "fe115e187889f352e3ff27500170765fac03de5b1e411979dec28c91221b0da9",
-    "probe_sha256": "98e072bfda358e2e6cfda7da5889238be1661819a4e032946dac2fd0f2273806",
+    "formal_sha256": "60549bcb4d8f71bbf549f9449230017b82b3a93eb1750bd29d61aa5e6a74fd23",
+    "probe_sha256": "76206ad86667da2a904436912a9d1a22459cc9a3a06667bbe8c38ea41c7b92c9",
     "exit_code": 0,
-    "marker": "/Users/lanstard/.codex/worktrees/item-corrections/blindbox-challenge-forge-1.20.1/mod/build/local-validation-2026-10-04/client/texture-batch2/main-menu.marker",
+    "marker": "/Users/lanstard/.codex/worktrees/item-corrections/blindbox-challenge-forge-1.20.1/mod/build/texture-redraw-2026-10-04-final/client/main-menu.marker",
     "problem": null,
     "limitations": [
       "本地验证，未执行 Hosted Runner 门禁",
       "独立观察探针不包含于正式 Jar"
     ]
   },
-  "贴图记录": "docs/assets/item-texture-batch2-2026-10-04.json",
-  "上一轮行为验证": {
+  "客户端穿戴观察": [
+    "title-screen-stable-20-ticks",
+    "wearable_eye_texture=blindboxchallenge:textures/models/armor/eggy_eye_mask_layer_1.png",
+    "wearable_face_texture=blindboxchallenge:textures/models/armor/face_mask_layer_1.png",
+    "wearable_wing_texture=blindboxchallenge:textures/entity/pink_butterfly_wings.png",
+    "wearable_resources_present=true",
+    "wearable_default_butterfly_layers=1",
+    "wearable_slim_butterfly_layers=1",
+    "wearable_vanilla_elytra_exclusive=true"
+  ],
+  "当前纯专服": {
+    "日期": "2026-10-04",
+    "环境": "本地隔离正式映射 Jar + Forge 47.4.22 + Java 17 专服",
+    "范围": "专服加载、全部物品命令解析与奖池保存重启；没有 Minecraft 客户端参与",
+    "正式Jar": "/Users/lanstard/.codex/worktrees/item-corrections/blindbox-challenge-forge-1.20.1/mod/build/libs/blindboxchallenge-1.0.5-all.jar",
+    "正式Jar SHA-256": "60549bcb4d8f71bbf549f9449230017b82b3a93eb1750bd29d61aa5e6a74fd23",
+    "物品数": 67,
+    "结果": "通过",
+    "启动记录": [
+      {
+        "日志": "/Users/lanstard/.codex/worktrees/item-corrections/blindbox-challenge-forge-1.20.1/mod/build/local-validation-2026-10-04/server/texture-final/专服第1次启动.log",
+        "退出码": 0,
+        "SHA-256": "a86f5dde3a989ade58ade9095d151dd3d3ba7464bd69a7863a09905bf6e89368",
+        "异常级日志": []
+      },
+      {
+        "日志": "/Users/lanstard/.codex/worktrees/item-corrections/blindbox-challenge-forge-1.20.1/mod/build/local-validation-2026-10-04/server/texture-final/专服第2次启动.log",
+        "退出码": 0,
+        "SHA-256": "91f9b25fee024d786c4a2e7c62f74b8e029eb3362ed8ef4fbc50a5c8a84d36e5",
+        "异常级日志": []
+      }
+    ],
+    "安装": "复用当前隔离目录的已安装 Forge",
+    "专服生成配置": {
+      "文件": "/Users/lanstard/.codex/worktrees/item-corrections/blindbox-challenge-forge-1.20.1/mod/build/local-validation-2026-10-04/server/texture-final/基础专服生成配置.toml",
+      "SHA-256": "40ed0aa65b8af4e0792dcbe9767e16bbfe193f78914786e740cc0e0850f5cd99"
+    },
+    "验证事实": [
+      "两次正常启动并正常停止",
+      "67 项物品均被正式 Jar 注册且可解析",
+      "67 条奖池数据保存后重启保留",
+      "嵌入 GeckoLib 与 JLayer 加载，没有专服客户端类加载崩溃"
+    ]
+  },
+  "包内差异": {
+    "变化": [
+      "META-INF/MANIFEST.MF",
+      "assets/blindboxchallenge/models/block/glow_stick.json",
+      "assets/blindboxchallenge/models/block/glow_stick_wall.json",
+      "assets/blindboxchallenge/textures/block/glow_stick.png",
+      "assets/blindboxchallenge/textures/block/safety_landing.png",
+      "assets/blindboxchallenge/textures/item/adrenaline.png",
+      "assets/blindboxchallenge/textures/item/bath_bucket.png",
+      "assets/blindboxchallenge/textures/item/beef_bites.png",
+      "assets/blindboxchallenge/textures/item/birthday_candle.png",
+      "assets/blindboxchallenge/textures/item/black_truffle_ham_cracker.png",
+      "assets/blindboxchallenge/textures/item/blind_box.png",
+      "assets/blindboxchallenge/textures/item/cat_doll.png",
+      "assets/blindboxchallenge/textures/item/clockwork_chicken.png",
+      "assets/blindboxchallenge/textures/item/decision_coin.png",
+      "assets/blindboxchallenge/textures/item/deep_sea_fish.png",
+      "assets/blindboxchallenge/textures/item/face_mask.png",
+      "assets/blindboxchallenge/textures/item/flowing_black_flag.png",
+      "assets/blindboxchallenge/textures/item/green_soy_milk.png",
+      "assets/blindboxchallenge/textures/item/ham_sausage.png",
+      "assets/blindboxchallenge/textures/item/headphones.png",
+      "assets/blindboxchallenge/textures/item/kazoo.png",
+      "assets/blindboxchallenge/textures/item/letter.png",
+      "assets/blindboxchallenge/textures/item/lighter.png",
+      "assets/blindboxchallenge/textures/item/magic_crispy_noodles.png",
+      "assets/blindboxchallenge/textures/item/math_exam_paper.png",
+      "assets/blindboxchallenge/textures/item/million_pound_note.png",
+      "assets/blindboxchallenge/textures/item/oil_chestnut.png",
+      "assets/blindboxchallenge/textures/item/packing_tool.png",
+      "assets/blindboxchallenge/textures/item/paper_cup.png",
+      "assets/blindboxchallenge/textures/item/pink_butterfly_wings.png",
+      "assets/blindboxchallenge/textures/item/potato_chips.png",
+      "assets/blindboxchallenge/textures/item/potato_snack.png",
+      "assets/blindboxchallenge/textures/item/quail_egg.png",
+      "assets/blindboxchallenge/textures/item/ration_pack.png",
+      "assets/blindboxchallenge/textures/item/safety_exit_sign_shield.png",
+      "assets/blindboxchallenge/textures/item/sesame_rice_noodles.png",
+      "assets/blindboxchallenge/textures/item/sun_candy.png",
+      "assets/blindboxchallenge/textures/item/sweet_sour_turkey_noodles.png",
+      "assets/blindboxchallenge/textures/item/toy_car.png",
+      "assets/blindboxchallenge/textures/item/toy_knife.png",
+      "assets/blindboxchallenge/textures/item/truffle_ham_cracker.png",
+      "assets/blindboxchallenge/textures/item/vodka.png",
+      "assets/blindboxchallenge/textures/item/white_rabbit_candy.png",
+      "assets/blindboxchallenge/textures/item/wind_blown_cake.png",
+      "cn/blindboxchallenge/client/ClientModEvents.class",
+      "cn/blindboxchallenge/item/EggyEyeMaskItem.class",
+      "cn/blindboxchallenge/registry/ModItems.class"
+    ],
+    "新增": [
+      "assets/blindboxchallenge/textures/entity/pink_butterfly_wings.png",
+      "assets/blindboxchallenge/textures/models/armor/eggy_eye_mask_layer_1.png",
+      "assets/blindboxchallenge/textures/models/armor/face_mask_layer_1.png",
+      "cn/blindboxchallenge/client/PinkButterflyWingsLayer.class",
+      "cn/blindboxchallenge/item/FaceMaskItem.class"
+    ],
+    "删除": [],
+    "前包SHA-256": "fe115e187889f352e3ff27500170765fac03de5b1e411979dec28c91221b0da9",
+    "本包SHA-256": "60549bcb4d8f71bbf549f9449230017b82b3a93eb1750bd29d61aa5e6a74fd23",
+    "资源变更准确等于44张PNG与2项荧光棒模型": true,
+    "测试探针未包含于正式包": true
+  },
+  "验证日志": {
+    "工具回归": {
+      "路径": "mod/build/texture-redraw-2026-10-04-final/工具回归-修正后.log",
+      "SHA-256": "e872925db0cd8e9171d5a4a5c9a9fb457f3e17a3b49d5c6f61387fa8e9656117"
+    },
+    "质量检查": {
+      "路径": "mod/build/texture-redraw-2026-10-04-final/资源契约.log",
+      "SHA-256": "cddae8b6a5ff08fb01e36711f4d68182e8f04c0e8e52af2ec982d878e2f61112"
+    },
+    "构建": {
+      "路径": "mod/build/texture-redraw-2026-10-04-final/构建.log",
+      "SHA-256": "164749daedc789497d4dbcf2366d8879e28e748110640a7f537b6c251baed7d1"
+    }
+  },
+  "贴图记录": "docs/assets/item-texture-final-2026-10-04.json",
+  "失败与修正": [
+    "初次工具回归发现2项荧光棒规范模板尚未同步cutout；修正规范模板后141项全量通过。未改写失败日志。"
+  ],
+  "限制": [
+    "王立新徽章按用户要求等照片，本轮保留旧图",
+    "本轮检查贴图与UV预览、客户端资源及层注册，尚未人工验收游戏内手持/穿戴/放置画面",
+    "当前包未重跑双客户端音频、任意门跨维强杀恢复和64MiB压力",
+    "首次登录偶发超时根因仍待查，生存获取方案仍有未定项",
+    "本地提交；远程构建、推送和发布暂停"
+  ],
+  "上一批材质验证": {
     "日期": "2026-10-04",
     "候选版本": "1.0.5",
-    "正式包SHA-256": "7d5ed4fe57e24f20a1dc65a0caee3b0f690a08eb526d4901555b0c4e819ccf0b",
-    "探针SHA-256": "98e072bfda358e2e6cfda7da5889238be1661819a4e032946dac2fd0f2273806",
-    "状态": "本地续修验证通过，尚非正式发行",
+    "正式包SHA-256": "fe115e187889f352e3ff27500170765fac03de5b1e411979dec28c91221b0da9",
+    "状态": "第二批九张贴图重绘与本地加载验证通过，尚非正式发行",
     "工具测试": 128,
     "静态资源数": 186,
-    "本轮改动": "任意门读取安全点邻域前检查已加载区块；未确认邻域时保留配对，拆安全点不主动读取未知邻区块。补充测试入口诊断与音频探针运行映射。",
     "本轮通过": [
-      "alice实际联机成功",
-      "任意门生产边界回归通过",
-      "任意门未知邻区块不强加载且恢复后原链接可用",
-      "bob实际联机成功",
-      "音频地址与权限拒绝回归通过",
-      "两个客户端首次OGG实际读取PCM",
-      "音频域名被隔离后缓存播放通过",
-      "两个客户端MP3实际读取PCM",
-      "坏音频安全失败通过",
-      "重连不补播及双客户端完整音频流程通过",
-      "音频场景已归还",
-      "同包纯专服两次正常启动停止，67项注册及奖池保存重启保留",
-      "两真实客户端与专服退出码均为0"
+      "九张最终图标及32屏幕像素预览视觉复核",
+      "确定性载荷与资源清单一致",
+      "九十九个模型及动画JSON字节保持不变",
+      "一百二十八项工具测试与资源质量检查通过",
+      "正式包构建通过，包内只有九张PNG及构建时间戳改变",
+      "真实客户端图集构建及主菜单稳定加载，正常退出"
     ],
-    "音频读取证据": [
-      {
-        "观察者": "caf161df-c456-3202-bef1-439e4d5eb913",
-        "事件": "1e0a5e93-d1bf-4747-9d3e-1108e8f95d70",
-        "格式": "MP3",
-        "缓存命中": "false",
-        "解码字节数": 27648
-      },
-      {
-        "观察者": "caf161df-c456-3202-bef1-439e4d5eb913",
-        "事件": "66392195-3717-4450-9b65-f2075114f3b8",
-        "格式": "OGG",
-        "缓存命中": "true",
-        "解码字节数": 22050
-      },
-      {
-        "观察者": "caf161df-c456-3202-bef1-439e4d5eb913",
-        "事件": "b964833a-0864-4601-95ec-a67e59c863a8",
-        "格式": "OGG",
-        "缓存命中": "false",
-        "解码字节数": 22050
-      },
-      {
-        "观察者": "157530ea-e51d-3187-bbe7-35a144ea8641",
-        "事件": "1e0a5e93-d1bf-4747-9d3e-1108e8f95d70",
-        "格式": "MP3",
-        "缓存命中": "false",
-        "解码字节数": 27648
-      },
-      {
-        "观察者": "157530ea-e51d-3187-bbe7-35a144ea8641",
-        "事件": "66392195-3717-4450-9b65-f2075114f3b8",
-        "格式": "OGG",
-        "缓存命中": "true",
-        "解码字节数": 22050
-      },
-      {
-        "观察者": "157530ea-e51d-3187-bbe7-35a144ea8641",
-        "事件": "b964833a-0864-4601-95ec-a67e59c863a8",
-        "格式": "OGG",
-        "缓存命中": "false",
-        "解码字节数": 22050
-      }
-    ],
-    "音频隔离方法": "仅两测试JVM使用独立hosts与正负DNS缓存TTL=0；首次播放后将音频域名指向回环，缓存通过后恢复公网地址；系统hosts未修改。",
-    "既有验证": [
-      {
-        "候选SHA-256": "189d8f18066e50c70e4906eb952b495169d99cc82ea293c4103ed460ad6ba14a",
-        "范围": "67项创造栏、眼罩跨刻、真实打包失败重开及数量守恒、四组业务断言",
-        "本轮关系": "仅任意门生产实现及构建时间戳有新增差异；上述组件代码未变，未重复整个上批矩阵"
-      },
-      {
-        "候选SHA-256": "fa4bf77d5d48416bec55b9694ef75a808f5da28d3df62febcdf4bf304a1c0d91",
-        "范围": "真实首跳二段跳、远端同步、长信与死亡笔记界面",
-        "边界": "旧贴图候选证据，不视为本轮完整客户端复验"
-      }
-    ],
-    "保留的失败": [
-      "第6轮Probe与Alice首连成功，Bob在LOGIN协议、autoRead开启且监听器正确的状态下30秒读取超时；原因仍未确定",
-      "第7轮门测试夹具的原版邻块形状更新加载了邻区块；探针改为禁止该更新并保留真实onRemove，第8轮回归通过",
-      "前五轮的首连、探针映射及二段跳夹具失败记录仍保留"
-    ],
+    "当前客户端": {
+      "schema": 1,
+      "status": "success",
+      "mode": "real-local-title-screen",
+      "platform": "macOS arm64",
+      "forge": "1.20.1-forge-47.4.22",
+      "username": "BlindBoxClient",
+      "formal_sha256": "fe115e187889f352e3ff27500170765fac03de5b1e411979dec28c91221b0da9",
+      "probe_sha256": "98e072bfda358e2e6cfda7da5889238be1661819a4e032946dac2fd0f2273806",
+      "exit_code": 0,
+      "marker": "/Users/lanstard/.codex/worktrees/item-corrections/blindbox-challenge-forge-1.20.1/mod/build/local-validation-2026-10-04/client/texture-batch2/main-menu.marker",
+      "problem": null,
+      "limitations": [
+        "本地验证，未执行 Hosted Runner 门禁",
+        "独立观察探针不包含于正式 Jar"
+      ]
+    },
+    "贴图记录": "docs/assets/item-texture-batch2-2026-10-04.json",
+    "上一轮行为验证": {
+      "日期": "2026-10-04",
+      "候选版本": "1.0.5",
+      "正式包SHA-256": "7d5ed4fe57e24f20a1dc65a0caee3b0f690a08eb526d4901555b0c4e819ccf0b",
+      "探针SHA-256": "98e072bfda358e2e6cfda7da5889238be1661819a4e032946dac2fd0f2273806",
+      "状态": "本地续修验证通过，尚非正式发行",
+      "工具测试": 128,
+      "静态资源数": 186,
+      "本轮改动": "任意门读取安全点邻域前检查已加载区块；未确认邻域时保留配对，拆安全点不主动读取未知邻区块。补充测试入口诊断与音频探针运行映射。",
+      "本轮通过": [
+        "alice实际联机成功",
+        "任意门生产边界回归通过",
+        "任意门未知邻区块不强加载且恢复后原链接可用",
+        "bob实际联机成功",
+        "音频地址与权限拒绝回归通过",
+        "两个客户端首次OGG实际读取PCM",
+        "音频域名被隔离后缓存播放通过",
+        "两个客户端MP3实际读取PCM",
+        "坏音频安全失败通过",
+        "重连不补播及双客户端完整音频流程通过",
+        "音频场景已归还",
+        "同包纯专服两次正常启动停止，67项注册及奖池保存重启保留",
+        "两真实客户端与专服退出码均为0"
+      ],
+      "音频读取证据": [
+        {
+          "观察者": "caf161df-c456-3202-bef1-439e4d5eb913",
+          "事件": "1e0a5e93-d1bf-4747-9d3e-1108e8f95d70",
+          "格式": "MP3",
+          "缓存命中": "false",
+          "解码字节数": 27648
+        },
+        {
+          "观察者": "caf161df-c456-3202-bef1-439e4d5eb913",
+          "事件": "66392195-3717-4450-9b65-f2075114f3b8",
+          "格式": "OGG",
+          "缓存命中": "true",
+          "解码字节数": 22050
+        },
+        {
+          "观察者": "caf161df-c456-3202-bef1-439e4d5eb913",
+          "事件": "b964833a-0864-4601-95ec-a67e59c863a8",
+          "格式": "OGG",
+          "缓存命中": "false",
+          "解码字节数": 22050
+        },
+        {
+          "观察者": "157530ea-e51d-3187-bbe7-35a144ea8641",
+          "事件": "1e0a5e93-d1bf-4747-9d3e-1108e8f95d70",
+          "格式": "MP3",
+          "缓存命中": "false",
+          "解码字节数": 27648
+        },
+        {
+          "观察者": "157530ea-e51d-3187-bbe7-35a144ea8641",
+          "事件": "66392195-3717-4450-9b65-f2075114f3b8",
+          "格式": "OGG",
+          "缓存命中": "true",
+          "解码字节数": 22050
+        },
+        {
+          "观察者": "157530ea-e51d-3187-bbe7-35a144ea8641",
+          "事件": "b964833a-0864-4601-95ec-a67e59c863a8",
+          "格式": "OGG",
+          "缓存命中": "false",
+          "解码字节数": 22050
+        }
+      ],
+      "音频隔离方法": "仅两测试JVM使用独立hosts与正负DNS缓存TTL=0；首次播放后将音频域名指向回环，缓存通过后恢复公网地址；系统hosts未修改。",
+      "既有验证": [
+        {
+          "候选SHA-256": "189d8f18066e50c70e4906eb952b495169d99cc82ea293c4103ed460ad6ba14a",
+          "范围": "67项创造栏、眼罩跨刻、真实打包失败重开及数量守恒、四组业务断言",
+          "本轮关系": "仅任意门生产实现及构建时间戳有新增差异；上述组件代码未变，未重复整个上批矩阵"
+        },
+        {
+          "候选SHA-256": "fa4bf77d5d48416bec55b9694ef75a808f5da28d3df62febcdf4bf304a1c0d91",
+          "范围": "真实首跳二段跳、远端同步、长信与死亡笔记界面",
+          "边界": "旧贴图候选证据，不视为本轮完整客户端复验"
+        }
+      ],
+      "保留的失败": [
+        "第6轮Probe与Alice首连成功，Bob在LOGIN协议、autoRead开启且监听器正确的状态下30秒读取超时；原因仍未确定",
+        "第7轮门测试夹具的原版邻块形状更新加载了邻区块；探针改为禁止该更新并保留真实onRemove，第8轮回归通过",
+        "前五轮的首连、探针映射及二段跳夹具失败记录仍保留"
+      ],
+      "未完成": [
+        "首次联机偶发超时定位",
+        "完整人工画面与听感复核",
+        "64MiB音频压力",
+        "本轮任意门双客户端跨维强杀恢复",
+        "其余贴图重绘",
+        "长期事务保留规则与生存获取配方"
+      ],
+      "发布边界": "仅本地提交；远程工作流、推送、标签及发行暂停",
+      "原始证据": [
+        {
+          "文件": "mod/build/local-validation-2026-10-04/continued/第6轮汇总.json",
+          "SHA-256": "787792d976bfd46d783390fc4f556f5feab99898f4853281557db5bb229dc6c5"
+        },
+        {
+          "文件": "mod/build/local-validation-2026-10-04/continued/第7轮汇总.json",
+          "SHA-256": "392a51ceac2e5d6ca56cb2d81f8b3ad50ca4eecc097b877a654eea1b8eeea389"
+        },
+        {
+          "文件": "mod/build/local-validation-2026-10-04/continued/第8轮汇总.json",
+          "SHA-256": "55c180cd7d8b0b66ba5ff4dbc0481c632d5cddd3dff996843c946f99fabb8af3"
+        },
+        {
+          "文件": "mod/build/local-validation-2026-10-04/server/续修基础验证/验证结果.json",
+          "SHA-256": "6c015d7e62a665cca8294d743c8e0a9ff78ab714c1c584715fe8fb46cea2acf4"
+        },
+        {
+          "文件": "mod/build/local-validation-2026-10-04/server/联机第8轮/客户端探针服结果.json",
+          "SHA-256": "6cf383a4bc8489bf8f93d045205dcba7bfb5a9fe84a45ffbb66c6f6aa5106bf6"
+        },
+        {
+          "文件": "mod/build/local-validation-2026-10-04/server/联机第8轮/客户端联机专服.log",
+          "SHA-256": "d131560b3883e2a2e8c336bb500047914e59b905645410f16e6d11ce3514e2bd"
+        },
+        {
+          "文件": "mod/build/local-validation-2026-10-04/client/continued-6-bob/console.log",
+          "SHA-256": "a927971f0355e8233c1de2508af3f9bc99301279d51452a015ea7549494e15bc"
+        }
+      ]
+    },
+    "证据沿用边界": "生产字节码与上一轮7d5ed4候选逐文件一致；本轮仅重新验证贴图、工具、构建及真实客户端加载，没有重跑门与音频联机矩阵。",
     "未完成": [
       "首次联机偶发超时定位",
       "完整人工画面与听感复核",
@@ -128,65 +339,25 @@
     "发布边界": "仅本地提交；远程工作流、推送、标签及发行暂停",
     "原始证据": [
       {
-        "文件": "mod/build/local-validation-2026-10-04/continued/第6轮汇总.json",
-        "SHA-256": "787792d976bfd46d783390fc4f556f5feab99898f4853281557db5bb229dc6c5"
+        "文件": "mod/build/texture-redraw-2026-10-04-batch2/工具回归.log",
+        "SHA-256": "e396c55d7529a9f77210db3c22d867ddf8b82e801fe0d6fec8a4b6680a03da8b"
       },
       {
-        "文件": "mod/build/local-validation-2026-10-04/continued/第7轮汇总.json",
-        "SHA-256": "392a51ceac2e5d6ca56cb2d81f8b3ad50ca4eecc097b877a654eea1b8eeea389"
+        "文件": "mod/build/texture-redraw-2026-10-04-batch2/资源质量.log",
+        "SHA-256": "cddae8b6a5ff08fb01e36711f4d68182e8f04c0e8e52af2ec982d878e2f61112"
       },
       {
-        "文件": "mod/build/local-validation-2026-10-04/continued/第8轮汇总.json",
-        "SHA-256": "55c180cd7d8b0b66ba5ff4dbc0481c632d5cddd3dff996843c946f99fabb8af3"
+        "文件": "mod/build/texture-redraw-2026-10-04-batch2/构建.log",
+        "SHA-256": "9f845d6f4c00e99a305e626fe3f0614beff87375228b1a33dba707b0d66e542f"
       },
       {
-        "文件": "mod/build/local-validation-2026-10-04/server/续修基础验证/验证结果.json",
-        "SHA-256": "6c015d7e62a665cca8294d743c8e0a9ff78ab714c1c584715fe8fb46cea2acf4"
+        "文件": "mod/build/local-validation-2026-10-04/client/texture-batch2/result.json",
+        "SHA-256": "c682d76deeef21279107727283b6ca532d16b4945acb8970bfa95157bfd65a01"
       },
       {
-        "文件": "mod/build/local-validation-2026-10-04/server/联机第8轮/客户端探针服结果.json",
-        "SHA-256": "6cf383a4bc8489bf8f93d045205dcba7bfb5a9fe84a45ffbb66c6f6aa5106bf6"
-      },
-      {
-        "文件": "mod/build/local-validation-2026-10-04/server/联机第8轮/客户端联机专服.log",
-        "SHA-256": "d131560b3883e2a2e8c336bb500047914e59b905645410f16e6d11ce3514e2bd"
-      },
-      {
-        "文件": "mod/build/local-validation-2026-10-04/client/continued-6-bob/console.log",
-        "SHA-256": "a927971f0355e8233c1de2508af3f9bc99301279d51452a015ea7549494e15bc"
+        "文件": "mod/build/local-validation-2026-10-04/client/texture-batch2/console.log",
+        "SHA-256": "38e6953472782d864726d0bae13c76764e798319e1b0da98771cae9604ee170d"
       }
     ]
-  },
-  "证据沿用边界": "生产字节码与上一轮7d5ed4候选逐文件一致；本轮仅重新验证贴图、工具、构建及真实客户端加载，没有重跑门与音频联机矩阵。",
-  "未完成": [
-    "首次联机偶发超时定位",
-    "完整人工画面与听感复核",
-    "64MiB音频压力",
-    "本轮任意门双客户端跨维强杀恢复",
-    "其余贴图重绘",
-    "长期事务保留规则与生存获取配方"
-  ],
-  "发布边界": "仅本地提交；远程工作流、推送、标签及发行暂停",
-  "原始证据": [
-    {
-      "文件": "mod/build/texture-redraw-2026-10-04-batch2/工具回归.log",
-      "SHA-256": "e396c55d7529a9f77210db3c22d867ddf8b82e801fe0d6fec8a4b6680a03da8b"
-    },
-    {
-      "文件": "mod/build/texture-redraw-2026-10-04-batch2/资源质量.log",
-      "SHA-256": "cddae8b6a5ff08fb01e36711f4d68182e8f04c0e8e52af2ec982d878e2f61112"
-    },
-    {
-      "文件": "mod/build/texture-redraw-2026-10-04-batch2/构建.log",
-      "SHA-256": "9f845d6f4c00e99a305e626fe3f0614beff87375228b1a33dba707b0d66e542f"
-    },
-    {
-      "文件": "mod/build/local-validation-2026-10-04/client/texture-batch2/result.json",
-      "SHA-256": "c682d76deeef21279107727283b6ca532d16b4945acb8970bfa95157bfd65a01"
-    },
-    {
-      "文件": "mod/build/local-validation-2026-10-04/client/texture-batch2/console.log",
-      "SHA-256": "38e6953472782d864726d0bae13c76764e798319e1b0da98771cae9604ee170d"
-    }
-  ]
+  }
 }

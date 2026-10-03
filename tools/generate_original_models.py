@@ -94,10 +94,10 @@ def block_model(identifier: str) -> dict[str, object]:
         return json.loads(decode_authoritative_json(relative).decode("utf-8"))
     texture = f"blindboxchallenge:block/{identifier}"
     if identifier == "glow_stick":
-        return {"parent": "minecraft:block/torch", "textures": {"torch": texture}}
+        return {"parent": "minecraft:block/torch", "textures": {"torch": texture}, "render_type": "minecraft:cutout"}
     if identifier == "glow_stick_wall":
         texture = "blindboxchallenge:block/glow_stick"
-        return {"parent": "minecraft:block/wall_torch", "textures": {"torch": texture}}
+        return {"parent": "minecraft:block/wall_torch", "textures": {"torch": texture}, "render_type": "minecraft:cutout"}
     if identifier in {"music_box", "safety_landing"}:
         return {"parent": "minecraft:block/cube_all", "textures": {"all": texture}}
     raise ValueError(f"未知方块模型：{identifier}")

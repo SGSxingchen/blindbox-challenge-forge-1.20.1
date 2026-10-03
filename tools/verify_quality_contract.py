@@ -15,6 +15,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from PIL import Image
+
 
 ROOT = Path(__file__).resolve().parents[1]
 MOD = ROOT / "mod"
@@ -109,7 +111,7 @@ def check_resource_manifest() -> None:
 
     generator = ROOT / "tools/generate_original_textures.py"
     targets = static_tuple_assignment(generator, "TARGETS")
-    require(len(targets) == 68, "原创重绘目标数量不是 68")
+    require(len(targets) == 71, "原创重绘目标数量不是 71")
     for target in targets:
         row = next((line for line in manifest.splitlines() if line.startswith(f"|`mod/src/main/resources/{target}`|")), "")
         if target in {
@@ -119,6 +121,53 @@ def check_resource_manifest() -> None:
             require(all(text in row for text in ("用户外观参考重绘", "用户提供", "重新绘制", "参考图不直接进入发行包")), f"用户参考重绘清单行错误：{target}")
         else:
             require("项目内原创重绘" in row and "原版图片仅作需求输入且不进入 Release" in row, f"原创重绘清单行错误：{target}")
+
+
+def binary_alpha_pixels(path: Path, size: tuple[int, int]) -> set[tuple[int, int]]:
+    """先锁定小画布尺寸，再解码透明度，避免异常图片引起大内存分配。"""
+    try:
+        with Image.open(path) as image:
+            require(image.format == "PNG" and image.mode == "RGBA" and image.size == size,
+                    f"贴图须为 {size[0]}×{size[1]} RGBA PNG：{path.name}")
+            alpha = image.getchannel("A").tobytes()
+    except (OSError, ValueError, Image.DecompressionBombError) as error:
+        fail(f"无法读取贴图 {path.name}：{error}")
+    require(set(alpha).issubset({0, 255}), f"贴图透明度须为二值：{path.name}")
+    return {(index % size[0], index // size[0]) for index, value in enumerate(alpha) if value}
+
+
+def check_wearable_and_glow_textures() -> None:
+    """约束实际穿戴 UV 与火把细杆透明区，不把图标尺寸泛化为任意尺寸。"""
+    # 坐标均为半开区间；头饰只使用头部四侧，不能覆盖头顶或身体装备 UV。
+    equipment = (
+        ("models/armor/eggy_eye_mask_layer_1.png", ((0, 8, 32, 16),), ((8, 8, 16, 16),)),
+        ("models/armor/face_mask_layer_1.png", ((0, 8, 32, 16),), ((8, 8, 16, 16),)),
+        ("entity/pink_butterfly_wings.png", ((24, 0, 44, 2), (22, 2, 46, 22)),
+         ((24, 2, 34, 22), (36, 2, 46, 22))),
+    )
+    for relative, allowed, visible_faces in equipment:
+        opaque = binary_alpha_pixels(ASSETS / "textures" / relative, (64, 32))
+        require(all(any(left <= x < right and top <= y < bottom for left, top, right, bottom in allowed)
+                    for x, y in opaque), f"穿戴贴图超出原版 UV 边界或污染透明区：{relative}")
+        for left, top, right, bottom in visible_faces:
+            count = sum(left <= x < right and top <= y < bottom for x, y in opaque)
+            require(0 < count < (right - left) * (bottom - top),
+                    f"穿戴贴图主要面须有图形和透明留白：{relative} / {(left, top, right, bottom)}")
+
+    glow = binary_alpha_pixels(ASSETS / "textures/block/glow_stick.png", (16, 16))
+    rod = {(x, y) for x in (7, 8) for y in range(6, 16)}
+    require(glow == rod, "荧光棒须仅保留 x7..8、y6..15 的完整两像素细杆与端盖，其余透明")
+    for identifier, parent in (("glow_stick", "minecraft:block/torch"),
+                               ("glow_stick_wall", "minecraft:block/wall_torch")):
+        path = ASSETS / "models/block" / f"{identifier}.json"
+        try:
+            model = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as error:
+            fail(f"无法读取荧光棒模型 {identifier}：{error}")
+        require(model.get("parent") == parent
+                and model.get("textures", {}).get("torch") == "blindboxchallenge:block/glow_stick"
+                and model.get("render_type") == "minecraft:cutout",
+                f"荧光棒模型须保持原版火把 UV 并使用 cutout：{identifier}")
 
 
 def check_original_resource_definitions() -> None:
@@ -253,6 +302,7 @@ def check_p5_safety() -> None:
 def main() -> None:
     check_p5_resources()
     check_resource_manifest()
+    check_wearable_and_glow_textures()
     check_original_resource_definitions()
     check_creative_inventory()
     check_network_and_isolation()

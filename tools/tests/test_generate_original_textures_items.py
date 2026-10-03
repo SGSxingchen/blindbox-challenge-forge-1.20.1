@@ -1,4 +1,5 @@
 import hashlib
+import io
 import os
 import subprocess
 import sys
@@ -10,6 +11,7 @@ from unittest.mock import patch
 from PIL import Image
 
 from tools import generate_original_textures as 被测模块
+from tools.render_item_texture_contact_sheet import 特殊贴图尺寸
 
 
 正式目录 = 被测模块.RESOURCE_ROOT / "assets/blindboxchallenge/textures/item"
@@ -35,6 +37,27 @@ class 物品贴图确定性生成测试(unittest.TestCase):
         relative = "assets/blindboxchallenge/textures/models/armor/road_barrier_layer_1.png"
         self.assertNotIn(relative, 被测模块.BLOCK_PNG_PAYLOADS)
         self.assertEqual(被测模块.png(被测模块.armor(relative)), 被测模块.render(relative))
+
+    def test_三张穿戴贴图优先使用内嵌完整PNG且不读取文件(self):
+        装备目标 = {
+            "assets/blindboxchallenge/textures/entity/pink_butterfly_wings.png",
+            "assets/blindboxchallenge/textures/models/armor/eggy_eye_mask_layer_1.png",
+            "assets/blindboxchallenge/textures/models/armor/face_mask_layer_1.png",
+        }
+        self.assertEqual(71, len(被测模块.TARGETS))
+        self.assertEqual(装备目标, set(被测模块.EQUIPMENT_PNG_PAYLOADS))
+        self.assertTrue(装备目标.issubset(被测模块.TARGETS))
+        self.assertTrue(装备目标.isdisjoint(被测模块.ITEM_TARGETS))
+        for 相对 in sorted(装备目标):
+            with patch.object(Path, "read_bytes", side_effect=AssertionError("不得读取正式贴图")), \
+                    patch.object(被测模块, "armor", side_effect=AssertionError("不得回退盔甲算法")), \
+                    patch.object(被测模块, "render_item", side_effect=AssertionError("不得分派到物品图标")):
+                内容 = 被测模块.render(相对)
+                self.assertEqual(被测模块.decode_equipment_png(相对), 内容)
+            self.assertEqual((被测模块.RESOURCE_ROOT / 相对).read_bytes(), 内容, 相对)
+            with Image.open(io.BytesIO(内容)) as 图:
+                self.assertEqual((64, 32), 图.size, 相对)
+                self.assertEqual("RGBA", 图.mode, 相对)
 
     def test_物品目标与正式五十九项精确一致(self):
         正式集合 = {
@@ -101,18 +124,7 @@ class 物品贴图确定性生成测试(unittest.TestCase):
                 路径 = Path(临时目录) / "item.png"
                 路径.write_bytes(内容)
                 with Image.open(路径) as 图像:
-                    期望尺寸 = {
-                        "assets/blindboxchallenge/textures/item/chainsaw_sword.png": (32, 32),
-                        "assets/blindboxchallenge/textures/item/shark_dagger_pillow.png": (32, 32),
-                        "assets/blindboxchallenge/textures/item/fairy_wand.png": (32, 32),
-                        "assets/blindboxchallenge/textures/item/pickaxe_hoe.png": (32, 32),
-                        "assets/blindboxchallenge/textures/item/nail_art.png": (32, 32),
-                        "assets/blindboxchallenge/textures/item/rainbow_hoop.png": (32, 32),
-
-                        "assets/blindboxchallenge/textures/item/wenxu_standee.png": (32, 32),
-                        "assets/blindboxchallenge/textures/item/rat_jerky_totem.png": (32, 32),
-                        "assets/blindboxchallenge/textures/item/road_barrier_helmet.png": (64, 64),
-                    }.get(relative, (16, 16))
+                    期望尺寸 = 特殊贴图尺寸.get(relative, (16, 16))
                     self.assertEqual(期望尺寸, 图像.size, relative)
                     self.assertEqual("RGBA", 图像.mode, relative)
 

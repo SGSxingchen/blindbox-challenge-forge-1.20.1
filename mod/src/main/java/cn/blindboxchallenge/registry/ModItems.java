@@ -7,6 +7,7 @@ import cn.blindboxchallenge.item.BlackKnightTelescopicKnifeItem;
 import cn.blindboxchallenge.item.BlindBoxItem;
 import cn.blindboxchallenge.item.ChainsawSwordItem;
 import cn.blindboxchallenge.item.EggyEyeMaskItem;
+import cn.blindboxchallenge.item.FaceMaskItem;
 import cn.blindboxchallenge.item.FairyWandItem;
 import cn.blindboxchallenge.item.LighterItem;
 import cn.blindboxchallenge.item.KazooItem;
@@ -34,7 +35,6 @@ import cn.blindboxchallenge.item.MusicBoxBlockItem;
 import cn.blindboxchallenge.entity.PillowVariant;
 import net.minecraft.core.Direction;
 import net.minecraft.world.food.FoodProperties;
-import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterials;
 import net.minecraft.world.item.ElytraItem;
 import net.minecraft.world.item.Item;
@@ -130,7 +130,7 @@ public final class ModItems {
             () -> new Item(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> CAT_DOLL = ITEMS.register("cat_doll", ModItems::collectible);
     public static final RegistryObject<Item> FACE_MASK = ITEMS.register("face_mask",
-            () -> new ArmorItem(ArmorMaterials.LEATHER, ArmorItem.Type.HELMET, new Item.Properties()));
+            () -> new FaceMaskItem(ArmorMaterials.LEATHER));
 
     public static final RegistryObject<Item> FAIRY_WAND = ITEMS.register("fairy_wand", FairyWandItem::new);
     public static final RegistryObject<Item> TOY_CAR = ITEMS.register("toy_car", ModItems::collectible);

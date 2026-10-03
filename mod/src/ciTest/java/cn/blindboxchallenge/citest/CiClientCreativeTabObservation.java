@@ -94,7 +94,8 @@ public final class CiClientCreativeTabObservation {
         if (player.containerMenu != player.inventoryMenu) {
             throw new IllegalStateException("创造物品栏关闭后没有恢复玩家背包菜单：" + player.containerMenu.getClass().getName());
         }
-        writeMarker(requiredMarker(), expected, tabItems, screenItems, player, menuBeforeClose);
+        String wearableObservations = CiWearableRenderingAssertions.verify(minecraft);
+        writeMarker(requiredMarker(), expected, tabItems, screenItems, player, menuBeforeClose, wearableObservations);
         markerWritten = true;
         CiTestProbe.LOGGER.info("创造模式标签页 CI：真实屏幕已验证 {} 个条目并关闭", expected.size());
     }
@@ -194,7 +195,8 @@ public final class CiClientCreativeTabObservation {
     }
 
     private static void writeMarker(Path marker, List<ResourceLocation> expected, List<ResourceLocation> tabItems,
-                                    List<ResourceLocation> screenItems, LocalPlayer player, String menuBeforeClose) {
+                                    List<ResourceLocation> screenItems, LocalPlayer player, String menuBeforeClose,
+                                    String wearableObservations) {
         int middle = expected.size() / 2;
         String value = "schema=1\n"
                 + "observer_uuid=" + player.getUUID() + "\n"
@@ -211,7 +213,8 @@ public final class CiClientCreativeTabObservation {
                 + "inventory_menu_restored=true\n"
                 + "first=" + expected.get(0) + "\n"
                 + "middle=" + expected.get(middle) + "\n"
-                + "last=" + expected.get(expected.size() - 1) + "\n";
+                + "last=" + expected.get(expected.size() - 1) + "\n"
+                + wearableObservations;
         try {
             Path parent = marker.getParent();
             if (parent == null) throw new IllegalStateException("创造模式标签页 marker 缺少父目录：" + marker);

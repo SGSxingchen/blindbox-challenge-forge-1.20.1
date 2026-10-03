@@ -1,25 +1,36 @@
 package cn.blindboxchallenge.item;
 
+import cn.blindboxchallenge.BlindBoxChallenge;
 import cn.blindboxchallenge.registry.ModItems;
 import java.util.Collections;
 import java.util.Set;
 import java.util.WeakHashMap;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 /** 037-C：头部饰品；仅由服务端装备和效果事件维护，不遍历世界中的生物。 */
 public final class EggyEyeMaskItem extends ArmorItem {
+    private static final String ARMOR_TEXTURE = new ResourceLocation(BlindBoxChallenge.MOD_ID,
+            "textures/models/armor/eggy_eye_mask_layer_1.png").toString();
     private static final String OWNED_BLINDNESS_KEY = "blindboxchallenge_eggy_eye_mask_blindness";
     /** 效果到期/被清除的事件发生在原版修改效果表之前，延后到服务端刻末补回。 */
     private static final Set<LivingEntity> PENDING_BLINDNESS = Collections.newSetFromMap(new WeakHashMap<>());
 
     public EggyEyeMaskItem(ArmorMaterial material) {
         super(material, Type.HELMET, new Item.Properties());
+    }
+
+    @Override
+    public String getArmorTexture(ItemStack stack, Entity entity, EquipmentSlot slot, String type) {
+        return ARMOR_TEXTURE;
     }
 
     /** 仅在尚未存在外部失明时写入无限时长效果，避免覆盖其他玩法来源的失明。 */

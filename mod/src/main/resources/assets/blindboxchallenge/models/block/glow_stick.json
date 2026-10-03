@@ -2,5 +2,6 @@
   "parent": "minecraft:block/torch",
   "textures": {
     "torch": "blindboxchallenge:block/glow_stick"
-  }
+  },
+  "render_type": "minecraft:cutout"
 }

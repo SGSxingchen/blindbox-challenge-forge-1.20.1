@@ -11,6 +11,7 @@ import cn.blindboxchallenge.client.MusicBoxScreen;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
+import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -33,6 +34,14 @@ public final class ClientModEvents {
         event.registerEntityRenderer(ModEntities.PILLOW_SEAT.get(), PillowSeatRenderer::new);
         event.registerEntityRenderer(ModEntities.RETURNING_SCISSORS.get(), ThrownItemRenderer::new);
         event.registerEntityRenderer(ModEntities.CLOCKWORK_CHICKEN.get(), ThrownItemRenderer::new);
+    }
+
+    @SubscribeEvent
+    public static void registerPlayerLayers(EntityRenderersEvent.AddLayers event) {
+        for (String skin : event.getSkins()) {
+            PlayerRenderer renderer = event.getSkin(skin);
+            if (renderer != null) renderer.addLayer(new PinkButterflyWingsLayer(renderer, event.getEntityModels()));
+        }
     }
 
     @SubscribeEvent
