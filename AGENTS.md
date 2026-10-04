@@ -12,6 +12,7 @@ P1 的盲盒、打包、全局奖池、事务隔离与调试命令，P2 的 50 �
 
 ## 规划文档
 
+* [当前67件物品效果与原计划对照清单（2026-10-04）](docs/ITEM_STATUS_SUMMARY_2026-10-04.html)
 * [物品名称、效果与交互修正候选记录](docs/ITEM_CORRECTIONS_2026-10-03.html)
 * [物品完整台账](docs/ITEM_CATALOG.md)
 * [技术设计与开发分期](docs/PLAN.md)
