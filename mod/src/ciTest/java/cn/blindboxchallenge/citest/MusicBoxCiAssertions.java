@@ -5,6 +5,10 @@ import cn.blindboxchallenge.menu.MusicBoxMenu;
 import cn.blindboxchallenge.network.CommitMusicBoxUrlPacket;
 import cn.blindboxchallenge.registry.ModBlocks;
 import cn.blindboxchallenge.service.AudioUrlPolicy;
+import cn.blindboxchallenge.service.AudioDownloadLimits;
+import cn.blindboxchallenge.network.PlayMusicBoxPacket;
+import net.minecraft.network.FriendlyByteBuf;
+import io.netty.buffer.Unpooled;
 import java.util.List;
 import java.util.UUID;
 import java.net.InetAddress;
@@ -38,6 +42,7 @@ public final class MusicBoxCiAssertions {
         float originalYaw = alice.getYRot();
         float originalPitch = alice.getXRot();
         try {
+            assertDownloadLimitsWire();
             level.setBlock(position, ModBlocks.MUSIC_BOX.get().defaultBlockState(), 3);
             if (!(level.getBlockEntity(position) instanceof MusicBoxBlockEntity box)) throw new IllegalStateException("八音盒方块实体未创建");
             alice.teleportTo(level, position.getX() + 0.5D, position.getY() + 1.0D, position.getZ() + 0.5D, 0.0F, 0.0F);
@@ -83,6 +88,20 @@ public final class MusicBoxCiAssertions {
             throw new IllegalStateException("危险八音盒 URL 被接受：" + value);
         } catch (IllegalArgumentException expected) {
             // 生产 URL 策略已拒绝，继续下一条独立负例。
+        }
+    }
+
+    private static void assertDownloadLimitsWire() {
+        var expected = new PlayMusicBoxPacket(UUID.randomUUID(), "https://example.com/audio.ogg", BlockPos.ZERO,
+                123L, new AudioDownloadLimits(2 * 1024 * 1024, 2000, 3000, 45_000));
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            PlayMusicBoxPacket.encode(expected, buffer);
+            if (!expected.equals(PlayMusicBoxPacket.decode(buffer)) || buffer.readableBytes() != 0) {
+                throw new IllegalStateException("播放包没有完整保留本次下载限制");
+            }
+        } finally {
+            buffer.release();
         }
     }
 

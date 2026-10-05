@@ -1,6 +1,7 @@
 package cn.blindboxchallenge.service;
 
 import cn.blindboxchallenge.blockentity.MusicBoxBlockEntity;
+import cn.blindboxchallenge.config.ModServerConfig;
 import cn.blindboxchallenge.menu.MusicBoxMenu;
 import cn.blindboxchallenge.network.ModNetwork;
 import cn.blindboxchallenge.network.PlayMusicBoxPacket;
@@ -38,9 +39,13 @@ public final class MusicBoxService {
         } catch (IllegalArgumentException ignored) {
             return;
         }
+        AudioDownloadLimits limits = new AudioDownloadLimits(ModServerConfig.MUSIC_BOX_MAX_DOWNLOAD_MIB.get() * 1024 * 1024,
+                ModServerConfig.MUSIC_BOX_CONNECT_TIMEOUT_SECONDS.get() * 1000,
+                ModServerConfig.MUSIC_BOX_READ_TIMEOUT_SECONDS.get() * 1000,
+                ModServerConfig.MUSIC_BOX_TOTAL_TIMEOUT_SECONDS.get() * 1000);
         UUID eventId = UUID.randomUUID();
         ModNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), new PlayMusicBoxPacket(eventId, normalized, box.getBlockPos(),
-                box.getLevel().getGameTime()));
+                box.getLevel().getGameTime(), limits));
     }
 
     /** 同时遵守玩家建造能力与该维度的实际交互权限（出生点保护等）。 */

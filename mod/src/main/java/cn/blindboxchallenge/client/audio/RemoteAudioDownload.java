@@ -1,6 +1,7 @@
 package cn.blindboxchallenge.client.audio;
 
 import cn.blindboxchallenge.service.AudioUrlPolicy;
+import cn.blindboxchallenge.service.AudioDownloadLimits;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -10,6 +11,7 @@ import java.net.InetSocketAddress;
 import java.net.StandardProtocolFamily;
 import java.net.URI;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.channels.SocketChannel;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
@@ -48,7 +50,7 @@ public final class RemoteAudioDownload {
     public enum FailureStage {
         DNS, PINNED_CONNECT_IPV4, PINNED_CONNECT_IPV6,
         TLS_SOCKET_WRAP, TLS_PARAMETERS, TLS_DEADLINE_ARM, TLS_HANDSHAKE, TLS_POST_HANDSHAKE_DEADLINE,
-        HTTP_HEADERS, BODY, CACHE, DECODE, UNKNOWN
+        HTTP_HEADERS, BODY, CACHE, DECODE, LIMIT, TOTAL_TIMEOUT, UNKNOWN
     }
 
     /** 保留实际 cause 供本地链路处理；对外诊断只允许读取无敏感数据的阶段枚举。 */
@@ -71,12 +73,12 @@ public final class RemoteAudioDownload {
         public String connectionAttemptSummary() { return connectionAttemptSummary; }
     }
 
-    public static final int MAX_DOWNLOAD_BYTES = 16 * 1024 * 1024;
+    public static final int MAX_DOWNLOAD_BYTES = AudioDownloadLimits.MAX_BYTES;
     public static final int MAX_CACHE_BYTES = 64 * 1024 * 1024;
-    private static final int TIMEOUT_MILLIS = (int) Duration.ofSeconds(10).toMillis();
     private static final int MAX_REDIRECTS = 3;
     private static final int MAX_HEADER_BYTES = 32 * 1024;
-    private static final long STALE_PART_MILLIS = Duration.ofMinutes(1).toMillis();
+    // 大于可配置总时限的120秒硬上限，避免清理仍在下载的临时文件。
+    private static final long STALE_PART_MILLIS = Duration.ofMinutes(3).toMillis();
     /**
      * 同 URL 的单飞结果只保存不可变的缓存条目；每个等待者都必须取得自己的短租约，不能共享一个
      * 可关闭的 {@link CachedAudio}。否则第一个完成解码的播放会错误释放另一个等待者仍在读取的文件。
@@ -103,7 +105,8 @@ public final class RemoteAudioDownload {
 
     private RemoteAudioDownload() {}
 
-    public static CachedAudio fetch(String requestedUrl) throws IOException {
+    public static CachedAudio fetch(String requestedUrl, AudioDownloadLimits limits) throws IOException {
+        java.util.Objects.requireNonNull(limits, "下载限制不能为空");
         String normalized = AudioUrlPolicy.normalizeHttpsUrl(requestedUrl);
         Path cache = Minecraft.getInstance().gameDirectory.toPath().resolve("blindboxchallenge-audio-cache");
         try { Files.createDirectories(cache); }
@@ -112,20 +115,20 @@ public final class RemoteAudioDownload {
         StoredAudio cached;
         try { cached = findCached(cache, urlHash); }
         catch (IOException exception) { throw new AudioFailureException(FailureStage.CACHE, exception); }
-        if (cached != null) return leaseOrCancel(cached);
+        if (cached != null) return leaseOrCancel(cached, limits);
 
-        long deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(TIMEOUT_MILLIS);
+        long deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(limits.totalTimeoutMillis());
         CompletableFuture<StoredAudio> ownDownload = new CompletableFuture<>();
         CompletableFuture<StoredAudio> activeDownload = IN_FLIGHT.putIfAbsent(urlHash, ownDownload);
-        if (activeDownload != null) return lease(waitForDownload(activeDownload, deadlineNanos), false, true);
+        if (activeDownload != null) return lease(waitForDownload(activeDownload, deadlineNanos), false, true, limits);
         try {
             cleanupStaleParts(cache);
             // 进入单飞区后再次复检，避免刚完成的同 URL 下载仍被当成未命中。
             cached = findCached(cache, urlHash);
-            StoredAudio result = cached != null ? cached : fetchUncached(normalized, cache, urlHash, deadlineNanos);
+            StoredAudio result = cached != null ? cached : fetchUncached(normalized, cache, urlHash, deadlineNanos, limits);
             // 新文件已由 saveResponse 在 CACHE_LOCK 内预留；先把预留转交给本调用者的租约，再唤醒
             // 其它同 URL 等待者，保证提交→解码打开之间没有可被另一个 URL 的 LRU 删除的窗口。
-            CachedAudio leased = leaseOrCancel(result);
+            CachedAudio leased = leaseOrCancel(result, limits);
             ownDownload.complete(result);
             return leased;
         } catch (AudioFailureException exception) {
@@ -143,12 +146,12 @@ public final class RemoteAudioDownload {
         }
     }
 
-    private static StoredAudio fetchUncached(String normalized, Path cache, String urlHash, long deadlineNanos) throws IOException {
+    private static StoredAudio fetchUncached(String normalized, Path cache, String urlHash, long deadlineNanos, AudioDownloadLimits limits) throws IOException {
         URI current = URI.create(normalized);
         for (int redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
             ensureBeforeDeadline(deadlineNanos);
             current = URI.create(AudioUrlPolicy.normalizeHttpsUrl(current.toString()));
-            try (DownloadResponse response = openPinned(current, deadlineNanos)) {
+            try (DownloadResponse response = openPinned(current, deadlineNanos, limits)) {
                 int status = response.status();
                 ensureBeforeDeadline(deadlineNanos);
                 if (isRedirect(status)) {
@@ -176,12 +179,12 @@ public final class RemoteAudioDownload {
                     try {
                         declaredContentLength = Long.parseLong(contentLength.trim());
                         if (declaredContentLength < 0L) throw new IOException("在线音频 Content-Length 非法");
-                        if (declaredContentLength > MAX_DOWNLOAD_BYTES) throw new IOException("在线音频超过 16 MiB 上限");
+                        if (declaredContentLength > limits.maxBytes()) throw limitExceeded();
                     } catch (NumberFormatException exception) {
                         throw new IOException("在线音频 Content-Length 非法", exception);
                     }
                 }
-                return saveResponse(response.body(), cache, urlHash, deadlineNanos, declaredContentLength);
+                return saveResponse(response.body(), cache, urlHash, deadlineNanos, declaredContentLength, limits.maxBytes());
             } catch (AudioFailureException exception) {
                 throw exception;
             } catch (IOException exception) {
@@ -198,7 +201,7 @@ public final class RemoteAudioDownload {
             Thread.currentThread().interrupt();
             throw new IOException("等待同一在线音频下载时被中断", exception);
         } catch (TimeoutException exception) {
-            throw new IOException("等待同一在线音频下载超时", exception);
+            throw new AudioFailureException(FailureStage.TOTAL_TIMEOUT, exception);
         } catch (ExecutionException exception) {
             Throwable cause = exception.getCause();
             if (cause instanceof IOException io) throw io;
@@ -211,15 +214,15 @@ public final class RemoteAudioDownload {
      * Authenticator 可悄然插入身份头。这里直接向已验证 IP 的 TLS socket 写固定 GET，因而既无
      * DNS 重绑定窗口，也绝不继承客户端其它网页会话的 Cookie、认证或代理配置。
      */
-    private static DownloadResponse openPinned(URI uri, long deadlineNanos) throws IOException {
+    private static DownloadResponse openPinned(URI uri, long deadlineNanos, AudioDownloadLimits limits) throws IOException {
         InetAddress[] addresses;
-        try { addresses = resolvePublicAddresses(uri.getHost(), deadlineNanos); }
+        try { addresses = resolvePublicAddresses(uri.getHost(), deadlineNanos, limits.connectTimeoutMillis()); }
         catch (IOException exception) { throw new AudioFailureException(FailureStage.DNS, exception); }
         IOException failure = null;
         Map<FailureStage, String> attempts = new LinkedHashMap<>();
         for (InetAddress address : addresses) {
             try {
-                return openPinnedAtAddress(uri, address, deadlineNanos);
+                return openPinnedAtAddress(uri, address, deadlineNanos, limits);
             } catch (IOException exception) {
                 FailureStage attemptStage = exception instanceof AudioFailureException staged ? staged.stage() : connectStage(address);
                 attempts.put(attemptStage, rootExceptionType(exception));
@@ -240,14 +243,14 @@ public final class RemoteAudioDownload {
         throw new AudioFailureException(FailureStage.UNKNOWN, failure);
     }
 
-    private static DownloadResponse openPinnedAtAddress(URI uri, InetAddress address, long deadlineNanos) throws IOException {
+    private static DownloadResponse openPinnedAtAddress(URI uri, InetAddress address, long deadlineNanos, AudioDownloadLimits limits) throws IOException {
         Socket plain = directSocketFor(address);
         SSLSocket tls = null;
         ScheduledFuture<?> closeAtDeadline = null;
         FailureStage stage = connectStage(address);
         try {
-            plain.connect(new InetSocketAddress(address, 443), remainingMillis(deadlineNanos));
-            plain.setSoTimeout(remainingMillis(deadlineNanos));
+            plain.connect(new InetSocketAddress(address, 443), Math.min(limits.connectTimeoutMillis(), remainingMillis(deadlineNanos)));
+            plain.setSoTimeout(Math.min(limits.readTimeoutMillis(), remainingMillis(deadlineNanos)));
             stage = FailureStage.TLS_SOCKET_WRAP;
             tls = (SSLSocket) TLS_FACTORY.createSocket(plain, uri.getHost(), 443, true);
             stage = FailureStage.TLS_PARAMETERS;
@@ -259,12 +262,13 @@ public final class RemoteAudioDownload {
             long closeDelay = remainingNanos(deadlineNanos);
             SSLSocket pinnedSocket = tls;
             closeAtDeadline = DEADLINE_ENFORCER.schedule(() -> closeQuietly(pinnedSocket), closeDelay, TimeUnit.NANOSECONDS);
-            tls.setSoTimeout(remainingMillis(deadlineNanos));
+            tls.setSoTimeout(Math.min(limits.connectTimeoutMillis(), remainingMillis(deadlineNanos)));
             stage = FailureStage.TLS_HANDSHAKE;
             tls.startHandshake();
             stage = FailureStage.TLS_POST_HANDSHAKE_DEADLINE;
             ensureBeforeDeadline(deadlineNanos);
             stage = FailureStage.HTTP_HEADERS;
+            tls.setSoTimeout(Math.min(limits.readTimeoutMillis(), remainingMillis(deadlineNanos)));
             writeRequest(tls.getOutputStream(), uri);
             InputStream input = tls.getInputStream();
             int status = readStatus(input, deadlineNanos);
@@ -281,7 +285,7 @@ public final class RemoteAudioDownload {
             if (tls != null) closeQuietly(tls);
             else closeQuietly(plain);
             if (exception instanceof AudioFailureException staged) throw staged;
-            throw new AudioFailureException(stage, exception);
+            throw new AudioFailureException(System.nanoTime() >= deadlineNanos ? FailureStage.TOTAL_TIMEOUT : stage, exception);
         }
     }
 
@@ -444,10 +448,10 @@ public final class RemoteAudioDownload {
         }
     }
 
-    private static InetAddress[] resolvePublicAddresses(String host, long deadlineNanos) throws IOException {
+    private static InetAddress[] resolvePublicAddresses(String host, long deadlineNanos, int connectTimeoutMillis) throws IOException {
         Future<InetAddress[]> resolution = DNS_RESOLVER.submit(() -> InetAddress.getAllByName(host));
         try {
-            InetAddress[] addresses = resolution.get(remainingMillis(deadlineNanos), TimeUnit.MILLISECONDS);
+            InetAddress[] addresses = resolution.get(Math.min(connectTimeoutMillis, remainingMillis(deadlineNanos)), TimeUnit.MILLISECONDS);
             if (addresses.length == 0 || Arrays.stream(addresses).anyMatch(address -> !AudioUrlPolicy.isPublicAddress(address))) {
                 throw new IOException("在线音频域名解析到非公网地址");
             }
@@ -472,7 +476,8 @@ public final class RemoteAudioDownload {
      * 因为合法保活响应会在完整音频后继续保持 TLS socket 打开。未声明长度的响应才读到 EOF。
      */
     private static StoredAudio saveResponse(InputStream input, Path cache, String urlHash, long deadlineNanos,
-                                            long declaredContentLength) throws IOException {
+                                            long declaredContentLength, int maxBytes) throws IOException {
+        if (declaredContentLength > maxBytes) throw limitExceeded();
         final Path temporary;
         try { temporary = Files.createTempFile(cache, urlHash + "-", ".part"); }
         catch (IOException exception) { throw new AudioFailureException(FailureStage.CACHE, exception); }
@@ -495,7 +500,7 @@ public final class RemoteAudioDownload {
                 if (read == 0) continue;
                 if (remainingContentLength > 0L) remainingContentLength -= read;
                 total += read;
-                if (total > MAX_DOWNLOAD_BYTES) throw new IOException("在线音频超过 16 MiB 上限");
+                if (total > maxBytes) throw limitExceeded();
                 if (firstLength < first.length) {
                     int copied = Math.min(read, first.length - firstLength);
                     System.arraycopy(buffer, 0, first, firstLength, copied);
@@ -506,10 +511,10 @@ public final class RemoteAudioDownload {
             }
         } catch (IOException exception) {
             Files.deleteIfExists(temporary);
-            throw new AudioFailureException(FailureStage.BODY, exception);
+            throw new AudioFailureException(System.nanoTime() >= deadlineNanos ? FailureStage.TOTAL_TIMEOUT : FailureStage.BODY, exception);
         } catch (RuntimeException exception) {
             Files.deleteIfExists(temporary);
-            throw new AudioFailureException(FailureStage.BODY, exception);
+            throw new AudioFailureException(System.nanoTime() >= deadlineNanos ? FailureStage.TOTAL_TIMEOUT : FailureStage.BODY, exception);
         }
         Kind kind = detect(first, firstLength);
         if (kind == null) {
@@ -650,11 +655,13 @@ public final class RemoteAudioDownload {
     }
 
     /** 为调用者分配独立租约；同 URL 单飞的每个 future 等待者都要各自持有一次。 */
-    private static CachedAudio lease(StoredAudio stored, boolean transferReservation, boolean singleFlightFollower) throws IOException {
+    private static CachedAudio lease(StoredAudio stored, boolean transferReservation, boolean singleFlightFollower, AudioDownloadLimits limits) throws IOException {
         synchronized (CACHE_LOCK) {
             if (!Files.isRegularFile(stored.path(), LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(stored.path())) {
                 throw new AudioFailureException(FailureStage.CACHE, new IOException("在线音频缓存条目在租约前消失"));
             }
+            // 缓存命中和同址等待者也必须遵守本事件限制，不能借旧大文件绕过下调值。
+            if (Files.size(stored.path()) > limits.maxBytes()) throw limitExceeded();
             retainCacheReferenceLocked(stored.path());
             if (transferReservation) {
                 if (!stored.reserved()) {
@@ -667,9 +674,9 @@ public final class RemoteAudioDownload {
         }
     }
 
-    private static CachedAudio leaseOrCancel(StoredAudio stored) throws IOException {
+    private static CachedAudio leaseOrCancel(StoredAudio stored, AudioDownloadLimits limits) throws IOException {
         try {
-            return lease(stored, stored.reserved(), false);
+            return lease(stored, stored.reserved(), false, limits);
         } catch (IOException | RuntimeException exception) {
             if (stored.reserved()) cancelReservation(stored.path());
             throw exception;
@@ -755,6 +762,10 @@ public final class RemoteAudioDownload {
         }
     }
 
+    private static AudioFailureException limitExceeded() {
+        return new AudioFailureException(FailureStage.LIMIT, new IOException("在线音频超过本次服务器大小限制"));
+    }
+
     private static void ensureBeforeDeadline(long deadlineNanos) throws IOException { remainingMillis(deadlineNanos); }
     private static int remainingMillis(long deadlineNanos) throws IOException {
         long remaining = remainingNanos(deadlineNanos);
@@ -763,7 +774,7 @@ public final class RemoteAudioDownload {
     }
     private static long remainingNanos(long deadlineNanos) throws IOException {
         long remaining = deadlineNanos - System.nanoTime();
-        if (remaining <= 0L) throw new IOException("在线音频总下载超时");
+        if (remaining <= 0L) throw new AudioFailureException(FailureStage.TOTAL_TIMEOUT, new SocketTimeoutException("在线音频总下载超时"));
         return remaining;
     }
     private static long lastModified(Path path) {

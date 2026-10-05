@@ -2,7 +2,7 @@ package cn.blindboxchallenge.config;
 
 import net.minecraftforge.common.ForgeConfigSpec;
 
-/** 物品参数由服务端配置确定；客户端仅呈现已同步的开启时长，不决定业务结算。 */
+/** 物品参数由服务端配置确定；客户端按播放事件中的限制下载音频，不决定业务结算。 */
 public final class ModServerConfig {
     private static final ForgeConfigSpec.Builder SERVER_BUILDER = new ForgeConfigSpec.Builder();
     public static final ForgeConfigSpec.IntValue BLIND_BOX_OPENING_TICKS;
@@ -20,6 +20,10 @@ public final class ModServerConfig {
     public static final ForgeConfigSpec.DoubleValue DEATH_NOTE_DAMAGE;
     public static final ForgeConfigSpec.IntValue CLOCKWORK_CHICKEN_FUSE_TICKS;
     public static final ForgeConfigSpec.IntValue CLOCKWORK_CHICKEN_EXPLOSION_POWER;
+    public static final ForgeConfigSpec.IntValue MUSIC_BOX_MAX_DOWNLOAD_MIB;
+    public static final ForgeConfigSpec.IntValue MUSIC_BOX_CONNECT_TIMEOUT_SECONDS;
+    public static final ForgeConfigSpec.IntValue MUSIC_BOX_READ_TIMEOUT_SECONDS;
+    public static final ForgeConfigSpec.IntValue MUSIC_BOX_TOTAL_TIMEOUT_SECONDS;
     public static final ForgeConfigSpec SERVER_SPEC;
 
     static {
@@ -68,6 +72,16 @@ public final class ModServerConfig {
                 .defineInRange("fuse_ticks", 1200, 1, 32767);
         CLOCKWORK_CHICKEN_EXPLOSION_POWER = SERVER_BUILDER.comment("发条小黄鸡到期后的原版 TNT 爆炸强度")
                 .defineInRange("explosion_power", 8, 1, 64);
+        SERVER_BUILDER.pop();
+        SERVER_BUILDER.push("music_box");
+        MUSIC_BOX_MAX_DOWNLOAD_MIB = SERVER_BUILDER.comment("八音盒单次下载的最大文件大小，单位 MiB；修改后从下一次播放生效")
+                .defineInRange("max_download_mib", 16, 1, 16);
+        MUSIC_BOX_CONNECT_TIMEOUT_SECONDS = SERVER_BUILDER.comment("八音盒连接及 TLS 握手的超时秒数，同时受总下载时限约束")
+                .defineInRange("connect_timeout_seconds", 10, 1, 60);
+        MUSIC_BOX_READ_TIMEOUT_SECONDS = SERVER_BUILDER.comment("八音盒每次网络读取等待的超时秒数，同时受总下载时限约束")
+                .defineInRange("read_timeout_seconds", 10, 1, 60);
+        MUSIC_BOX_TOTAL_TIMEOUT_SECONDS = SERVER_BUILDER.comment("八音盒从域名解析到下载完成的总时限秒数，包含重定向")
+                .defineInRange("total_timeout_seconds", 60, 1, 120);
         SERVER_BUILDER.pop();
         SERVER_SPEC = SERVER_BUILDER.build();
     }

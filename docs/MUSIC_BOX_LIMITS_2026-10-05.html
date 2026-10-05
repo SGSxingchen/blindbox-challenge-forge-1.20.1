@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>八音盒下载限制与大文件验证</title>
+<style>
+:root{color-scheme:light;--ink:#21302b;--muted:#65726c;--line:#d9e3dc;--accent:#256b51}*{box-sizing:border-box}body{margin:0;background:#f4f6f2;color:var(--ink);font:16px/1.8 system-ui,-apple-system,"PingFang SC",sans-serif}main{max-width:1080px;margin:auto;padding:44px 24px}header,section{padding:28px;background:#fff;border:1px solid var(--line);border-radius:18px;margin-bottom:20px}header{background:#e7f1e9}h1{font-size:32px;line-height:1.3;margin:12px 0}h2{font-size:22px;margin:0 0 14px}.muted{color:var(--muted);font-size:14px}a{color:var(--accent)}.links{display:flex;gap:18px;flex-wrap:wrap}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line)}th{background:#f4f7f2}pre{white-space:pre-wrap;background:#eff3ed;border-radius:10px;padding:18px;overflow-wrap:anywhere}code{overflow-wrap:anywhere}.scroll{overflow:auto}.note{border-left:4px solid var(--accent);padding-left:16px}@media(max-width:600px){main{padding:20px 12px}header,section{padding:20px}h1{font-size:27px}}
+</style></head><body><main>
+<header><div class="muted">盲盒挑战生存 · 2026年10月5日 · 本地候选 1.0.5</div>
+<h1>八音盒下载时限可调，大文件有更充足的等待时间</h1>
+<p>默认总下载时限从10秒调整为60秒。服务器分别控制连接等待、读取等待、总时限和文件大小，每次播放把当次限制发给在线玩家。</p>
+<div class="links"><a href="../mod/build/libs/blindboxchallenge-1.0.5-all.jar">本地候选包</a><a href="assets/music-box-limits-validation-2026-10-05.json">验证记录</a><a href="BLIND_BOX_OPENING_2026-10-05.html">上一项：盲盒连续开盖</a><a href="ITEM_STATUS_SUMMARY_2026-10-04.html">67件原计划对照快照</a></div></header>
+<section><h2>上一次为什么失败</h2>
+<p>两端已经成功登录，其中一端完成了14,064,854字节音频的播放，另一端在正文下载约10.8秒后失败。独立传输记录中，首个字节等待约9.5秒，10秒内只收到约234千字节。</p>
+<p>这些证据指向固定10秒总时限不足。旧日志只记录到正文阶段，无法进一步确定是读取超时还是总时限主动关闭连接。本轮新增总时限和大小超限的独立诊断阶段，便于区分后续问题。</p></section>
+<section><h2>服务器怎么调整</h2><p>在所用世界的 <code>serverconfig/blindboxchallenge-server.toml</code> 中设置：</p>
+<pre>[music_box]
+max_download_mib = 16
+connect_timeout_seconds = 10
+read_timeout_seconds = 10
+total_timeout_seconds = 60</pre>
+<div class="scroll"><table><thead><tr><th>项目</th><th>默认</th><th>范围</th><th>含义</th></tr></thead><tbody>
+<tr><td>文件大小</td><td>16 MiB</td><td>1～16 MiB</td><td>原始下载文件大小；缓存命中也检查。</td></tr>
+<tr><td>连接等待</td><td>10秒</td><td>1～60秒</td><td>域名解析、每次连接及加密握手的等待上限。</td></tr>
+<tr><td>读取等待</td><td>10秒</td><td>1～60秒</td><td>每次网络读取等待数据的上限。</td></tr>
+<tr><td>总下载时限</td><td>60秒</td><td>1～120秒</td><td>从解析到正文下载结束，包含重定向；优先于各阶段上限。</td></tr>
+</tbody></table></div>
+<p>配置被服务器加载后，从下一次播放采用新值；正在下载的事件保留启动时的限制。同一地址的并发播放共享第一条网络连接，各自仍遵守自己的等待总时限与大小上限。</p>
+<p class="note">本批播放消息格式有变化。服务器与所有客户端应同时换用本批候选包；旧包不能与新包混用。</p></section>
+<section><h2>这次覆盖了哪些边界</h2><ul>
+<li>已知长度超限时，在读取正文之前拒绝；没有长度时按实际下载字节计数。</li>
+<li>调低上限后，旧缓存和同址等待者也不能绕过。有效的大缓存保留，供允许它的后续事件使用。</li>
+<li>等待者超时不会取消另一条共享下载；每条播放独立持有和释放缓存引用。</li>
+<li>超时或中断的正文清理临时文件；清理过期文件时避开仍可能处于120秒预算内的下载。</li>
+</ul><p class="muted">缓存总上限仍为64 MiB，解码上限仍为128 MiB，同时最多两条远程音频。下载在客户端后台执行；服务器只广播地址和限制。</p></section>
+<section id="validation"><h2>本轮验证全部通过</h2><p>148项工具测试、质量契约、资源生成器与打包通过。纯正式包完成两次专服正常启停，67项注册及奖池保存重启保留，新配置默认值已实际生成。非默认下载限制的播放消息编码、解码往返一致。</p>
+<div class="scroll"><table><thead><tr><th>真实双客户端场景</th><th>本轮结果</th></tr></thead><tbody>
+<tr><td>连续五个大文件</td><td>两端全部播放；单文件14,064,854字节，累计70,324,270字节，超过64 MiB缓存上限。</td></tr>
+<tr><td>淘汰后重下</td><td>首个文件被淘汰，再次播放时两端均重新下载并读到声音数据。</td></tr>
+<tr><td>同址共享下载</td><td>两端各有一次发起者和一次等待者，两个独立播放事件都完成。</td></tr>
+<tr><td>损坏缓存恢复</td><td>两端缓存被测试探针截断后，正式逻辑识别并重新下载，播放恢复。</td></tr>
+<tr><td>退出与清理</td><td>测试方块归还，两个客户端及专服退出码均为0。</td></tr>
+</tbody></table></div>
+<p>共9个真实播放事件、18份双端声音引擎记录，每份实际读取22,050字节解码数据。本次首轮从触发到两端确认约14.2秒；此时间包含界面操作、下载和解码，不是单独的下载耗时。</p>
+<p class="muted">以上均使用同一正式候选包。校验值：<code>bfaa03175853219c56f265b0c9f722b530dddf3441e368f29e742de92269d043</code>。资源仍为192项，未修改图片。测试探针仅在独立验证包中。</p></section>
+<section><h2>仍需后续验收</h2><p>实际游戏内画面、人工听感、完整的静音与资源重载流程，以及生存获取方式仍需继续推进。压力场景使用受控测试音频，不代表任何外部链接都能稳定播放。本轮没有重跑短音频、断网命中及重连不补播的整套流程，上一批结果保留为历史证据。</p><p class="muted">本批仅本地验证与提交，尚未远程推送或发行；王立新高清徽章及其余物品材质沿用上一批成果。</p></section>
+</main></body></html>

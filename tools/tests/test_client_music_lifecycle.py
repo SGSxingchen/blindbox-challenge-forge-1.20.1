@@ -118,7 +118,9 @@ public final class SoundManager {
     "cn/blindboxchallenge/client/audio/RemoteAudioDownload.java": '''package cn.blindboxchallenge.client.audio;
 public final class RemoteAudioDownload {
     public static final java.util.concurrent.atomic.AtomicInteger FETCHES = new java.util.concurrent.atomic.AtomicInteger();
-    public static Object fetch(String url) { FETCHES.incrementAndGet(); return new Object(); }
+    public static Object fetch(String url, cn.blindboxchallenge.service.AudioDownloadLimits limits) {
+        FETCHES.incrementAndGet(); return new Object();
+    }
     public enum FailureStage { UNKNOWN }
     public static final class AudioFailureException extends RuntimeException {
         public FailureStage stage() { return FailureStage.UNKNOWN; }
@@ -214,7 +216,8 @@ public final class LifecycleRegression {
     }
 
     private static void request() {
-        ClientMusicService.play(new MusicBoxPlaybackEvent(UUID.randomUUID(), "https://example.com/music.ogg", new BlockPos(), 0));
+        ClientMusicService.play(new MusicBoxPlaybackEvent(UUID.randomUUID(), "https://example.com/music.ogg", new BlockPos(), 0,
+                cn.blindboxchallenge.service.AudioDownloadLimits.DEFAULTS));
     }
     private static void awaitTasks(int count) throws Exception {
         long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5);
@@ -255,6 +258,7 @@ class 客户端音频生命周期回归(unittest.TestCase):
             "cn/blindboxchallenge/client/audio/ClientMusicService.java",
             "cn/blindboxchallenge/client/audio/BufferedAudioStream.java",
             "cn/blindboxchallenge/service/AudioUrlPolicy.java",
+            "cn/blindboxchallenge/service/AudioDownloadLimits.java",
             "cn/blindboxchallenge/event/MusicBoxPlaybackEvent.java",
             "cn/blindboxchallenge/event/MusicBoxPlaybackFailedEvent.java",
         )]

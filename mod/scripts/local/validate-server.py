@@ -2,6 +2,7 @@
 """隔离验证正式 Jar 的专服加载、物品注册和奖池保存重启。"""
 
 import argparse
+import datetime
 import hashlib
 import json
 import os
@@ -166,7 +167,7 @@ def main():
             if not (ROOT / name).exists():
                 (ROOT / name).symlink_to(BASE_ROOT / name, target_is_directory=(name == "libraries"))
     report = {
-        "日期": "2026-10-04", "环境": "本地隔离正式映射 Jar + Forge 47.4.22 + Java 17 专服",
+        "日期": datetime.date.today().isoformat(), "环境": "本地隔离正式映射 Jar + Forge 47.4.22 + Java 17 专服",
         "范围": "专服加载、全部物品命令解析与奖池保存重启；没有 Minecraft 客户端参与", "正式Jar": str(JAR),
         "正式Jar SHA-256": sha256(JAR), "物品数": len(ITEMS), "结果": "未完成", "启动记录": [],
     }

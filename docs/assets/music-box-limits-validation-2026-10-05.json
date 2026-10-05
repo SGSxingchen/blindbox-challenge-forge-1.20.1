@@ -1,0 +1,456 @@
+{
+  "日期": "2026-10-05",
+  "任务": "八音盒服务器下载限制与本地双客户端大文件压力",
+  "结论": "本轮范围通过；仅本地候选，未推送或发行",
+  "正式Jar": {
+    "路径": "mod/build/libs/blindboxchallenge-1.0.5-all.jar",
+    "SHA-256": "bfaa03175853219c56f265b0c9f722b530dddf3441e368f29e742de92269d043"
+  },
+  "独立探针Jar": {
+    "路径": "mod/build/libs/blindboxchallenge-1.0.5-citest.jar",
+    "SHA-256": "fb87c1c6b9cb80cbb231461a9bd024ea0cb736d86a69cce83aff296b5044224d"
+  },
+  "实际生成配置": {
+    "max_download_mib": 16,
+    "connect_timeout_seconds": 10,
+    "read_timeout_seconds": 10,
+    "total_timeout_seconds": 60
+  },
+  "生成配置证据": {
+    "路径": "mod/build/local-validation-2026-10-04/server/audio-config-2026-10-05/基础专服生成配置.toml",
+    "SHA-256": "34f86d527d4cfed518d522667508021a4fcd028da45be379a053400ddc9822cf"
+  },
+  "网络协议": "5；服务器及客户端须同时更新",
+  "工具测试": {
+    "通过数": 148,
+    "日志": {
+      "路径": "mod/build/audio-limits-2026-10-05/工具测试.log",
+      "SHA-256": "86d5313a48fe02e5dab66791b21182e7172b4e5730f54cd13623cf2f4b798075"
+    },
+    "覆盖": "生产下载器的已知/未知长度超限、正文截断、短预算超时与较长预算成功、旧缓存限制、同址独立租约、等待超时不取消发起者、120秒内临时文件保留；不联网，不声称解码或播放"
+  },
+  "构建": {
+    "结果": "通过",
+    "命令": "离线执行 check build ciTestJar",
+    "日志": {
+      "路径": "mod/build/audio-limits-2026-10-05/构建.log",
+      "SHA-256": "009f8a33720539c38224336bf2f395db86c5b1741e88e2f171b25505ce6659c9"
+    }
+  },
+  "静态检查": [
+    {
+      "结果": "通过",
+      "日志": {
+        "路径": "mod/build/audio-limits-2026-10-05/质量契约.log",
+        "SHA-256": "cddae8b6a5ff08fb01e36711f4d68182e8f04c0e8e52af2ec982d878e2f61112"
+      }
+    },
+    {
+      "结果": "通过",
+      "日志": {
+        "路径": "mod/build/audio-limits-2026-10-05/资源检查.log",
+        "SHA-256": "3bdf921eafc30dff00bee571db342c61387dddb8ad9b3d23aeb796a86fc3a0a5"
+      }
+    },
+    {
+      "结果": "通过",
+      "日志": {
+        "路径": "mod/build/audio-limits-2026-10-05/材质生成器.log",
+        "SHA-256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "结果": "通过",
+      "日志": {
+        "路径": "mod/build/audio-limits-2026-10-05/模型生成器.log",
+        "SHA-256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  ],
+  "基础专服": {
+    "结果": "通过",
+    "物品数": 67,
+    "重启后奖池条目": 67,
+    "启动退出码": [
+      0,
+      0
+    ],
+    "原始结果": {
+      "路径": "mod/build/local-validation-2026-10-04/server/audio-config-2026-10-05/验证结果.json",
+      "SHA-256": "5b74cad7348c96a7cdc57d14b183e92eabba0b9cd22ed2f314f52d9845a8177d"
+    }
+  },
+  "播放包往返": {
+    "结果": "通过",
+    "证据": "本轮 run_p4_music_negative 使用非默认下载限制编码解码，要求四项值完整相等且没有剩余字节"
+  },
+  "真实双客户端压力": {
+    "结果": "通过",
+    "轮次": 11,
+    "开始时间": "2026-10-05T08:22:28.909497+00:00",
+    "结束时间": "2026-10-05T08:25:42.064415+00:00",
+    "单文件字节": 14064854,
+    "五个填充文件合计字节": 70324270,
+    "缓存总上限字节": 67108864,
+    "原始结果": {
+      "路径": "mod/build/stability-2026-10-04/audio-limits-2026-10-05/音频压力结果.json",
+      "SHA-256": "760675a2f41dc9fe7c69d0a15837aa52a0c82d3ecfb2c70c40c5e745fc6a1273"
+    },
+    "阶段": [
+      {
+        "名称": "专服本轮入口就绪",
+        "开始时间": "2026-10-05T08:22:28.912660+00:00",
+        "上限秒数": 150,
+        "状态": "通过",
+        "耗时秒数": 28.359
+      },
+      {
+        "名称": "alice 首次真实联机",
+        "开始时间": "2026-10-05T08:22:57.283964+00:00",
+        "上限秒数": 180,
+        "状态": "通过",
+        "耗时秒数": 28.681
+      },
+      {
+        "名称": "bob 首次真实联机",
+        "开始时间": "2026-10-05T08:23:25.975201+00:00",
+        "上限秒数": 180,
+        "状态": "通过",
+        "耗时秒数": 31.57
+      },
+      {
+        "名称": "BLINDBOX_CITEST_P4_MUSIC_NEGATIVE=success",
+        "开始时间": "2026-10-05T08:23:57.553915+00:00",
+        "上限秒数": 60,
+        "状态": "通过",
+        "耗时秒数": 0.262
+      },
+      {
+        "名称": "BLINDBOX_CITEST_P5_MUSIC_CACHE_STARTED=success",
+        "开始时间": "2026-10-05T08:23:57.817467+00:00",
+        "上限秒数": 60,
+        "状态": "通过",
+        "耗时秒数": 0.267
+      },
+      {
+        "名称": "BLINDBOX_CITEST_P5_MUSIC_CACHE_FILL_1=success",
+        "开始时间": "2026-10-05T08:23:58.086460+00:00",
+        "上限秒数": 240,
+        "状态": "通过",
+        "耗时秒数": 14.164
+      },
+      {
+        "名称": "BLINDBOX_CITEST_P5_MUSIC_CACHE_FILL_2=success",
+        "开始时间": "2026-10-05T08:24:12.253543+00:00",
+        "上限秒数": 240,
+        "状态": "通过",
+        "耗时秒数": 10.832
+      },
+      {
+        "名称": "BLINDBOX_CITEST_P5_MUSIC_CACHE_FILL_3=success",
+        "开始时间": "2026-10-05T08:24:23.088350+00:00",
+        "上限秒数": 240,
+        "状态": "通过",
+        "耗时秒数": 14.781
+      },
+      {
+        "名称": "BLINDBOX_CITEST_P5_MUSIC_CACHE_FILL_4=success",
+        "开始时间": "2026-10-05T08:24:37.870612+00:00",
+        "上限秒数": 240,
+        "状态": "通过",
+        "耗时秒数": 10.749
+      },
+      {
+        "名称": "BLINDBOX_CITEST_P5_MUSIC_CACHE_FILL_5=success",
+        "开始时间": "2026-10-05T08:24:48.620936+00:00",
+        "上限秒数": 240,
+        "状态": "通过",
+        "耗时秒数": 10.772
+      },
+      {
+        "名称": "BLINDBOX_CITEST_P5_MUSIC_CACHE_EVICTION_REDOWNLOAD=success",
+        "开始时间": "2026-10-05T08:24:59.394148+00:00",
+        "上限秒数": 240,
+        "状态": "通过",
+        "耗时秒数": 14.581
+      },
+      {
+        "名称": "BLINDBOX_CITEST_P5_MUSIC_CACHE_SINGLE_FLIGHT=success",
+        "开始时间": "2026-10-05T08:25:13.976749+00:00",
+        "上限秒数": 240,
+        "状态": "通过",
+        "耗时秒数": 11.305
+      },
+      {
+        "名称": "BLINDBOX_CITEST_P5_MUSIC_CACHE_CORRUPTION=ready",
+        "开始时间": "2026-10-05T08:25:25.283286+00:00",
+        "上限秒数": 120,
+        "状态": "通过",
+        "耗时秒数": 0.005
+      },
+      {
+        "名称": "BLINDBOX_CITEST_P5_MUSIC_CACHE_CLIENTS=success",
+        "开始时间": "2026-10-05T08:25:25.289050+00:00",
+        "上限秒数": 240,
+        "状态": "通过",
+        "耗时秒数": 11.903
+      },
+      {
+        "名称": "BLINDBOX_CITEST_P5_MUSIC_CACHE_CLEANUP=success",
+        "开始时间": "2026-10-05T08:25:37.195420+00:00",
+        "上限秒数": 60,
+        "状态": "通过",
+        "耗时秒数": 0.271
+      }
+    ],
+    "客户端": [
+      {
+        "角色": "alice",
+        "正式Jar SHA-256": "bfaa03175853219c56f265b0c9f722b530dddf3441e368f29e742de92269d043",
+        "退出码": 0,
+        "原始结果": {
+          "路径": "mod/build/stability-2026-10-04/audio-limits-2026-10-05/alice/result.json",
+          "SHA-256": "c658ba2c85913fa8b2c0bb0cc60ca712682616288c4c4c90ad0ef01d23780baa"
+        }
+      },
+      {
+        "角色": "bob",
+        "正式Jar SHA-256": "bfaa03175853219c56f265b0c9f722b530dddf3441e368f29e742de92269d043",
+        "退出码": 0,
+        "原始结果": {
+          "路径": "mod/build/stability-2026-10-04/audio-limits-2026-10-05/bob/result.json",
+          "SHA-256": "5b08160c0926bb9e270de86519179237f44e5b0b503d5fa784538d9853255ddd"
+        }
+      }
+    ],
+    "专服退出码": 0,
+    "真实播放事件数": 9,
+    "两端声音引擎记录数": 18,
+    "事件": {
+      "178a456d-f892-4d1f-acde-84d1fa226c26": [
+        {
+          "观察端": "client-1",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-fill-5",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": false,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-1-p5-music-cache-read-178a456d-f892-4d1f-acde-84d1fa226c26.marker",
+            "SHA-256": "0a97170393075de135ca9597183adbb8ed8b004e77af65310f197996cb338892"
+          }
+        },
+        {
+          "观察端": "client-2",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-fill-5",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": false,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-2-p5-music-cache-read-178a456d-f892-4d1f-acde-84d1fa226c26.marker",
+            "SHA-256": "c4a1ffe852fcaf320fe3e88e6bb342266565efe47358827c4b7a3b8ab76165d7"
+          }
+        }
+      ],
+      "20119f18-f68d-428a-9c9c-64521d9a8565": [
+        {
+          "观察端": "client-1",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-fill-1",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": false,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-1-p5-music-cache-read-20119f18-f68d-428a-9c9c-64521d9a8565.marker",
+            "SHA-256": "e41d73748af806ce12959feed773ed952288ca06b810f41c179b1cb633d76425"
+          }
+        },
+        {
+          "观察端": "client-2",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-fill-1",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": false,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-2-p5-music-cache-read-20119f18-f68d-428a-9c9c-64521d9a8565.marker",
+            "SHA-256": "dfa53721491b905c1bbbfd7239ee99635e41ec36459cd6353ff98bfac1b50d86"
+          }
+        }
+      ],
+      "5ba12d16-2a75-4e61-8109-787ecfc7d3a4": [
+        {
+          "观察端": "client-1",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-fill-4",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": false,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-1-p5-music-cache-read-5ba12d16-2a75-4e61-8109-787ecfc7d3a4.marker",
+            "SHA-256": "e83b6c6786bbe14e70331f27697527c4275c12a410bbc3705a4c59d459c2ae03"
+          }
+        },
+        {
+          "观察端": "client-2",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-fill-4",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": false,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-2-p5-music-cache-read-5ba12d16-2a75-4e61-8109-787ecfc7d3a4.marker",
+            "SHA-256": "c767ecf277c53ffd09c1e220dfa63dd3cfee4372841ef7d91ed05ecfe675b046"
+          }
+        }
+      ],
+      "73a2d278-fa0e-4725-aacb-8a960c5e1386": [
+        {
+          "观察端": "client-1",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-fill-3",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": false,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-1-p5-music-cache-read-73a2d278-fa0e-4725-aacb-8a960c5e1386.marker",
+            "SHA-256": "45fa5a8aa3c2f6e7b5096e2abbfc05bea4c57893b38f8e7a7022c57054cba070"
+          }
+        },
+        {
+          "观察端": "client-2",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-fill-3",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": false,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-2-p5-music-cache-read-73a2d278-fa0e-4725-aacb-8a960c5e1386.marker",
+            "SHA-256": "53f8c0624aa2131a6847428e2303029b5271c35b81392564b510d3cd059725cc"
+          }
+        }
+      ],
+      "9d9bef2f-20ab-4cb9-8594-1203da5701bb": [
+        {
+          "观察端": "client-1",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-fill-5",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": false,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-1-p5-music-cache-read-9d9bef2f-20ab-4cb9-8594-1203da5701bb.marker",
+            "SHA-256": "dd68f61501463a762860d56d50823a77a07e5f41ca126b82b3a47f7edb0118b3"
+          }
+        },
+        {
+          "观察端": "client-2",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-fill-5",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": false,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-2-p5-music-cache-read-9d9bef2f-20ab-4cb9-8594-1203da5701bb.marker",
+            "SHA-256": "569d5e28c6bcb19b4ccb706c0ce8a7d8ac82f84acc82bc6d0e37b89f1a89ac5f"
+          }
+        }
+      ],
+      "d239f55e-0055-418c-9fa3-b7a06e77dbfe": [
+        {
+          "观察端": "client-1",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-fill-1",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": false,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-1-p5-music-cache-read-d239f55e-0055-418c-9fa3-b7a06e77dbfe.marker",
+            "SHA-256": "b921edfef30a69539c868c1b81eacc4c8199092bb43ec402a18eb791ae2f75cc"
+          }
+        },
+        {
+          "观察端": "client-2",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-fill-1",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": false,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-2-p5-music-cache-read-d239f55e-0055-418c-9fa3-b7a06e77dbfe.marker",
+            "SHA-256": "82dd8f44cdbc3aaa2463ab37bfa48d33569140a615fab573c46babe9a319086b"
+          }
+        }
+      ],
+      "eaaaf554-f244-4a72-9982-bcf38ed4032f": [
+        {
+          "观察端": "client-1",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-singleflight",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": true,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-1-p5-music-cache-read-eaaaf554-f244-4a72-9982-bcf38ed4032f.marker",
+            "SHA-256": "e0a9224fe11bd79008f73ef3b98329c858b819d510d650cf47512623a0276688"
+          }
+        },
+        {
+          "观察端": "client-2",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-singleflight",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": true,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-2-p5-music-cache-read-eaaaf554-f244-4a72-9982-bcf38ed4032f.marker",
+            "SHA-256": "ffd480c9a0014bb79ad695860e23c38e91175d5fd07d4a951c89bc15d8b07bff"
+          }
+        }
+      ],
+      "f5d6c558-cad2-4f72-a70d-b10fe6a7c378": [
+        {
+          "观察端": "client-1",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-fill-2",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": false,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-1-p5-music-cache-read-f5d6c558-cad2-4f72-a70d-b10fe6a7c378.marker",
+            "SHA-256": "22bc427be5b9e87cac58b0e2138b61578fc19496d9de02bf2009bdc08b568adb"
+          }
+        },
+        {
+          "观察端": "client-2",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-fill-2",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": false,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-2-p5-music-cache-read-f5d6c558-cad2-4f72-a70d-b10fe6a7c378.marker",
+            "SHA-256": "910cea907a564ea130659d5fbf66c97af51a9006392fb55257706c5cd0226a0a"
+          }
+        }
+      ],
+      "fb1c036f-edc9-486f-bbae-980c0a187306": [
+        {
+          "观察端": "client-1",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-singleflight",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": false,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-1-p5-music-cache-read-fb1c036f-edc9-486f-bbae-980c0a187306.marker",
+            "SHA-256": "cc1400baaf6fedb88f1b20923ec48f02100969a3990c82993d5102f3cea835a0"
+          }
+        },
+        {
+          "观察端": "client-2",
+          "播放地址": "https://cdn.jsdelivr.net/gh/SGSxingchen/blindbox-challenge-forge-1.20.1@e33a3fe39cf0fc8beb7bdb2e7f44bc5e5727819f/mod/src/ciTest/resources/ci-audio/blindbox-ci-cache-pressure.ogg?ci=p5-singleflight",
+          "声音引擎读取字节": 22050,
+          "缓存命中": false,
+          "共享下载等待者": false,
+          "原始记录": {
+            "路径": "mod/build/local-validation-2026-10-04/client/stability-audio-11-ede3bbe0-evidence/client-2-p5-music-cache-read-fb1c036f-edc9-486f-bbae-980c0a187306.marker",
+            "SHA-256": "ee698e82e30baef4091ebfc7db8b73294df7f30fb2b9144e6ca9770aadebedc2"
+          }
+        }
+      ]
+    }
+  },
+  "限制": [
+    "本轮未重跑短 OGG/MP3、断网命中与重连不补播全流程；旧结果不自动继承到新包",
+    "真实声音引擎读取不替代人工听感验收",
+    "未验证完整静音、资源重载和所有取消时机",
+    "未改变 HTTPS、公网地址和固定 IP 加密连接策略",
+    "仅本地受控场景，不保证任意外部音频持续可用",
+    "正式 Jar 不包含测试探针、原始照片和源压缩包"
+  ]
+}

@@ -83,7 +83,7 @@ public final class ClientMusicService {
             if (released.compareAndSet(false, true)) REMOTE_AUDIO_SLOTS.release();
         };
         CompletableFuture.supplyAsync(() -> {
-            try { return RemoteAudioDownload.fetch(normalized); }
+            try { return RemoteAudioDownload.fetch(normalized, event.limits()); }
             catch (Exception exception) { throw new IllegalStateException(exception); }
         }, AUDIO_EXECUTOR).thenApplyAsync(audio -> RemoteMusicSoundInstance.prepare(audio, event.source(), event.eventId(), releaseSlot), AUDIO_EXECUTOR)
                 .thenAccept(sound -> Minecraft.getInstance().execute(() -> {
