@@ -67,12 +67,18 @@ public final class BlindBoxItem extends Item {
 
     /** 仅显示当前使用栈的服务端快照；缺失快照或无实体的物品栏预览一律闭盖。 */
     public static float getOpeningProgress(ItemStack stack, LivingEntity entity) {
+        return getOpeningProgress(stack, entity, 0.0F);
+    }
+
+    /** 帧间进度只用于客户端显示，服务端仍按完整游戏刻结算。 */
+    public static float getOpeningProgress(ItemStack stack, LivingEntity entity, float partialTick) {
         if (entity == null || !entity.isUsingItem() || entity.getUseItem() != stack) return 0.0F;
         long startTick = openingStartTick(stack);
         if (startTick < 0L || !stack.getTag().contains(OPENING_DURATION_KEY, Tag.TAG_INT)) return 0.0F;
         int duration = stack.getTag().getInt(OPENING_DURATION_KEY);
         if (duration < 10 || duration > 200) return 0.0F;
-        double elapsedTicks = (double) entity.level().getGameTime() - startTick;
+        float frame = Float.isFinite(partialTick) ? Math.max(0.0F, Math.min(1.0F, partialTick)) : 0.0F;
+        double elapsedTicks = (double) entity.level().getGameTime() - startTick + frame;
         return (float) Math.max(0.0D, Math.min(1.0D, elapsedTicks / duration));
     }
 

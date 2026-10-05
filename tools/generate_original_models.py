@@ -61,15 +61,15 @@ BLOCK_ITEM_MODELS = {
     "safety_landing",
     "stone_pillow",
 }
-BLIND_BOX_STAGES = tuple(
-    f"assets/blindboxchallenge/models/item/blind_box_open_{stage}.json" for stage in range(1, 5)
+BLIND_BOX_PARTS = tuple(
+    f"assets/blindboxchallenge/models/item/blind_box_{part}.json" for part in ("body", "lid")
 )
 TARGETS = tuple(
     sorted({
         path.relative_to(RESOURCE_ROOT).as_posix()
         for path in MODEL_ROOT.rglob("*.json")
         if path.relative_to(RESOURCE_ROOT).as_posix() not in PROTECTED_MODELS
-    } | set(BLIND_BOX_STAGES))
+    } | set(BLIND_BOX_PARTS))
 ) + HISTORIC_BLOCKSTATES + HISTORIC_LOOT
 
 
@@ -106,8 +106,8 @@ def block_model(identifier: str) -> dict[str, object]:
     raise ValueError(f"未知方块模型：{identifier}")
 
 
-def blind_box_model(stage: int) -> dict[str, object]:
-    """五档铰链盒盖；只引用原版材质，不增加图片或客户端渲染器。"""
+def blind_box_model(part: str) -> dict[str, object]:
+    """盒身与闭合盒盖分开烘焙，由客户端绕固定铰链连续旋转；不新增图片。"""
     def piece(start, end, texture):
         element = cuboid(start, end, texture)
         for value in element["faces"].values():
@@ -128,17 +128,6 @@ def blind_box_model(stage: int) -> dict[str, object]:
     lid = [piece([2.5, 11, 2.5], [13.5, 13, 13.5], "#body"),
            piece([7, 13, 2.5], [9, 13.15, 13.5], "#ribbon"),
            piece([2.5, 13, 7], [13.5, 13.15, 9], "#ribbon")]
-    for element in lid:
-        # 原版元素只接受 0、±22.5、±45 度。后两档先将坐标转到 90 度，
-        # 再以同一个铰链回转 22.5 度，避免使用非法的 67.5/90 度元素旋转。
-        angle = stage * 22.5
-        if stage >= 3:
-            start, end = element["from"], element["to"]
-            element["from"] = [start[0], 24 - end[2], start[1] + 2]
-            element["to"] = [end[0], 24 - start[2], end[1] + 2]
-            angle -= 90
-        if angle:
-            element["rotation"] = {"origin": [8, 11, 13], "axis": "x", "angle": angle}
     result = {
         "parent": "minecraft:block/block",
         "textures": {"particle": "#body", "body": "minecraft:block/purple_concrete",
@@ -148,20 +137,14 @@ def blind_box_model(stage: int) -> dict[str, object]:
             "firstperson_righthand": {"rotation": [0, 45, 0], "scale": [0.5, 0.5, 0.5]},
             "firstperson_lefthand": {"rotation": [0, 225, 0], "scale": [0.5, 0.5, 0.5]},
         },
-        "elements": elements + lid,
+        "elements": elements if part == "body" else lid if part == "lid" else elements + lid,
     }
-    if stage == 0:
-        result["overrides"] = [
-            {"predicate": {"blindboxchallenge:opening": threshold},
-             "model": f"blindboxchallenge:item/blind_box_open_{index}"}
-            for index, threshold in enumerate((0.15, 0.35, 0.6, 0.85), 1)
-        ]
     return result
 
 
 def item_model(identifier: str) -> dict[str, object]:
-    if identifier == "blind_box" or identifier.startswith("blind_box_open_"):
-        return blind_box_model(0 if identifier == "blind_box" else int(identifier.rsplit("_", 1)[1]))
+    if identifier in {"blind_box", "blind_box_body", "blind_box_lid"}:
+        return blind_box_model(identifier.removeprefix("blind_box_"))
     if identifier in {"music_box", "road_barrier_helmet"}:
         return {"parent": "builtin/entity"}
     if identifier in BLOCK_ITEM_MODELS:

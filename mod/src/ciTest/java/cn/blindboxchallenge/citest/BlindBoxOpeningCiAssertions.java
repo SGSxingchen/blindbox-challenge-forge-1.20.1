@@ -43,6 +43,12 @@ final class BlindBoxOpeningCiAssertions {
                     && BlindBoxItem.getOpeningProgress(box, null) == 0.0F, "非活跃栈或空实体触发动画");
             long now = player.level().getGameTime();
             require(now > 0L, "探针须在世界开始运行后执行");
+            box.getTag().putLong("blindboxchallenge_opening_start_tick", now);
+            float quarterFrame = BlindBoxItem.getOpeningProgress(box, player, 0.25F);
+            float laterFrame = BlindBoxItem.getOpeningProgress(box, player, 0.75F);
+            require(quarterFrame > 0.0F && laterFrame > quarterFrame
+                    && Math.abs(laterFrame - quarterFrame - 0.5F / 80.0F) < 0.00001F,
+                    "同一游戏刻内没有按帧插值");
             box.getTag().putLong("blindboxchallenge_opening_start_tick", 0L);
             require(BlindBoxItem.getOpeningProgress(box, player) == (float) Math.min(1.0D, now / 80.0D),
                     "活跃盒盖未按服务端快照推进或超过上限");
