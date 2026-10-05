@@ -95,8 +95,8 @@ class 物品贴图确定性生成测试(unittest.TestCase):
             被改路径.write_bytes(被改路径.read_bytes() + b"tampered")
             self.assertEqual([被测模块.ITEM_TARGETS[0]], 被测模块.check_items(临时根))
 
-    def test_更新清单保留文绪奶龙用户外观参考来源(self):
-        项目 = tuple(f"assets/blindboxchallenge/textures/item/{编号}.png" for 编号 in ("wenxu_standee", "rat_jerky_totem", "yijin_manual"))
+    def test_更新清单保留用户参考与高清人物照片来源(self):
+        项目 = tuple(f"assets/blindboxchallenge/textures/item/{编号}.png" for 编号 in ("wenxu_standee", "rat_jerky_totem", "wang_lixin_badge", "yijin_manual"))
         with tempfile.TemporaryDirectory() as 临时目录:
             临时根 = Path(临时目录)
             清单 = 临时根 / "manifest.md"
@@ -108,12 +108,14 @@ class 物品贴图确定性生成测试(unittest.TestCase):
             with patch.object(被测模块, "TARGETS", 项目), patch.object(被测模块, "RESOURCE_ROOT", 临时根), patch.object(被测模块, "MANIFEST", 清单):
                 被测模块.update_manifest()
             行 = 清单.read_text(encoding="utf-8").splitlines()
-            for 来源行 in 行[:2]:
+            for 来源行 in 行[:3]:
                 self.assertIn("用户外观参考重绘", 来源行)
                 self.assertIn("参考图不直接进入发行包", 来源行)
                 self.assertNotIn("不读取、采样或混合原图", 来源行)
-            self.assertIn("项目内原创重绘", 行[2])
-            self.assertEqual("保留其他审计说明", 行[3])
+            self.assertIn("用户提供人物照片", 行[2])
+            self.assertIn("不宣称纯文字原创", 行[2])
+            self.assertIn("项目内原创重绘", 行[3])
+            self.assertEqual("保留其他审计说明", 行[4])
 
     def test_每项载荷解码符合逐项尺寸且生成器不读取正式图或output(self):
         self.assertEqual(set(被测模块.ITEM_TARGETS), set(被测模块.ITEM_PIXEL_PAYLOADS) | set(被测模块.ITEM_PNG_PAYLOADS))

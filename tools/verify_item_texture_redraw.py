@@ -75,7 +75,7 @@ from PIL import Image
     'assets/blindboxchallenge/textures/item/toy_knife.png': ('toy_knife', 'catalog_reference', '732da1a3eac2e60651c79244fe3df3bcb4530343fcb41241b2360e37fdb5cb6f'),
     'assets/blindboxchallenge/textures/item/truffle_ham_cracker.png': ('truffle_ham_cracker', 'catalog_reference', '52c14e48ff8ab87eb3725ab4d3f8c0f267f6c9f145f239a446372349ad3ffeef'),
     'assets/blindboxchallenge/textures/item/vodka.png': ('vodka', 'catalog_reference', '51a1ecda5550a45a3c99f98db8befefd2819639e8e9182954cdef53855a99a47'),
-    'assets/blindboxchallenge/textures/item/wang_lixin_badge.png': ('wang_lixin_badge', 'catalog_reference', 'cbaf91a46f2f92adcf1dfbfc31eba52e485827d4b4b3e23ee3e254cfe4a1dfdc'),
+    'assets/blindboxchallenge/textures/item/wang_lixin_badge.png': ('wang_lixin_badge', 'catalog_reference', '4f66736e690dcc6e6eb547d8fb3c88e71a807cf35beaeac707ee229321fd6462'),
     'assets/blindboxchallenge/textures/item/wenxu_standee.png': ('wenxu_standee', 'catalog_reference', '9201060ce655a039c7b6978ea3ced8bcac8f2be2d5e6015e250e055be5fd5504'),
     'assets/blindboxchallenge/textures/item/white_rabbit_candy.png': ('white_rabbit_candy', 'catalog_reference', 'b7332e5ce9581606bb5d2680117512fa9f0e2a5f941150f6da7327773c60451f'),
     'assets/blindboxchallenge/textures/item/wind_blown_cake.png': ('wind_blown_cake', 'catalog_reference', 'cbdf4833453c3d5527ed3219eeeff114dc1710411c412f689e64501e4a34105a'),
@@ -100,7 +100,7 @@ from PIL import Image
     "yijin_manual": ("线装古书", "封皮", "书脊", "无文字题签"),
     "math_exam_paper": ("试卷", "纸张轮廓", "不可读"),
     "million_pound_note": ("纸币", "纸张边框", "不可读", "不含肖像"),
-    "wang_lixin_badge": ("徽章", "金属边", "不可读", "不含人物肖像"),
+    "wang_lixin_badge": ("徽章", "金属边", "高清肖像", "无文字"),
     "flowing_black_flag": ("布旗", "旗杆", "不可读"),
 }
 原创防复刻关键词 = {
@@ -109,6 +109,7 @@ from PIL import Image
     "toy_car": ("原创", "不使用品牌造型"),
 }
 用户参考外观关键词 = {
+    "wang_lixin_badge": ("用户提供人物照片", "高清肖像", "黑色头发", "白衣", "透明背景"),
     "wenxu_standee": ("用户提供两张外观参考", "重新绘制", "白发兽耳", "蓝眼", "粉色围巾", "浅蓝衣服", "透明底座", "不直接拼贴"),
     "rat_jerky_totem": ("用户提供商品外观参考", "重新绘制", "黄色长手长脚", "白肚皮", "布偶", "褐色手脚", "不直接拼贴"),
 }

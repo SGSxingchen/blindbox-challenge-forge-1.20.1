@@ -329,6 +329,15 @@ def update_manifest() -> None:
             relative = target_paths.get(path)
             if relative is not None:
                 checksum = hashlib.sha256((RESOURCE_ROOT / relative).read_bytes()).hexdigest()
+                if relative == "assets/blindboxchallenge/textures/item/wang_lixin_badge.png":
+                    rows.append(
+                        f"|`{path}`|`{checksum}`|用户外观参考重绘|"
+                        "依据用户提供人物照片编辑、重新绘制成高清肖像徽章；参考图不直接进入发行包|"
+                        "项目方提供人物照片并要求用于徽章；仅本项保留高清肖像，不宣称纯文字原创|"
+                        f"{line.split('|')[-2]}|"
+                    )
+                    updated.add(path)
+                    continue
                 if relative in {
                     "assets/blindboxchallenge/textures/item/wenxu_standee.png",
                     "assets/blindboxchallenge/textures/item/rat_jerky_totem.png",
@@ -336,7 +345,8 @@ def update_manifest() -> None:
                     rows.append(
                         f"|`{path}`|`{checksum}`|用户外观参考重绘|"
                         "依据本轮用户提供外观参考重新绘制；参考图不直接进入发行包|"
-                        "项目方提供外观参考；发行使用重新绘制 PNG，不外推第三方授权|2026-10-04|"
+                        "项目方提供外观参考；发行使用重新绘制 PNG，不外推第三方授权|"
+                        f"{line.split('|')[-2]}|"
                     )
                     updated.add(path)
                     continue

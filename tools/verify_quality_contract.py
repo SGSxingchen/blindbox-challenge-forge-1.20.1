@@ -115,6 +115,7 @@ def check_resource_manifest() -> None:
     for target in targets:
         row = next((line for line in manifest.splitlines() if line.startswith(f"|`mod/src/main/resources/{target}`|")), "")
         if target in {
+            "assets/blindboxchallenge/textures/item/wang_lixin_badge.png",
             "assets/blindboxchallenge/textures/item/wenxu_standee.png",
             "assets/blindboxchallenge/textures/item/rat_jerky_totem.png",
         }:

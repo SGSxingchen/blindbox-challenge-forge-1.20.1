@@ -875,6 +875,10 @@ public final class CiTestCommands {
                 || !approximately(stackAttributeTotal(purpleToy, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED), -2.8D)) {
             throw new IllegalStateException("紫色玩具钻石镐缺少原版木镐的栈敏感采掘或属性语义");
         }
+        purpleToy.getItem().hurtEnemy(purpleToy, player, player);
+        if (purpleToy.getDamageValue() != 2) {
+            throw new IllegalStateException("紫色玩具工具镐形态近战命中未扣除 2 点耐久");
+        }
 
         player.setItemInHand(InteractionHand.MAIN_HAND, purpleToy);
         if (!purpleToy.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
@@ -893,6 +897,10 @@ public final class CiTestCommands {
                 || !approximately(stackAttributeTotal(purpleToy, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE), 3.0D)
                 || !approximately(stackAttributeTotal(purpleToy, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED), -2.4D)) {
             throw new IllegalStateException("紫色玩具钻石剑缺少原版木剑的栈敏感近战语义");
+        }
+        purpleToy.getItem().hurtEnemy(purpleToy, player, player);
+        if (purpleToy.getDamageValue() != 3) {
+            throw new IllegalStateException("紫色玩具工具剑形态近战命中未额外扣除 1 点耐久");
         }
         if (!purpleToy.getItem().use(level, player, InteractionHand.MAIN_HAND).getResult().consumesAction()
                 || !purpleToy.hasTag() || !purpleToy.getTag().contains(PurpleToyPickaxeSwordItem.PICKAXE_FORM_KEY, net.minecraft.nbt.Tag.TAG_BYTE)

@@ -3,7 +3,7 @@
 ## 当前范围
 
 * 正式资源共 190 项，逐文件记录 SHA-256。其中 PNG 为 74 张，71 张由确定性生成器重建，另外 3 张为既有人工模型配套贴图；包含 2 个几何模型和 2 个动画文件。
-* 文绪立牌、奶龙老鼠干按用户本轮外观图片重新绘制；其余资源沿用下表记录的来源。参考图片本身不进入发行包。
+* 文绪立牌、奶龙老鼠干按用户外观图片重新绘制。2026-10-05 王立新徽章依据用户新提供照片编辑生成，采用 1024×1024 高清肖像例外；不宣称该项为未读取原图的纯文字原创。参考图片本身不进入发行包。
 * 人工模型的映射与授权边界见 [道具人工模型导入记录](PROP_MODEL_IMPORT.md)。原压缩包内约 30 MiB 的广告图未进入正式资源。
 
 |正式路径|SHA-256|来源类别|来源说明|授权边界|记录日期|
@@ -156,7 +156,7 @@
 |`mod/src/main/resources/assets/blindboxchallenge/textures/item/toy_knife.png`|`978a7009ce1335055ee577e4c9f4c5c36ccd1435aeb39073c497011ac2011ea2`|项目内原创重绘|原版图片仅作需求输入且不进入 Release；不读取、采样或混合原图|项目方提供需求背景；发行使用项目内原创重绘 PNG|2026-10-04|
 |`mod/src/main/resources/assets/blindboxchallenge/textures/item/truffle_ham_cracker.png`|`dc92beb74f1e4f2b420504805e7a887f221d872486a71bdcb015f2de4ee31fb0`|项目内原创重绘|原版图片仅作需求输入且不进入 Release；不读取、采样或混合原图|项目方提供需求背景；发行使用项目内原创重绘 PNG|2026-10-04|
 |`mod/src/main/resources/assets/blindboxchallenge/textures/item/vodka.png`|`c4607c59af73795a49df8e4696a8f191e39f697c248ea3cf18fe95ffd1a901e6`|项目内原创重绘|原版图片仅作需求输入且不进入 Release；不读取、采样或混合原图|项目方提供需求背景；发行使用项目内原创重绘 PNG|2026-10-04|
-|`mod/src/main/resources/assets/blindboxchallenge/textures/item/wang_lixin_badge.png`|`189a143a7467c41303e2539623212a52bc0daafe67e22d91be73671caecb194e`|项目内原创重绘|原版图片仅作需求输入且不进入 Release；不读取、采样或混合原图|项目方提供需求背景；发行使用项目内原创重绘 PNG|2026-08-07|
+|`mod/src/main/resources/assets/blindboxchallenge/textures/item/wang_lixin_badge.png`|`87be365ecef9c4cbc9e9118974651e064397f9f637899802db7c5e2d0ccdd96d`|用户外观参考重绘|依据用户提供人物照片编辑、重新绘制成高清肖像徽章；参考图不直接进入发行包|项目方提供人物照片并要求用于徽章；仅本项保留高清肖像，不宣称纯文字原创|2026-10-05|
 |`mod/src/main/resources/assets/blindboxchallenge/textures/item/wenxu_standee.png`|`0971908e6604f653021385d75dff83fd02d5a4c5e82c513752a1a508de56f456`|用户外观参考重绘|依据本轮用户提供外观参考重新绘制；参考图不直接进入发行包|项目方提供外观参考；发行使用重新绘制 PNG，不外推第三方授权|2026-10-04|
 |`mod/src/main/resources/assets/blindboxchallenge/textures/item/white_rabbit_candy.png`|`daea3284930134633b003e83a5c57661326cd655686d48aac4e3527118973911`|项目内原创重绘|原版图片仅作需求输入且不进入 Release；不读取、采样或混合原图|项目方提供需求背景；发行使用项目内原创重绘 PNG|2026-10-04|
 |`mod/src/main/resources/assets/blindboxchallenge/textures/item/wind_blown_cake.png`|`a12a1cf9bef8f815b85a70a47f4b8222e7f8b361d34a65cb2788dd93b61aaa08`|项目内原创重绘|原版图片仅作需求输入且不进入 Release；不读取、采样或混合原图|项目方提供需求背景；发行使用项目内原创重绘 PNG|2026-10-04|

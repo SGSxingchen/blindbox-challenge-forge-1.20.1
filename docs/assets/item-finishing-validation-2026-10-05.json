@@ -1,0 +1,83 @@
+{
+  "日期": "2026-10-05",
+  "基础提交": "a6e4cce",
+  "版本": "1.0.5 本地候选，未发行",
+  "正式Jar": "mod/build/libs/blindboxchallenge-1.0.5-all.jar",
+  "正式Jar SHA-256": "84f71630ac158dcd1a1dabf2cbaefca4036e70f0404b63de1e3ab3ca0a3befef",
+  "徽章贴图 SHA-256": "87be365ecef9c4cbc9e9118974651e064397f9f637899802db7c5e2d0ccdd96d",
+  "母稿 SHA-256": "60240ba684fc409795aa2b34d43c7cc3e6720d149d17ad1a93f9aa2cd10be006",
+  "徽章规格": {
+    "正式尺寸": [
+      1024,
+      1024
+    ],
+    "母稿尺寸": [
+      1254,
+      1254
+    ],
+    "格式": "RGBA PNG",
+    "来源": "用户照片经内置图像工具编辑生成；sips仅规范正式尺寸",
+    "功能": "普通收藏品，无额外效果"
+  },
+  "通过": [
+    "147项工具回归",
+    "59项物品重绘语义与71张生成器贴图逐字节闭合",
+    "190项正式资源静态契约",
+    "离线缓存环境 check build ciTestJar 构建成功",
+    "正式Jar内徽章字节与已复核贴图一致，未混入原始照片和测试探针",
+    "本地真实客户端图集创建与主菜单稳定20刻，正常退出，未见贴图缺失或mipmap降级"
+  ],
+  "客户端": {
+    "schema": 1,
+    "status": "success",
+    "mode": "real-local-title-screen",
+    "platform": "macOS arm64",
+    "forge": "1.20.1-forge-47.4.22",
+    "username": "BlindBoxClient",
+    "formal_sha256": "84f71630ac158dcd1a1dabf2cbaefca4036e70f0404b63de1e3ab3ca0a3befef",
+    "probe_sha256": "d84f00e4144b6b5a6b4475f76c7493031f6ebd9ead7308c5335cd471a52db399",
+    "exit_code": 0,
+    "marker": "/Users/lanstard/.codex/worktrees/item-corrections/blindbox-challenge-forge-1.20.1/mod/build/badge-update-2026-10-05/client/main-menu.marker",
+    "problem": null,
+    "limitations": [
+      "本地验证，未执行 Hosted Runner 门禁",
+      "独立观察探针不包含于正式 Jar"
+    ]
+  },
+  "图集": "2048×1024，mipmap级别4",
+  "镐剑修正": "镐形态近战耐久损耗2；剑形态1。现有业务探针补断言并编译通过，本轮未执行联机命中探针。",
+  "限制": [
+    "本轮没有重跑专服、任意门双端恢复或音频压力",
+    "没有实际游戏内手持和展示框视觉验收",
+    "音频压力及完整声音生命周期仍待完成",
+    "生存获取、盲盒动画与可配置时长仍待完成",
+    "未推送、未触发远程工作流、标签或正式发行"
+  ],
+  "原始证据": [
+    {
+      "路径": "mod/build/badge-update-2026-10-05/工具回归.log",
+      "SHA-256": "e7b9a16c1a267456c82449248cec3f45704bdb5348f688cd6d187bdb7da1a4fd"
+    },
+    {
+      "路径": "mod/build/badge-update-2026-10-05/构建.log",
+      "SHA-256": "1d3f9f7fa858ad5353da9a39ebc9d2e0fa7e7da18b54e27f752903c7b9941dc1"
+    },
+    {
+      "路径": "mod/build/badge-update-2026-10-05/缓存构建.log",
+      "SHA-256": "61df78d7e6cd648e9beb415b5ceb3d35715e09a03ff4e3cf6aeae1ce71b979a7"
+    },
+    {
+      "路径": "mod/build/badge-update-2026-10-05/client/console.log",
+      "SHA-256": "d7ae2029f91885d08a20b30e9108d6a0dc4bb4df79701c932a3fedd40ffab030"
+    },
+    {
+      "路径": "mod/build/badge-update-2026-10-05/client/result.json",
+      "SHA-256": "0c93e30308a814725edaccd5a5cc6333a29918f3e0f30e8b13670d8bfc1e336e"
+    },
+    {
+      "路径": "mod/build/badge-update-2026-10-05/client/main-menu.marker",
+      "SHA-256": "6b6e305a7ae541c4fd8ca19951f55d40fb383c4af5392ea578fcaaa13480066e"
+    }
+  ],
+  "构建环境修正": "首次未指定既有缓存导致离线插件解析失败；复用 /tmp/blindbox-item-corrections-gradle 后构建通过，未改依赖。"
+}

@@ -27,8 +27,9 @@ from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 最大单元宽 = 4096
 最大单元高 = 4096
 默认最大总像素 = 100_000_000
-# 明确列出需保留轮廓细节的 32 像素图标；路障沿用人工模型 UV 尺寸。
+# 明确列出逐项尺寸；路障保留人工模型 UV，人物徽章按用户要求独立使用高清贴图。
 特殊贴图尺寸 = {
+    "assets/blindboxchallenge/textures/item/wang_lixin_badge.png": (1024, 1024),
     "assets/blindboxchallenge/textures/item/chainsaw_sword.png": (32, 32),
     "assets/blindboxchallenge/textures/item/shark_dagger_pillow.png": (32, 32),
     "assets/blindboxchallenge/textures/item/fairy_wand.png": (32, 32),

@@ -1088,8 +1088,8 @@
     "id": "wang_lixin_badge",
     "texture": "assets/blindboxchallenge/textures/item/wang_lixin_badge.png",
     "reference_status": "catalog_reference",
-    "subject": "原创纪念徽章",
-    "must_show": "一枚圆形珐琅纪念徽章，清楚显示金属边、别针侧影和不可读抽象几何图案，不含人物肖像",
+    "subject": "王立新高清肖像徽章",
+    "must_show": "依据用户提供人物照片制作圆形高清肖像徽章，保留黑色头发、眼神和白衣；银色金属边，透明背景，无文字；仅本项保留照片辨识度，不转为小像素图",
     "avoid": [
       "广告背景",
       "包装",
@@ -1099,10 +1099,12 @@
       "人物手持"
     ],
     "palette": [
-      "金黄",
-      "深蓝",
-      "珐琅红"
-    ]
+      "黑色",
+      "银白",
+      "肤色",
+      "米色"
+    ],
+    "reference_basis": "2026-10-05用户提供人物照片，明确要求用于王立新徽章且尽可能高清；参考图不直接进入发行包，正式贴图为内置图像工具编辑生成的衍生徽章"
   },
   {
     "id": "wenxu_standee",

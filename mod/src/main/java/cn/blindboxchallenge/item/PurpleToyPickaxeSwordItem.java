@@ -65,7 +65,7 @@ public final class PurpleToyPickaxeSwordItem extends Item {
 
     @Override
     public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
-        stack.hurtAndBreak(1, attacker, entity -> entity.broadcastBreakEvent(InteractionHand.MAIN_HAND));
+        stack.hurtAndBreak(isPickaxeForm(stack) ? 2 : 1, attacker, entity -> entity.broadcastBreakEvent(InteractionHand.MAIN_HAND));
         return true;
     }
 
