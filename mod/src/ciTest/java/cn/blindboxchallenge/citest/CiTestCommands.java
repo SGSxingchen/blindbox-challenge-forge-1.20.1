@@ -69,6 +69,7 @@ public final class CiTestCommands {
                 .then(Commands.literal("prepare_p4_door_recovery")
                         .executes(context -> P4DoorRecoveryCiScenario.prepare(context.getSource())))
                 .then(Commands.literal("run_multi_business").executes(context -> runMultiBusiness(context.getSource())))
+                .then(Commands.literal("run_blind_box_opening").executes(context -> BlindBoxOpeningCiAssertions.run(context.getSource())))
                 .then(Commands.literal("run_p2_business").executes(context -> runP2Business(context.getSource())))
                 .then(Commands.literal("start_eye_mask").executes(context -> EyeMaskCiScenario.start(context.getSource())))
                 .then(Commands.literal("verify_eye_mask").executes(context -> EyeMaskCiScenario.verify(context.getSource())))

@@ -61,7 +61,8 @@ public final class CiClientSmokeEvents {
             stableTitleTicks = 0;
         }
         if (stableTitleTicks >= 20) {
-            complete(minecraft, "title-screen-stable-20-ticks\n" + CiWearableRenderingAssertions.verify(minecraft));
+            complete(minecraft, "title-screen-stable-20-ticks\n" + CiWearableRenderingAssertions.verify(minecraft)
+                    + CiBlindBoxRenderingAssertions.verify(minecraft));
         }
     }
 

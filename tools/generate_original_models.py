@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """生成并校验 P5 发行整改中的确定性原创模型、方块状态和战利品 JSON。
 
-本工具不读取旧 JSON 来作为输入。资源路径、注册 ID、原版模型父类和两个已
-存在的动态谓词是兼容约束；其余 JSON 由下面明确的中性模板建立。这样既保留
+本工具不读取旧 JSON 来作为输入。资源路径、注册 ID、原版模型父类和既有
+动态谓词是兼容约束；其余 JSON 由下面明确的中性模板建立。这样既保留
 存档/联机路径，也不会把历史模型的文字、图案或结构当作可再发行来源。
 """
 
@@ -61,12 +61,15 @@ BLOCK_ITEM_MODELS = {
     "safety_landing",
     "stone_pillow",
 }
+BLIND_BOX_STAGES = tuple(
+    f"assets/blindboxchallenge/models/item/blind_box_open_{stage}.json" for stage in range(1, 5)
+)
 TARGETS = tuple(
-    sorted(
+    sorted({
         path.relative_to(RESOURCE_ROOT).as_posix()
         for path in MODEL_ROOT.rglob("*.json")
         if path.relative_to(RESOURCE_ROOT).as_posix() not in PROTECTED_MODELS
-    )
+    } | set(BLIND_BOX_STAGES))
 ) + HISTORIC_BLOCKSTATES + HISTORIC_LOOT
 
 
@@ -103,7 +106,62 @@ def block_model(identifier: str) -> dict[str, object]:
     raise ValueError(f"未知方块模型：{identifier}")
 
 
+def blind_box_model(stage: int) -> dict[str, object]:
+    """五档铰链盒盖；只引用原版材质，不增加图片或客户端渲染器。"""
+    def piece(start, end, texture):
+        element = cuboid(start, end, texture)
+        for value in element["faces"].values():
+            value["uv"] = [0, 0, 16, 16]
+        return element
+
+    # 底和四壁分开，开盖后能看到内腔；金色侧带与正面问号延续盲盒图标。
+    elements = [piece([3, 2, 3], [13, 3, 13], "#inside")]
+    for start, end in (([3, 3, 3], [13, 11, 4]), ([3, 3, 12], [13, 11, 13]),
+                       ([3, 3, 4], [4, 11, 12]), ([12, 3, 4], [13, 11, 12])):
+        elements.append(piece(start, end, "#body"))
+    for start, end in (([2.9, 2, 7], [3.1, 11, 9]), ([12.9, 2, 7], [13.1, 11, 9]),
+                       ([3, 2, 2.9], [13, 3, 3.1]), ([3, 2, 12.9], [13, 3, 13.1])):
+        elements.append(piece(start, end, "#ribbon"))
+    for x, y in ((6, 9), (7, 9), (8, 9), (9, 8), (8, 7), (7, 6), (7, 4)):
+        elements.append(piece([x, y, 2.85], [x + 1, y + 1, 3], "#ribbon"))
+
+    lid = [piece([2.5, 11, 2.5], [13.5, 13, 13.5], "#body"),
+           piece([7, 13, 2.5], [9, 13.15, 13.5], "#ribbon"),
+           piece([2.5, 13, 7], [13.5, 13.15, 9], "#ribbon")]
+    for element in lid:
+        # 原版元素只接受 0、±22.5、±45 度。后两档先将坐标转到 90 度，
+        # 再以同一个铰链回转 22.5 度，避免使用非法的 67.5/90 度元素旋转。
+        angle = stage * 22.5
+        if stage >= 3:
+            start, end = element["from"], element["to"]
+            element["from"] = [start[0], 24 - end[2], start[1] + 2]
+            element["to"] = [end[0], 24 - start[2], end[1] + 2]
+            angle -= 90
+        if angle:
+            element["rotation"] = {"origin": [8, 11, 13], "axis": "x", "angle": angle}
+    result = {
+        "parent": "minecraft:block/block",
+        "textures": {"particle": "#body", "body": "minecraft:block/purple_concrete",
+                     "ribbon": "minecraft:block/yellow_concrete", "inside": "minecraft:block/black_concrete"},
+        "display": {
+            "gui": {"rotation": [25, 135, 0], "translation": [0, -1, 0], "scale": [0.65, 0.65, 0.65]},
+            "firstperson_righthand": {"rotation": [0, 45, 0], "scale": [0.5, 0.5, 0.5]},
+            "firstperson_lefthand": {"rotation": [0, 225, 0], "scale": [0.5, 0.5, 0.5]},
+        },
+        "elements": elements + lid,
+    }
+    if stage == 0:
+        result["overrides"] = [
+            {"predicate": {"blindboxchallenge:opening": threshold},
+             "model": f"blindboxchallenge:item/blind_box_open_{index}"}
+            for index, threshold in enumerate((0.15, 0.35, 0.6, 0.85), 1)
+        ]
+    return result
+
+
 def item_model(identifier: str) -> dict[str, object]:
+    if identifier == "blind_box" or identifier.startswith("blind_box_open_"):
+        return blind_box_model(0 if identifier == "blind_box" else int(identifier.rsplit("_", 1)[1]))
     if identifier in {"music_box", "road_barrier_helmet"}:
         return {"parent": "builtin/entity"}
     if identifier in BLOCK_ITEM_MODELS:

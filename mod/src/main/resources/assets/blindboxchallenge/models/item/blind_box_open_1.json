@@ -1204,6 +1204,15 @@
             16
           ]
         }
+      },
+      "rotation": {
+        "origin": [
+          8,
+          11,
+          13
+        ],
+        "axis": "x",
+        "angle": 22.5
       }
     },
     {
@@ -1272,6 +1281,15 @@
             16
           ]
         }
+      },
+      "rotation": {
+        "origin": [
+          8,
+          11,
+          13
+        ],
+        "axis": "x",
+        "angle": 22.5
       }
     },
     {
@@ -1340,33 +1358,16 @@
             16
           ]
         }
+      },
+      "rotation": {
+        "origin": [
+          8,
+          11,
+          13
+        ],
+        "axis": "x",
+        "angle": 22.5
       }
-    }
-  ],
-  "overrides": [
-    {
-      "predicate": {
-        "blindboxchallenge:opening": 0.15
-      },
-      "model": "blindboxchallenge:item/blind_box_open_1"
-    },
-    {
-      "predicate": {
-        "blindboxchallenge:opening": 0.35
-      },
-      "model": "blindboxchallenge:item/blind_box_open_2"
-    },
-    {
-      "predicate": {
-        "blindboxchallenge:opening": 0.6
-      },
-      "model": "blindboxchallenge:item/blind_box_open_3"
-    },
-    {
-      "predicate": {
-        "blindboxchallenge:opening": 0.85
-      },
-      "model": "blindboxchallenge:item/blind_box_open_4"
     }
   ]
 }

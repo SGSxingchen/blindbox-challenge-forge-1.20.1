@@ -1141,13 +1141,13 @@
     {
       "from": [
         2.5,
-        11,
-        2.5
+        10.5,
+        13
       ],
       "to": [
         13.5,
-        13,
-        13.5
+        21.5,
+        15
       ],
       "faces": {
         "down": {
@@ -1209,13 +1209,13 @@
     {
       "from": [
         7,
-        13,
-        2.5
+        10.5,
+        15
       ],
       "to": [
         9,
-        13.15,
-        13.5
+        21.5,
+        15.15
       ],
       "faces": {
         "down": {
@@ -1277,13 +1277,13 @@
     {
       "from": [
         2.5,
-        13,
-        7
+        15,
+        15
       ],
       "to": [
         13.5,
-        13.15,
-        9
+        17,
+        15.15
       ],
       "faces": {
         "down": {
@@ -1341,32 +1341,6 @@
           ]
         }
       }
-    }
-  ],
-  "overrides": [
-    {
-      "predicate": {
-        "blindboxchallenge:opening": 0.15
-      },
-      "model": "blindboxchallenge:item/blind_box_open_1"
-    },
-    {
-      "predicate": {
-        "blindboxchallenge:opening": 0.35
-      },
-      "model": "blindboxchallenge:item/blind_box_open_2"
-    },
-    {
-      "predicate": {
-        "blindboxchallenge:opening": 0.6
-      },
-      "model": "blindboxchallenge:item/blind_box_open_3"
-    },
-    {
-      "predicate": {
-        "blindboxchallenge:opening": 0.85
-      },
-      "model": "blindboxchallenge:item/blind_box_open_4"
     }
   ]
 }

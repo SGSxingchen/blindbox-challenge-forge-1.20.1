@@ -2,6 +2,7 @@ package cn.blindboxchallenge.client;
 
 import cn.blindboxchallenge.BlindBoxChallenge;
 import cn.blindboxchallenge.item.BlackKnightTelescopicKnifeItem;
+import cn.blindboxchallenge.item.BlindBoxItem;
 import cn.blindboxchallenge.item.PurpleToyPickaxeSwordItem;
 import cn.blindboxchallenge.registry.ModItems;
 import cn.blindboxchallenge.registry.ModMenus;
@@ -52,6 +53,9 @@ public final class ClientModEvents {
             MenuScreens.register(ModMenus.DEATH_NOTE_MENU.get(), DeathNoteScreen::new);
             MenuScreens.register(ModMenus.MUSIC_BOX_MENU.get(), MusicBoxScreen::new);
             // 仅客户端渲染谓词：生产物品类完全不引用客户端类型，只读取服务器已同步的 NBT。
+            ItemProperties.register(ModItems.BLIND_BOX.get(),
+                    new ResourceLocation(BlindBoxChallenge.MOD_ID, "opening"),
+                    (stack, level, entity, seed) -> BlindBoxItem.getOpeningProgress(stack, entity));
             ItemProperties.register(ModItems.BLACK_KNIGHT_TELESCOPIC_KNIFE.get(),
                     new ResourceLocation(BlindBoxChallenge.MOD_ID, "extended"),
                     (stack, level, entity, seed) -> BlackKnightTelescopicKnifeItem.isExtended(stack) ? 1.0F : 0.0F);

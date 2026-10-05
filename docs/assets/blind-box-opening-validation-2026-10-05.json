@@ -1,0 +1,87 @@
+{
+  "日期": "2026-10-05",
+  "基础提交": "d28b057",
+  "版本": "1.0.5 本地候选",
+  "本轮变更": [
+    "盲盒立体中空盒身与五档开盖模型",
+    "服务器配置 blind_box.opening_ticks 默认40、范围10..200",
+    "每次开启固定时长与开始刻，取消和完成清理快照",
+    "移除拉弓姿势，渲染只读服务器快照"
+  ],
+  "正式包SHA-256": "1e4ddf1c99db7e82ef5d994399f6a6573704c43a3989a3da6e713991e8bb66b0",
+  "工具回归": {
+    "数量": 147,
+    "状态": "通过"
+  },
+  "正式资源数量": 194,
+  "贴图总数": 74,
+  "生成器贴图数": 71,
+  "玩家物品数": 67,
+  "构建": "本地离线 check build ciTestJar 通过；随后只重新构建服务端断言探针，正式包未变",
+  "客户端": {
+    "schema": 1,
+    "status": "success",
+    "mode": "real-local-title-screen",
+    "platform": "macOS arm64",
+    "forge": "1.20.1-forge-47.4.22",
+    "username": "BlindBoxClient",
+    "formal_sha256": "1e4ddf1c99db7e82ef5d994399f6a6573704c43a3989a3da6e713991e8bb66b0",
+    "probe_sha256": "3e42923fe3392cf71904e6c27b02b0ebcaa1f65e191c482a8b908a5cf66934e2",
+    "exit_code": 0,
+    "marker": "/Users/lanstard/.codex/worktrees/item-corrections/blindbox-challenge-forge-1.20.1/mod/build/blind-box-opening-2026-10-05/client/main-menu.marker",
+    "problem": null,
+    "limitations": [
+      "本地验证，未执行 Hosted Runner 门禁",
+      "独立观察探针不包含于正式 Jar"
+    ]
+  },
+  "客户端观察标志": [
+    "title-screen-stable-20-ticks",
+    "wearable_eye_texture=blindboxchallenge:textures/models/armor/eggy_eye_mask_layer_1.png",
+    "wearable_face_texture=blindboxchallenge:textures/models/armor/face_mask_layer_1.png",
+    "wearable_wing_texture=blindboxchallenge:textures/entity/pink_butterfly_wings.png",
+    "wearable_resources_present=true",
+    "wearable_default_butterfly_layers=1",
+    "wearable_slim_butterfly_layers=1",
+    "wearable_vanilla_elytra_exclusive=true",
+    "blind_box_baked_3d_stages=5",
+    "blind_box_missing_textures=0",
+    "blind_box_idle_closed=true"
+  ],
+  "专服模拟玩家断言": {
+    "日期": "2026-10-05",
+    "范围": "专服模拟玩家调用原版倒计时；无真实客户端参与",
+    "sha256": {
+      "all": "1e4ddf1c99db7e82ef5d994399f6a6573704c43a3989a3da6e713991e8bb66b0",
+      "citest": "c33eec99d2aeec0854d555fc5c474d42e4b6d93dc0abcfe193417c2520eb0012"
+    },
+    "status": "success",
+    "断言": [
+      "[14:14:26] [Server thread/INFO] [minecraft/MinecraftServer]: BLINDBOX_CITEST_OPENING_OK 时长快照=80 下一次=10 取消无消耗=true 空池无消耗=true"
+    ],
+    "exit_code": 0,
+    "默认开启时长": 40,
+    "配置文件": "/Users/lanstard/.codex/worktrees/item-corrections/blindbox-challenge-forge-1.20.1/mod/build/blind-box-opening-2026-10-05/server/test-world/serverconfig/blindboxchallenge-server.toml"
+  },
+  "发行包检查": {
+    "五档模型齐全": true,
+    "不含测试探针": true,
+    "高清徽章逐字节保留": true
+  },
+  "验证边界": [
+    "主菜单探针临时驱动模型谓词，验证烘焙结果，不等于真实玩家手持画面验收",
+    "专服模拟玩家逐次调用原版使用更新，验证80刻快照、下一次10刻、副手取消和空池不消耗；不是实际联机操作",
+    "客户端离线测试身份产生官方认证和资料密钥错误，未使用真实账户；没有模组加载或模型缺失错误",
+    "本轮未重跑双客户端、掉电恢复、八音盒压力或完整生存流程",
+    "未推送、未运行远程工作流、未创建标签或发行",
+    "当前候选未重测非空奖池完整发奖，以及真实客户端收到使用态时的短暂换手显示"
+  ],
+  "日志": {
+    "mod/build/blind-box-opening-2026-10-05/build.log": "5b1c4a2c1406b7acb395289dc14b8deb1c4a20cd5e9fee5700d66fdcefdbb804",
+    "mod/build/blind-box-opening-2026-10-05/probe-build.log": "9682c5b262dfd304c683010f8c46e3315df88c82521adc1526e6339994eae01a",
+    "mod/build/blind-box-opening-2026-10-05/client/console.log": "a4a8db8c73f77e4f5d261c3942a86b34d4f88c7f3b881b19043ca5aa143e0ff3",
+    "mod/build/blind-box-opening-2026-10-05/server/console.log": "18e7a32dad0721b98daadbea68313b3a63d6dee0688fe1f7fff05121a9d95908",
+    "mod/build/blind-box-opening-2026-10-05/validate-opening.py": "a26107a990cb79578ab982135e70ff291eb2695b4f54cf6bb1349595cdbccad0"
+  },
+  "复核": "独立只读复核未发现阻断问题；未增加运行期证明"
+}

@@ -2,9 +2,10 @@ package cn.blindboxchallenge.config;
 
 import net.minecraftforge.common.ForgeConfigSpec;
 
-/** 物品效果和保护阈值只由逻辑服务端读取；客户端不决定伤害、速度或繁殖目标。 */
+/** 物品参数由服务端配置确定；客户端仅呈现已同步的开启时长，不决定业务结算。 */
 public final class ModServerConfig {
     private static final ForgeConfigSpec.Builder SERVER_BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec.IntValue BLIND_BOX_OPENING_TICKS;
     public static final ForgeConfigSpec.IntValue EFFICIENT_PIG_COOLDOWN_TICKS;
     public static final ForgeConfigSpec.IntValue EFFICIENT_PIG_MAX_SCANNED;
     public static final ForgeConfigSpec.DoubleValue YIJIN_MAX_HEALTH_BONUS;
@@ -22,6 +23,10 @@ public final class ModServerConfig {
     public static final ForgeConfigSpec SERVER_SPEC;
 
     static {
+        SERVER_BUILDER.push("blind_box");
+        BLIND_BOX_OPENING_TICKS = SERVER_BUILDER.comment("长按开启盲盒所需的服务端刻数，20 刻约为 1 秒；修改后从下一次开启生效")
+                .defineInRange("opening_ticks", 40, 10, 200);
+        SERVER_BUILDER.pop();
         SERVER_BUILDER.push("yijin_manual");
         YIJIN_MAX_HEALTH_BONUS = SERVER_BUILDER.comment("易筋经永久增加的最大生命值，2 点等于 1 颗心")
                 .defineInRange("maximum_health_bonus", 2.0D, 0.0D, 40.0D);

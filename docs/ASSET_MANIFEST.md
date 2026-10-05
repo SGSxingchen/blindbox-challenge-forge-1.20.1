@@ -2,7 +2,7 @@
 
 ## 当前范围
 
-* 正式资源共 190 项，逐文件记录 SHA-256。其中 PNG 为 74 张，71 张由确定性生成器重建，另外 3 张为既有人工模型配套贴图；包含 2 个几何模型和 2 个动画文件。
+* 正式资源共 194 项，逐文件记录 SHA-256。其中 PNG 为 74 张，71 张由确定性生成器重建，另外 3 张为既有人工模型配套贴图；包含 2 个几何模型和 2 个动画文件。
 * 文绪立牌、奶龙老鼠干按用户外观图片重新绘制。2026-10-05 王立新徽章依据用户新提供照片编辑生成，采用 1024×1024 高清肖像例外；不宣称该项为未读取原图的纯文字原创。参考图片本身不进入发行包。
 * 人工模型的映射与授权边界见 [道具人工模型导入记录](PROP_MODEL_IMPORT.md)。原压缩包内约 30 MiB 的广告图未进入正式资源。
 
@@ -49,7 +49,11 @@
 |`mod/src/main/resources/assets/blindboxchallenge/models/item/black_knight_telescopic_knife.json`|`5f9f40e58824e61cca4fdf27ce1f116c7041cfb155dbc5758edc0ea0d39380f5`|项目内原创定义产物|由明确模板、资源路径与兼容约束生成；不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-07|
 |`mod/src/main/resources/assets/blindboxchallenge/models/item/black_knight_telescopic_knife_extended.json`|`887564330433073bf84a08b419bfd201c67fdac48e818ec44d27dba15f7ede75`|项目内原创定义产物|由明确模板、资源路径与兼容约束生成；不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-07|
 |`mod/src/main/resources/assets/blindboxchallenge/models/item/black_truffle_ham_cracker.json`|`b71e4d2c72f90fe2c3d1028c0ee404038c3de21eb286c8c9595292cbcfd9bea2`|项目内原创定义产物|由明确模板、资源路径与兼容约束生成；不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-07|
-|`mod/src/main/resources/assets/blindboxchallenge/models/item/blind_box.json`|`5fe237b89870d8a80d8415271657e6aff1b06760479d52a84e4dcfda009920f0`|项目内原创定义产物|由明确模板、资源路径与兼容约束生成；不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-07|
+|`mod/src/main/resources/assets/blindboxchallenge/models/item/blind_box_open_1.json`|`cafdc0fa361928552d772131935eaa97bb0a2835283abfb6def1257b178fc1c4`|项目内原创模型定义|五档铰链盒盖与中空盒身；仅引用游戏内置材质，不复制原版图片|沿用既有项目使用、修改与发行授权；不外推第三方授权|2026-10-05|
+|`mod/src/main/resources/assets/blindboxchallenge/models/item/blind_box_open_2.json`|`3c79c67198e46610fb201b05d32655a3563452e7a11576d7f74a76088e7a9998`|项目内原创模型定义|五档铰链盒盖与中空盒身；仅引用游戏内置材质，不复制原版图片|沿用既有项目使用、修改与发行授权；不外推第三方授权|2026-10-05|
+|`mod/src/main/resources/assets/blindboxchallenge/models/item/blind_box_open_3.json`|`cb569e1c1822e0eeb37224006912bff7750bbb83a34497b6c33443cc3229178f`|项目内原创模型定义|五档铰链盒盖与中空盒身；仅引用游戏内置材质，不复制原版图片|沿用既有项目使用、修改与发行授权；不外推第三方授权|2026-10-05|
+|`mod/src/main/resources/assets/blindboxchallenge/models/item/blind_box_open_4.json`|`3f15a211d936e78cc9a5adb9d6e212abdca5a71f8249f476fe5c5f08b12332b6`|项目内原创模型定义|五档铰链盒盖与中空盒身；仅引用游戏内置材质，不复制原版图片|沿用既有项目使用、修改与发行授权；不外推第三方授权|2026-10-05|
+|`mod/src/main/resources/assets/blindboxchallenge/models/item/blind_box.json`|`73b12f9962e880826017f40542ce48c174d03ae0122770be2cf9037d4e038a01`|项目内原创模型定义|五档铰链盒盖与中空盒身；仅引用游戏内置材质，不复制原版图片|沿用既有项目使用、修改与发行授权；不外推第三方授权|2026-10-05|
 |`mod/src/main/resources/assets/blindboxchallenge/models/item/bml_cheer_stick.json`|`e5e7b20ba71423d0d3f5dc11dba60b411aee31baacd332cd32be0f860c881493`|项目内原创定义产物|由明确模板、资源路径与兼容约束生成；不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-07|
 |`mod/src/main/resources/assets/blindboxchallenge/models/item/cat_doll.json`|`936068470859a3565f2580c93774858b69e9fd41b8a9a9bead52ca1a26792b74`|项目内原创定义产物|由明确模板、资源路径与兼容约束生成；不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-07|
 |`mod/src/main/resources/assets/blindboxchallenge/models/item/chainsaw_sword.json`|`6af140a187c9006b6390e9d931ee996b5d9e9bc1788afb6d8ecc0839fd0ea2c2`|项目内原创定义产物|由明确模板、资源路径与兼容约束生成；不含原版图片|项目方提供素材与需求背景，许可本项目使用、修改与发行；不外推第三方再授权|2026-08-07|
