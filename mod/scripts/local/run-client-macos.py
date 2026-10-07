@@ -14,7 +14,7 @@ from pathlib import Path
 
 import minecraft_launcher_lib
 
-JAVA = "/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home/bin/java"
+from validation_runtime import client_platform_arguments, resolve_java
 VERSION = "1.20.1-forge-47.4.22"
 FATAL = re.compile(r"\bFATAL\b|ModLoadingException|Failed to load mods?|Mixin apply failed|NoClassDefFoundError:|Crash report saved to", re.I)
 
@@ -43,7 +43,9 @@ def main():
     parser.add_argument("--probe", type=Path)
     parser.add_argument("--property", action="append", default=[])
     parser.add_argument("--timeout", type=int, default=600)
+    parser.add_argument("--java", type=Path, help="Java 17 可执行文件；默认 JAVA_HOME/bin/java 或 PATH")
     args = parser.parse_args()
+    java = resolve_java(args.java)
     runtime = args.runtime.resolve()
     directory = args.directory.resolve()
     directory.mkdir(parents=True, exist_ok=True)
@@ -63,7 +65,7 @@ def main():
     release = directory / "release.flag"
     marker.unlink(missing_ok=True)
     release.unlink(missing_ok=True)
-    arguments = ["-Xms768M", "-Xmx2G", "-XstartOnFirstThread", f"-Dblindbox.ci.clientMarker={marker}"]
+    arguments = ["-Xms768M", "-Xmx2G", *client_platform_arguments(), f"-Dblindbox.ci.clientMarker={marker}"]
     if args.server:
         arguments.extend(["-Dblindbox.ci.multiplayerSmoke=true", f"-Dblindbox.ci.serverAddress={args.server}",
                           f"-Dblindbox.ci.clientRelease={release}", "-Dblindbox.ci.connectionDiagnostics=true"])
@@ -73,7 +75,7 @@ def main():
     options = minecraft_launcher_lib.utils.generate_test_options()
     offline_id = uuid.UUID(bytes=hashlib.md5(("OfflinePlayer:" + args.username).encode("utf-8")).digest(), version=3)
     options.update({"username": args.username, "uuid": offline_id.hex,
-                    "token": "blindbox-local-offline-test", "executablePath": JAVA,
+                    "token": "blindbox-local-offline-test", "executablePath": str(java),
                     "gameDirectory": str(directory), "disableMultiplayer": not bool(args.server),
                     "customResolution": True, "resolutionWidth": "1024", "resolutionHeight": "720",
                     "jvmArguments": arguments})

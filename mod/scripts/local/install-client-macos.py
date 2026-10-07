@@ -11,7 +11,7 @@ from pathlib import Path
 import requests
 import minecraft_launcher_lib
 
-JAVA = "/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home/bin/java"
+from validation_runtime import resolve_java
 
 
 def bounded_calls():
@@ -55,18 +55,20 @@ def seed_assets(directory):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("directory", type=Path)
+    parser.add_argument("--java", type=Path, help="Java 17 可执行文件；默认 JAVA_HOME/bin/java 或 PATH")
     args = parser.parse_args()
+    java = resolve_java(args.java)
     directory = args.directory.resolve()
     directory.mkdir(parents=True, exist_ok=True)
     bounded_calls()
     seed_assets(directory)
     installed = minecraft_launcher_lib.mod_loader.get_mod_loader("forge").install(
-        "1.20.1", str(directory), loader_version="47.4.22", java=JAVA,
+        "1.20.1", str(directory), loader_version="47.4.22", java=str(java),
         callback={"setStatus": lambda value: print(value, flush=True)},
     )
     if installed != "1.20.1-forge-47.4.22":
         raise RuntimeError(f"安装版本异常：{installed}")
-    if platform.machine() == "arm64":
+    if platform.system() == "Darwin" and platform.machine() == "arm64":
         # 1.20.1 官方元数据同时提供 Intel/Apple Silicon 原生库。限定本次隔离安装的架构，
         # 防止启动库把两个 osx 分类同时加入路径并先加载 Intel 动态库。
         version = directory / "versions/1.20.1/1.20.1.json"

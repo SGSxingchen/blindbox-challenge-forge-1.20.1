@@ -15,11 +15,14 @@ import time
 import zipfile
 
 
+from validation_runtime import gradle_cache, resolve_java
+
+
 MOD = Path(__file__).resolve().parents[2]
 BASE_ROOT = MOD / "build/local-validation-2026-10-04/server"
 ROOT = BASE_ROOT
-CACHE = Path("/tmp/blindbox-item-corrections-gradle/caches")
-JAVA = Path("/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home/bin/java")
+CACHE = None
+JAVA = None
 INSTALLER = ROOT / "forge-1.20.1-47.4.22-installer.jar"
 RUN_ARGS = ROOT / "libraries/net/minecraftforge/forge/1.20.1-47.4.22/unix_args.txt"
 JAR = MOD / "build/libs/blindboxchallenge-1.0.5-all.jar"
@@ -147,11 +150,15 @@ ITEMS = re.findall(r'ITEMS\.register\("([a-z0-9_]+)"', (MOD / "src/main/java/cn/
 
 
 def main():
-    global ROOT, RUN_ARGS, RESULT, JAR
+    global ROOT, RUN_ARGS, RESULT, JAR, JAVA, CACHE
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--server-dir", type=Path, default=BASE_ROOT, help="必须位于本地专服验证目录内的独立目录")
     parser.add_argument("--formal-jar", type=Path, default=JAR, help="本轮固定使用的正式 Jar")
+    parser.add_argument("--java", type=Path, help="Java 17 可执行文件；默认 JAVA_HOME/bin/java 或 PATH")
+    parser.add_argument("--gradle-cache", type=Path, default=gradle_cache(), help="只读复用的 Gradle caches 目录")
     arguments = parser.parse_args()
+    JAVA = resolve_java(arguments.java)
+    CACHE = arguments.gradle_cache.resolve()
     ROOT = arguments.server_dir.resolve()
     if ROOT != BASE_ROOT.resolve() and BASE_ROOT.resolve() not in ROOT.parents:
         parser.error("专服目录必须位于隔离的 server 验证目录内")

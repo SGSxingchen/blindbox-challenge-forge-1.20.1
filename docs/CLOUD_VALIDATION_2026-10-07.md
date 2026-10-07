@@ -36,3 +36,13 @@ Gradle 8.8 本身可正常启动；`check build ciTestJar` 在解析设置插件
 当前 Gradle 依赖缓存没有可用构件；仅手动下载首个插件 POM 无法补齐 ForgeGradle、Mixin、Minecraft 映射/合并处理器、Mojang 运行库及 GeckoLib 等完整依赖图。没有篡改 Gradle 内部缓存元数据、替换仓库或禁用校验来制造构建成功。
 
 因此本轮尚未通过完整构建、正式包/探针隔离、真实专服、客户端画面、音频生命周期/人工听感、生存获取、盲盒真实多人同步与非空奖池发奖测试。历史本地通过记录不视为本轮云端证据。仓库已有 Linux CI 脚本；Mac 专用启动脚本不应在未完成云端构建前盲目替换。
+
+## 后续：依赖连接恢复与验证脚本跨平台化
+
+进一步定位发现：当前执行工具提供的 HTTPS 代理端口随调用变化，不能沿用上一次调用的端口。按同一次执行的 `HTTPS_PROXY` 为 Java 配置代理后，Gradle 已通过设置插件解析并开始下载后续依赖。上文是首次失败记录；当前尚不据此宣称完整构建或游戏测试通过。
+
+本轮同时修正本地验证脚本的固定 Homebrew Java 路径。公共解析器按 `--java`、`JAVA_HOME/bin/java`、`PATH` 顺序选择，校验可执行权限、命令退出状态与 Java 17 主版本，并设置 10 秒版本检查超时；显式配置错误时拒绝运行，不悄悄改用另一份 Java。专服脚本接受 `--gradle-cache`，默认遵循 `GRADLE_USER_HOME/caches` 或 `~/.gradle/caches`。任意门恢复编排把选定 Java 明确传递给两个客户端。
+
+保留既有 `install-client-macos.py`、`run-client-macos.py` 文件名以兼容旧命令，但启动逻辑不再固定 macOS：`-XstartOnFirstThread` 仅在 Darwin 使用，Apple Silicon 原生库过滤也同时限定 Darwin 与 arm64。没有改动账户、模组内容、判定 marker 或隔离目录边界。
+
+新增 10 项运行环境回归，累计 160 项全部通过，无跳过。云端实际 Java 17 路径解析、Gradle 缓存解析、Linux 无首线程参数、四个命令的 `--help`、全部本地验证脚本语法，以及三类资源生成器/静态契约/59项清单检查均通过。客户端启动依赖 `minecraft-launcher-lib==8.0` 安装于独立虚拟环境。这些结果仅证明运行前置和脚本参数，不能替代 Forge 专服或客户端实际启动。

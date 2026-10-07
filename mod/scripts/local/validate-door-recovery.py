@@ -16,9 +16,11 @@ import time
 import uuid
 
 
+from validation_runtime import resolve_java
+
+
 MOD = Path(__file__).resolve().parents[2]
 BASE = MOD / "build/local-validation-2026-10-04"
-JAVA = Path("/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home/bin/java")
 FORGE_ARGS = Path("libraries/net/minecraftforge/forge/1.20.1-47.4.22/unix_args.txt")
 FATAL = re.compile(r"\bFATAL\b|NoClassDefFoundError|Exception in server tick|Crash report saved to|ModLoadingException|Mixin apply failed", re.I)
 DOOR_FAILURE = re.compile(r"BLINDBOX_CITEST_P4_DOOR_RECOVERY=failed|CI 任意门探针失败|Cannot (?:prepare|start|cleanup) P4 cross-dimension door", re.I)
@@ -163,7 +165,7 @@ def execute(args):
         client_outputs.append(output)
         process = subprocess.Popen(
             [str(args.client_python), str(MOD / "scripts/local/run-client-macos.py"),
-             str(args.client_runtime), str(directory), "--server", report["地址"], "--username", name,
+             str(args.client_runtime), str(directory), "--java", str(args.java), "--server", report["地址"], "--username", name,
              "--formal", str(artifacts / args.formal_jar.name), "--probe", str(artifacts / args.probe_jar.name),
              "--timeout", "900", "--property", f"blindbox.ci.p4DoorMarkerDir={evidence}",
              "--property", "blindbox.ci.serverRecovery=true", "--property",
@@ -387,8 +389,9 @@ def main():
     parser.add_argument("--server-template", type=Path, default=BASE / "server")
     parser.add_argument("--client-runtime", type=Path, default=BASE / "client/runtime")
     parser.add_argument("--client-python", type=Path, default=BASE / "client/venv/bin/python")
-    parser.add_argument("--java", type=Path, default=JAVA)
+    parser.add_argument("--java", type=Path, help="Java 17 可执行文件；默认 JAVA_HOME/bin/java 或 PATH")
     args = parser.parse_args()
+    args.java = resolve_java(args.java)
     for name in ("formal_jar", "probe_jar", "server_template", "client_runtime", "client_python", "java"):
         setattr(args, name, getattr(args, name).absolute() if name == "client_python" else getattr(args, name).resolve())
     try:
