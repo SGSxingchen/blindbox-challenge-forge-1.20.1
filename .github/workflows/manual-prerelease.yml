@@ -49,7 +49,7 @@ jobs:
       - name: 准备独立 Python 校验环境
         run: |
           python3 -m venv "$RUNNER_TEMP/release-venv"
-          "$RUNNER_TEMP/release-venv/bin/pip" install Pillow==11.3.0
+          "$RUNNER_TEMP/release-venv/bin/pip" install Pillow==12.3.0
           echo "$RUNNER_TEMP/release-venv/bin" >> "$GITHUB_PATH"
       - name: 工具回归、三类生成器与资源契约
         run: |
