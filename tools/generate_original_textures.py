@@ -99,7 +99,16 @@ TARGETS = (
     "assets/blindboxchallenge/textures/models/armor/face_mask_layer_1.png",
     "assets/blindboxchallenge/textures/models/armor/road_barrier_layer_1.png",
 )
-ITEM_TARGETS = tuple(ITEM_PIXEL_PAYLOADS) + tuple(ITEM_PNG_PAYLOADS)
+try:
+    from .original_item_png_portability import PORTABLE_ITEM_PNG_PAYLOADS
+except ImportError:
+    from original_item_png_portability import PORTABLE_ITEM_PNG_PAYLOADS
+
+# 固定完整 PNG 字节，保留旧像素载荷用于独立回归核验。
+ITEM_PNG_PAYLOADS.update(PORTABLE_ITEM_PNG_PAYLOADS)
+
+# 同时保留旧像素基准与固定 PNG 时，每个资源仍只处理一次。
+ITEM_TARGETS = tuple(dict.fromkeys((*ITEM_PIXEL_PAYLOADS, *ITEM_PNG_PAYLOADS)))
 
 
 def digest(name: str) -> bytes:

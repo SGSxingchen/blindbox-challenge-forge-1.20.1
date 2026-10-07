@@ -1,0 +1,38 @@
+# 云端验证与 PNG 生成器跨平台修正（2026-10-07）
+
+## 环境与范围
+
+本轮在 dot 云端 Linux amd64 工作区检出 `codex/item-corrections`，基线提交为 `1f59b55c2828187a89341966a65f657799ae2aec`。只同步本分支，不修改 master，不恢复 GitHub Actions，不创建 PR、tag 或 Release。
+
+工具链为 Eclipse Adoptium JDK 17.0.20.1、Gradle 8.8、Python 3、Pillow 12.3.0 与 zlib 1.3.2。Gradle 从官方 `https://services.gradle.org/distributions/gradle-8.8-bin.zip` 下载，并对照官方 `.sha256` 校验为 `a4b4158601f8636cdeeab09bd76afb640030bb5b144aafe261a5e8af027dc612`。
+
+## 已复现问题与修正
+
+原始 148 项工具测试在 Java 17 可用时全部执行，146 项通过、2 项失败，无跳过。9 张物品 PNG 在当前 Pillow/zlib 下重新编码的字节与已提交资源不同，但尺寸、RGBA 模式与每个像素均一致。这是生成器字节可复现性问题，不是美术内容变化。
+
+沿用项目现有固定 PNG 载荷惯例，将剩余 10 张仍依赖 Pillow 编码的物品图标固定为已验收 PNG 字节，其中 9 张已复现漂移，另一张一并消除同类环境依赖。新增独立载荷模块，不修改正式 PNG、资源清单、游戏代码或已有高清徽章。保留旧 RGBA 载荷作为独立像素基准，目标列表按原顺序去重。
+
+新增两项回归验证：
+
+- 固定 PNG 与原 RGBA 基准逐像素相等，目标恰为 59 项且无重复。
+- 全部 59 张物品图标不调用平台 PNG 编码器、不读取工作区正式图，仍可从源码载荷重建。
+
+固定完整 PNG 比只锁定 Pillow 版本更符合本项目的逐字节契约：PNG 压缩输出还可能受底层 zlib 与平台影响。本轮保留既有字节校验，没有改成只比较像素或放宽预期值。
+
+## 本轮实测结果
+
+- `python3 -m unittest discover -s tools/tests -v`：150 项全部通过，无跳过。
+- `python3 tools/generate_original_textures.py --check`：通过。
+- `python3 tools/generate_original_models.py --check`：通过。
+- `python3 tools/generate_original_metadata.py --check`：通过。
+- `python3 tools/verify_quality_contract.py`：通过，67 项玩家物品创造栏静态映射一致。
+- `python3 tools/verify_item_texture_redraw.py`：59 项通过。
+- `git diff --check`：通过。
+
+## 构建阻塞与未验收项
+
+Gradle 8.8 本身可正常启动；`check build ciTestJar` 在解析设置插件 `org.gradle.toolchains.foojay-resolver-convention:0.7.0` 时失败，未进入 Java 编译。详细日志显示 Java 到环境默认代理 `browser-proxy:8889` 的连接报 `Network is unreachable`；显式采用当前 HTTP 代理也未完成解析。受审查的扩展网络执行则在启动前报 bubblewrap `/root/.codex` 挂载目标不是目录。普通 curl 可以取得官方分发包与插件 POM，因此不能把失败归因为插件不存在。
+
+当前 Gradle 依赖缓存没有可用构件；仅手动下载首个插件 POM 无法补齐 ForgeGradle、Mixin、Minecraft 映射/合并处理器、Mojang 运行库及 GeckoLib 等完整依赖图。没有篡改 Gradle 内部缓存元数据、替换仓库或禁用校验来制造构建成功。
+
+因此本轮尚未通过完整构建、正式包/探针隔离、真实专服、客户端画面、音频生命周期/人工听感、生存获取、盲盒真实多人同步与非空奖池发奖测试。历史本地通过记录不视为本轮云端证据。仓库已有 Linux CI 脚本；Mac 专用启动脚本不应在未完成云端构建前盲目替换。

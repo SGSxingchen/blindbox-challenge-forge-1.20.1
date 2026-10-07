@@ -12,12 +12,29 @@ from PIL import Image
 
 from tools import generate_original_textures as 被测模块
 from tools.render_item_texture_contact_sheet import 特殊贴图尺寸
+from tools.original_item_png_portability import PORTABLE_ITEM_PNG_PAYLOADS
 
 
 正式目录 = 被测模块.RESOURCE_ROOT / "assets/blindboxchallenge/textures/item"
 
 
 class 物品贴图确定性生成测试(unittest.TestCase):
+    def test_固定PNG保留旧像素基准且目标不重复(self):
+        self.assertEqual(59, len(被测模块.ITEM_TARGETS))
+        self.assertEqual(len(被测模块.ITEM_TARGETS), len(set(被测模块.ITEM_TARGETS)))
+        for relative in PORTABLE_ITEM_PNG_PAYLOADS:
+            with Image.open(io.BytesIO(被测模块.decode_item_png(relative))) as 图像:
+                self.assertEqual("RGBA", 图像.mode, relative)
+                self.assertEqual((16, 16), 图像.size, relative)
+                self.assertEqual(被测模块.decode_rgba(relative), 图像.tobytes(), relative)
+
+    def test_所有正式物品不依赖平台PNG编码器(self):
+        self.assertEqual(set(被测模块.ITEM_TARGETS), set(被测模块.ITEM_PNG_PAYLOADS))
+        with patch.object(Image.Image, "save", side_effect=AssertionError("不得重新编码正式PNG")), \
+                patch.object(Path, "read_bytes", side_effect=AssertionError("不得读取工作区正式PNG")):
+            for relative in 被测模块.ITEM_TARGETS:
+                self.assertEqual(被测模块.decode_item_png(relative), 被测模块.render_item(relative), relative)
+
     def test_八张权威方块载荷集合精确且临时重建逐字节一致(self):
         正式集合 = {
             path.relative_to(被测模块.RESOURCE_ROOT).as_posix()
