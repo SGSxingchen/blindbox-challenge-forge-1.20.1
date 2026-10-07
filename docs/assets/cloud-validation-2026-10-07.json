@@ -1,0 +1,70 @@
+{
+  "日期": "2026-10-07",
+  "源提交": "6a19766ae0c9dc98dfb16bb51443a42bbc6d979e",
+  "正式包SHA256": "50bcfcf046b65e1959864fa56b3a5ffbb5bb68f94a1f82f804a2f366b0533a07",
+  "探针包SHA256": "716953c94a5d5fffd197d8c81247590965ff74b8411e5eddf9f5c911a3a74e3d",
+  "工具回归": {
+    "执行": 160,
+    "通过": 160,
+    "跳过": 0
+  },
+  "构建": {
+    "命令": "Gradle 8.8 --no-daemon check build ciTestJar",
+    "结果": "通过",
+    "日志SHA256": "7a9087036a2f37eb42e127d7f8bb0d24f40c860e365829671a3b2803d07dce2a",
+    "边界": "Gradle test任务为NO-SOURCE；工具回归单独执行，实际专服另行验证。"
+  },
+  "包隔离": {
+    "结果": "通过",
+    "断言": [
+      "正式包不含ciTest类与ci-audio夹具",
+      "正式包内嵌GeckoLib和JLayer",
+      "JLayer许可与NOTICE齐全",
+      "探针包包含独立入口、元数据与两种音频夹具"
+    ]
+  },
+  "专服": {
+    "结果": "通过",
+    "物品数": 67,
+    "验证事实": [
+      "两次正常启动并正常停止",
+      "67 项物品均被正式 Jar 注册且可解析",
+      "67 条奖池数据保存后重启保留",
+      "嵌入 GeckoLib 与 JLayer 加载，没有专服客户端类加载崩溃"
+    ],
+    "启动记录": [
+      {
+        "退出码": 0,
+        "日志SHA256": "d2920b4212b6fc7f09bfe18353a12bb3f9991ea434896476c9d5491d6752d281",
+        "异常级日志": [
+          "[00:44:52] [Yggdrasil Key Fetcher/ERROR] [mojang/YggdrasilServicesKeyInfo]: Failed to request yggdrasil public key"
+        ]
+      },
+      {
+        "退出码": 0,
+        "日志SHA256": "265393de77b359e986f31ebdb03f800085cbf3f95626b1340425200ec5bb21f4",
+        "异常级日志": [
+          "[00:45:28] [Yggdrasil Key Fetcher/ERROR] [mojang/YggdrasilServicesKeyInfo]: Failed to request yggdrasil public key"
+        ]
+      }
+    ],
+    "生成配置SHA256": "34f86d527d4cfed518d522667508021a4fcd028da45be379a053400ddc9822cf"
+  },
+  "开盒探针": {
+    "结果": "通过",
+    "范围": "仅专服模拟玩家开盒断言，没有真实客户端参与",
+    "断言": [
+      "[00:45:18] [Server thread/INFO] [minecraft/MinecraftServer]: BLINDBOX_CITEST_OPENING_OK 时长快照=80 下一次=10 取消无消耗=true 空池无消耗=true"
+    ],
+    "退出码": 0,
+    "日志SHA256": "67b241d179d4d8887a288594d43fff7044ac958192870093811bbcaf0958956c"
+  },
+  "未通过或未运行": [
+    "图形客户端启动：Unix域套接字创建EPERM，受审查显示执行遭遇挂载错误",
+    "官方客户端安装：可选内置JVM的piston-meta.mojang.com manifest遭代理403，未换路请求",
+    "人工画面与完整音频生命周期/听感",
+    "真实多人开盒同步、非空奖池发奖与生存获取"
+  ],
+  "网络限制说明": "离线专服记录Yggdrasil公钥下载失败；不将本次离线测试描述为在线认证通过。",
+  "进程清理": "两次最终纯专服与一次最终探针专服均正常停止，退出码0。"
+}
